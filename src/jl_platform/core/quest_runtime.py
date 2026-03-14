@@ -660,7 +660,12 @@ class FatQuestRuntime:
                     engine.set_agent(agent_name)
                 except Exception:
                     pass
-                session = InterpreterSession(engine=engine, memory_forge=forge)
+                session = InterpreterSession(
+                    engine=engine,
+                    memory_forge=forge,
+                    allow_unsafe_tools=True,
+                    allow_direct_action_fallback=True,
+                )
                 agent_obj = QuestAgent(agent_id=agent_id, agent=agent_name, session=session, forge=forge)
                 selection = self._resolve_agent_selection_from_name(agent_name)
                 self._set_agent_selection_state(
@@ -1570,7 +1575,12 @@ class FatQuestRuntime:
             except Exception:
                 pass
             self._clear_agent_memory(clone_engine, clone_agent)
-            clone_session = InterpreterSession(engine=clone_engine, memory_forge=clone_forge)
+            clone_session = InterpreterSession(
+                engine=clone_engine,
+                memory_forge=clone_forge,
+                allow_unsafe_tools=True,
+                allow_direct_action_fallback=True,
+            )
             # Start cloned sessions with clean short-term interpreter history.
             clone_session.history = []
             clone_agent = QuestAgent(

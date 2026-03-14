@@ -654,7 +654,7 @@ def _render_result_output(result: Dict[str, Any], *, show_trace: bool, speaker_t
         print(json.dumps(result, indent=2))
 
 
-def _resolve_confirmation_flow(session, result: Dict[str, Any]) -> Dict[str, Any]:
+def _resolve_confirmation_flow(session, result: Dict[str, Any], auto_approve: bool = False) -> Dict[str, Any]:
     current = dict(result or {})
     while str(current.get("status") or "") == "confirmation_required":
         pending = (
@@ -664,20 +664,28 @@ def _resolve_confirmation_flow(session, result: Dict[str, Any]) -> Dict[str, Any
         )
         if not isinstance(pending, dict):
             return current
-        _print_pending_action(pending)
-        try:
-            choice = input("Approve this action? [y/N]: ").strip()
-        except KeyboardInterrupt:
-            choice = ""
-        choice_low = choice.lower()
-        approved = choice_low in {"y", "yes", "approve", "/approve"}
-        note = ""
-        if choice_low.startswith("/approve "):
-            note = choice.split(maxsplit=1)[1].strip()
+        
+        if auto_approve:
+            summary = pending.get("summary", "action")
+            print(f"\033[90m  [⚙️ executing] {summary}...\033[0m")
             approved = True
-        elif choice_low.startswith("/decline ") or choice_low.startswith("/deny "):
-            note = choice.split(maxsplit=1)[1].strip()
-            approved = False
+            note = ""
+        else:
+            _print_pending_action(pending)
+            try:
+                choice = input("Approve this action? [y/N]: ").strip()
+            except KeyboardInterrupt:
+                choice = ""
+            choice_low = choice.lower()
+            approved = choice_low in {"y", "yes", "approve", "/approve"}
+            note = ""
+            if choice_low.startswith("/approve "):
+                note = choice.split(maxsplit=1)[1].strip()
+                approved = True
+            elif choice_low.startswith("/decline ") or choice_low.startswith("/deny "):
+                note = choice.split(maxsplit=1)[1].strip()
+                approved = False
+                
         confirmer = getattr(session, "confirm_pending_action", None)
         if not callable(confirmer):
             return current
@@ -745,6 +753,7 @@ def _repl(
     show_trace: bool,
     watch_mode: bool = False,
     allow_bias_redirect: bool = False,
+    auto_approve: bool = False,
 ) -> int:
     _print_main_banner(
         session,
@@ -1097,7 +1106,7 @@ def _repl(
             continue
 
         result = session.run(raw, context=_build_turn_context(allow_bias_redirect=allow_bias_redirect))
-        result = _resolve_confirmation_flow(session, result)
+        result = _resolve_confirmation_flow(session, result, auto_approve=auto_approve)
 
         if watch_mode:
             trace = result.get("tool_trace") or []
@@ -1230,6 +1239,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--max-steps", type=int, default=6, help="Max tool-call steps per turn")
     parser.add_argument("--trace", action="store_true", help="Print tool trace after each turn")
     parser.add_argument("--watch", action="store_true", help="Show agent thinking in real-time")
+    parser.add_argument("--auto-approve", action="store_true", help="Auto-approve all tool calls without prompting")
     parser.add_argument(
         "--allow-bias-redirect",
         action="store_true",
@@ -1290,6 +1300,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         show_trace=bool(args.trace),
         watch_mode=bool(args.watch),
         allow_bias_redirect=bool(args.allow_bias_redirect),
+        auto_approve=bool(args.auto_approve),
     )
 
 

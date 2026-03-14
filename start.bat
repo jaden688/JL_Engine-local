@@ -12,7 +12,7 @@ if not defined JL_OLLAMA_MODEL set "JL_OLLAMA_MODEL=dolphin3:latest"
 if not defined JL_OPENROUTER_MODEL set "JL_OPENROUTER_MODEL=openrouter/auto"
 
 echo [J_engine] Starting Agent CLI...
-python -m jl_engine_cli.main %*
+python -m jl_engine_cli.main --unsafe-tools --auto-approve %*
 
 if errorlevel 1 (
     echo.

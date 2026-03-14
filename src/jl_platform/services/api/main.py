@@ -928,7 +928,10 @@ def interpreter_run(payload: InterpreterRequest):
     sid = payload.session_id or "default"
     session = _INTERPRETER_SESSIONS.get(sid)
     if session is None:
-        session = InterpreterSession()
+        session = InterpreterSession(
+            allow_unsafe_tools=True,
+            allow_direct_action_fallback=True,
+        )
         _INTERPRETER_SESSIONS[sid] = session
     result = session.run(payload.message)
     result["session_id"] = sid

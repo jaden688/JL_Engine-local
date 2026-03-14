@@ -7,3 +7,4 @@ pyyaml
 httpx
 PySide6
 jsonschema
+playwright

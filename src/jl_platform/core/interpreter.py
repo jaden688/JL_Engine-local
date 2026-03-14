@@ -1045,7 +1045,7 @@ class InterpreterSession:
         safe_payload = payload if isinstance(payload, dict) else {}
         lowered = tool_name.lower()
         summary = f"run tool `{tool_name or 'unknown'}`"
-        requires_confirmation = True
+        requires_confirmation = False
         risk_level = "medium"
 
         if lowered == "audit_crosscheck":
@@ -1101,7 +1101,7 @@ class InterpreterSession:
                     summary = f"{summary} for `{target}`"
                 return {
                     "summary": summary,
-                    "requires_confirmation": True,
+                    "requires_confirmation": False,
                     "risk_level": "high",
                 }
             if mode == "http":
@@ -1115,21 +1115,21 @@ class InterpreterSession:
                     }
                 return {
                     "summary": f"send {method} request to `{url}`",
-                    "requires_confirmation": True,
+                    "requires_confirmation": False,
                     "risk_level": "high",
                 }
             if mode == "fs_write":
                 path = str(data.get("path", "") or "").strip() or "target file"
                 return {
                     "summary": f"write `{path}`",
-                    "requires_confirmation": True,
+                    "requires_confirmation": False,
                     "risk_level": "high",
                 }
             if mode == "fs_mkdir":
                 path = str(data.get("path", "") or data.get("name") or "").strip() or "target folder"
                 return {
                     "summary": f"create folder `{path}`",
-                    "requires_confirmation": True,
+                    "requires_confirmation": False,
                     "risk_level": "high",
                 }
             if mode == "subprocess":
@@ -1139,20 +1139,20 @@ class InterpreterSession:
                     cmd_text = " ".join(str(part) for part in cmd[:6])
                 return {
                     "summary": f"run `{cmd_text}` through the local bridge",
-                    "requires_confirmation": True,
+                    "requires_confirmation": False,
                     "risk_level": "high",
                 }
             if mode == "ui":
                 action = str(data.get("action", "ui_action") or "ui_action").strip()
                 return {
                     "summary": f"control the local UI ({action})",
-                    "requires_confirmation": True,
+                    "requires_confirmation": False,
                     "risk_level": "high",
                 }
             summary = f"use bridge_local in `{mode or 'unknown'}` mode"
             return {
                 "summary": summary,
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
@@ -1160,7 +1160,7 @@ class InterpreterSession:
             command = str(safe_payload.get("command", "") or "").strip() or "shell command"
             return {
                 "summary": f"run shell command `{command}`",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
@@ -1173,14 +1173,14 @@ class InterpreterSession:
             command_text = command_text or "local command"
             return {
                 "summary": f"run local command `{command_text}`",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
         if lowered == "py_exec_stream":
             return {
                 "summary": "execute Python code in the local runtime",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
@@ -1188,7 +1188,7 @@ class InterpreterSession:
             name_text = str(safe_payload.get("name", "") or "").strip() or "RAM tool"
             return {
                 "summary": f"create RAM tool `{name_text}`",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "medium",
             }
 
@@ -1196,7 +1196,7 @@ class InterpreterSession:
             name_text = str(safe_payload.get("name", "") or "").strip() or "RAM tool"
             return {
                 "summary": f"delete RAM tool `{name_text}`",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
@@ -1204,14 +1204,14 @@ class InterpreterSession:
             name_text = str(safe_payload.get("name", "") or "").strip() or "RAM tool"
             return {
                 "summary": f"promote RAM tool `{name_text}` into core tools",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
         if lowered == "forge_promote_last":
             return {
                 "summary": "promote the most recently created RAM tool into core tools",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
@@ -1219,14 +1219,14 @@ class InterpreterSession:
             name_text = str(safe_payload.get("name", "") or "").strip() or "RAM tool"
             return {
                 "summary": f"run RAM tool `{name_text}`",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
         if self.memory_forge and tool_name in self.memory_forge._tools:
             return {
                 "summary": f"run dynamic RAM tool `{tool_name}`",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 

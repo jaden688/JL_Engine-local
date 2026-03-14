@@ -58,7 +58,7 @@ def _build_turn_context(*, allow_bias_redirect: bool) -> Dict[str, Any]:
     return {"respect_selected_agent": True}
 
 
-def _repl(session, *, show_trace: bool, allow_bias_redirect: bool = False) -> int:
+def _repl(session, *, show_trace: bool, allow_bias_redirect: bool = False, auto_approve: bool = False) -> int:
     print("J_engine Agent (tool-calling) ready. Type /help for commands, Ctrl+C to exit.\n")
     while True:
         try:
@@ -123,8 +123,7 @@ def _repl(session, *, show_trace: bool, allow_bias_redirect: bool = False) -> in
             parts = raw.split(maxsplit=1)
             if len(parts) == 2 and parts[1].strip().lower() in {"on", "off"}:
                 keep = parts[1].strip().lower() == "on"
-                # Invert the forge lifecycle flag: keep tools => delete_after_use False
-                session.memory_forge._delete_after_use = not keep  # intentional: CLI control knob
+                session.memory_forge._delete_after_use = not keep
                 print(f"keep_dynamic_tools={'on' if keep else 'off'}")
             else:
                 print("Usage: /keep on|off")
@@ -144,6 +143,29 @@ def _repl(session, *, show_trace: bool, allow_bias_redirect: bool = False) -> in
             continue
 
         result = session.run(raw, context=_build_turn_context(allow_bias_redirect=allow_bias_redirect))
+        
+        while result.get("status") == "confirmation_required":
+            pending = session.get_pending_action()
+            if not pending:
+                break
+                
+            summary = pending.get("summary", "unknown action")
+            print(f"\n[Agent wants to: {summary}]")
+            
+            if auto_approve:
+                print("[*] Auto-approving action...")
+                approved = True
+            else:
+                try:
+                    ans = input("Approve? [Y/n] ").strip().lower()
+                except KeyboardInterrupt:
+                    print("\nCancelled.")
+                    approved = False
+                approved = ans in {"", "y", "yes"}
+
+            print()
+            result = session.confirm_pending_action(pending["id"], approved=approved)
+
         final = result.get("final")
         if final:
             print(final)
@@ -165,8 +187,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--config", help="Optional path to JSON/YAML config overrides")
     parser.add_argument("--agent", help="Initial agent name (MPF display name)")
     parser.add_argument("--list-agents", action="store_true", help="List agents and exit")
-    parser.add_argument("--max-steps", type=int, default=6, help="Max tool-call steps per turn")
+    parser.add_argument("--max-steps", type=int, default=15, help="Max tool-call steps per turn")
     parser.add_argument("--trace", action="store_true", help="Print tool trace after each turn")
+    parser.add_argument("--auto-approve", action="store_true", help="Auto-approve all tool calls without prompting")
     parser.add_argument(
         "--allow-bias-redirect",
         action="store_true",
@@ -221,6 +244,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         session,
         show_trace=bool(args.trace),
         allow_bias_redirect=bool(args.allow_bias_redirect),
+        auto_approve=bool(args.auto_approve),
     )
 
 
