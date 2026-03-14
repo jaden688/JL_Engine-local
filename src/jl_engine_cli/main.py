@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional
 from jl_engine_core import __version__
 from jl_engine_core.config_loader import load_config
 from jl_engine_core.engine_core import EngineConfig, JLEngineCore
+from jl_platform.controllers import backend_controller
 
 try:
     import msvcrt
@@ -113,6 +114,18 @@ def _current_backend_label() -> str:
         return str(cfg.get("label") or backend_id)
     except Exception:
         return "unknown"
+
+
+def _current_game_npc_mode_label() -> str:
+    try:
+        return "on" if backend_controller.get_game_npc_mode() else "off"
+    except Exception:
+        return "off"
+
+
+def _set_game_npc_mode(enabled: bool) -> bool:
+    result = backend_controller.set_game_npc_mode(bool(enabled), persist=True)
+    return bool(result.get("enabled"))
 
 
 def _configure_cli_logging(*, verbose: bool = False) -> None:
@@ -375,6 +388,7 @@ def _print_main_status(
     print("  task_router: engine_first")
     print(f"  trace: {'on' if show_trace else 'off'}")
     print(f"  watch: {'on' if watch_mode else 'off'}")
+    print(f"  game_npc_mode: {_current_game_npc_mode_label()}")
     print(f"  tqa_redirect: {'on' if allow_bias_redirect else 'off'}")
     if bench is not None:
         print(f"  bench_worker: {getattr(bench, 'active_worker_agent_name', 'Bench Worker')}")
@@ -421,6 +435,7 @@ def _print_main_banner(
         "Runtime:      "
         f"trace={'on' if show_trace else 'off'} | "
         f"watch={'on' if watch_mode else 'off'} | "
+        f"npc={_current_game_npc_mode_label()} | "
         f"tqa_redirect={'on' if allow_bias_redirect else 'off'}"
     )
     print("Slash Menu:   Type / for command picker")
@@ -510,6 +525,7 @@ def _pick_main_slash_command() -> Optional[str]:
         ("/tools", "List registered tools"),
         ("/trace", "Toggle tool trace printing"),
         ("/watch", "Toggle live agent-thinking output"),
+        ("/npc", "Toggle game NPC reactivity mode"),
         ("/keep", "Keep dynamic tools after use"),
         ("/doctor", "Show system health"),
         ("/hosts", "List host templates"),
@@ -810,6 +826,7 @@ def _repl(
             print("  /tools        List registered tools")
             print("  /trace on|off Toggle tool trace printing")
             print("  /watch on|off Toggle live tool-call watch")
+            print("  /npc on|off   Toggle game NPC reactivity mode")
             print("  /keep on|off  Keep dynamic tools after use")
             print("  /promote      Promote a dynamic tool")
             print("  /doctor       Show system health")
@@ -879,6 +896,18 @@ def _repl(
                     print("Agent thinking will be shown in real-time...\n")
             else:
                 print("Usage: /watch on|off")
+            continue
+
+        if low.startswith("/npc"):
+            parsed = _parse_on_off_command(raw)
+            if parsed is not None:
+                enabled = _set_game_npc_mode(parsed)
+                _print_system_message(
+                    f"Game NPC reactivity {'enabled' if enabled else 'disabled'}.",
+                    str(getattr(session.engine, "current_agent_name", "system") or "system"),
+                )
+            else:
+                print("Usage: /npc on|off")
             continue
 
         if low.startswith("/backend"):

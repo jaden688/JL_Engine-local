@@ -332,6 +332,19 @@ def test_modern_cli_uses_agent_specific_boot_line(monkeypatch, capsys):
     assert "SparkByte hotwired and humming. Talk to me." in output
 
 
+def test_modern_cli_npc_command_toggles_game_mode(monkeypatch, capsys):
+    session = StubSession()
+    prompts = iter(["/npc on", "quit"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(prompts))
+    monkeypatch.setattr(modern_cli, "_set_game_npc_mode", lambda enabled: bool(enabled))
+
+    result = modern_cli._repl(session, show_trace=False)
+    output = capsys.readouterr().out
+
+    assert result == 0
+    assert "Game NPC reactivity enabled." in output
+
+
 def test_modern_cli_direct_agent_switches_cover_gremlin_and_slappy(monkeypatch, capsys):
     session = SwitchingSession()
     prompts = iter(["/agent The Gremlin", "hello", "/agent Slappy", "hello again", "quit"])

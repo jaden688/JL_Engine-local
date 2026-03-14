@@ -37,6 +37,7 @@ from jl_platform.services.api.schemas import (
     ForgeDeleteRequest,
     ForgePromoteRequest,
     ForgeRunRequest,
+    GameNPCModeRequest,
     InterpreterRequest,
     JL_FAT_AGENT_ID,
     OllamaModelSelectionRequest,
@@ -404,6 +405,7 @@ def health():
         "hosts": sorted(HOST_REGISTRY.keys()),
         "browser_bridge": _BROWSER_BRIDGE.status(),
         "runtime_mode": backend_controller.get_runtime_mode_status(),
+        "game_npc_mode": backend_controller.get_game_npc_mode_status(),
     }
 
 
@@ -524,6 +526,7 @@ def runtime_mode_settings():
     return {
         "status": "ok",
         **backend_controller.get_runtime_mode_status(),
+        "game_npc_mode": backend_controller.get_game_npc_mode_status(),
         "effective_model": backend_controller.get_effective_model_name(),
     }
 
@@ -538,7 +541,30 @@ def runtime_mode_set(payload: RuntimeModeRequest):
         "status": "ok",
         "message": f"Runtime mode set to {result['configured_mode']}",
         **result,
+        "game_npc_mode": backend_controller.get_game_npc_mode_status(),
         "effective_model": backend_controller.get_effective_model_name(),
+    }
+
+
+@app.get("/settings/game-npc-mode")
+def game_npc_mode_settings():
+    return {
+        "status": "ok",
+        **backend_controller.get_game_npc_mode_status(),
+    }
+
+
+@app.post("/settings/game-npc-mode")
+def game_npc_mode_set(payload: GameNPCModeRequest):
+    result = backend_controller.set_game_npc_mode(bool(payload.enabled), persist=True)
+    return {
+        "status": "ok",
+        "message": (
+            "Game NPC reactivity enabled"
+            if result["enabled"]
+            else "Game NPC reactivity disabled"
+        ),
+        **result,
     }
 
 

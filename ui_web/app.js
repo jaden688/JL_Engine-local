@@ -33,6 +33,7 @@ const state = {
   currentBrainBackendId: "",
   currentToolBackendId: "",
   runtimeMode: null,
+  gameNpcModeEnabled: false,
   chatRequestPending: false,
 };
 
@@ -627,6 +628,14 @@ function renderAgentControlButton() {
   btn.textContent = `Total Agent Control: ${state.totalAgentControlEnabled ? "ON" : "OFF"}`;
   btn.classList.toggle("active", state.totalAgentControlEnabled);
   btn.classList.toggle("ghost", !state.totalAgentControlEnabled);
+}
+
+function renderGameNpcModeButton() {
+  const btn = $("toggleGameNpcModeBtn");
+  if (!btn) return;
+  btn.textContent = `Game NPC Reactivity: ${state.gameNpcModeEnabled ? "ON" : "OFF"}`;
+  btn.classList.toggle("active", state.gameNpcModeEnabled);
+  btn.classList.toggle("ghost", !state.gameNpcModeEnabled);
 }
 
 function renderChatLoopChip() {
@@ -1496,6 +1505,39 @@ async function refreshRuntimeMode(options = {}) {
       feed(`Runtime mode refresh failed: ${err.message}`, "error");
     }
     return null;
+  }
+}
+
+async function refreshGameNpcMode(options = {}) {
+  const { silent = false } = options;
+  try {
+    const res = await api("/settings/game-npc-mode");
+    state.gameNpcModeEnabled = !!res.enabled;
+    renderGameNpcModeButton();
+    return res;
+  } catch (err) {
+    if (!silent) {
+      feed(`Game NPC mode refresh failed: ${err.message}`, "error");
+    }
+    return null;
+  }
+}
+
+async function toggleGameNpcMode() {
+  const next = !state.gameNpcModeEnabled;
+  try {
+    const res = await api("/settings/game-npc-mode", {
+      method: "POST",
+      body: JSON.stringify({ enabled: next }),
+    });
+    state.gameNpcModeEnabled = !!res.enabled;
+    renderGameNpcModeButton();
+    feed(
+      `Game NPC reactivity ${state.gameNpcModeEnabled ? "enabled" : "disabled"}.`,
+      "ok",
+    );
+  } catch (err) {
+    feed(`Game NPC mode switch failed: ${err.message}`, "error");
   }
 }
 
@@ -2660,6 +2702,7 @@ function wireEvents() {
       feed("Browser session window was blocked by the browser.", "error");
     }
   });
+  bindEvent("toggleGameNpcModeBtn", "click", toggleGameNpcMode);
   bindEvent("toggleAgentControlBtn", "click", toggleTotalAgentControl);
   bindEvent("toggleChatLoopBtn", "click", toggleChatLoop);
   bindEvent("chatInput", "keydown", (event) => {
@@ -2749,6 +2792,7 @@ async function boot() {
   $("stripTools").textContent = "Tools: ON";
   await refreshTopline();
   await refreshRuntimeMode({ silent: true });
+  await refreshGameNpcMode({ silent: true });
   await refreshOllamaModels({ silent: true });
   const loadedPersonas = await loadMpfPersonas({ silent: true });
   if (!loadedPersonas) {
@@ -2771,6 +2815,7 @@ async function boot() {
   }
   await loadWorkspaceList(".");
   await refreshSelfEditStatus({ logLines: 120, silent: true });
+  renderGameNpcModeButton();
   renderAgentControlButton();
   renderChatLoopChip();
   await refreshChatLoopStatus({ silent: true });
@@ -2779,6 +2824,7 @@ async function boot() {
       loadMpfPersonas({ silent: true });
     }
     refreshRuntimeMode({ silent: true });
+    refreshGameNpcMode({ silent: true });
     if (state.activeTab === "selfedit" || state.selfEditRunning) {
       refreshSelfEditStatus({ logLines: 120, silent: true });
     }

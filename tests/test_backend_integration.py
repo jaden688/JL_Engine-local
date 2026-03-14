@@ -287,3 +287,31 @@ def test_runtime_mode_hybrid_without_provider_falls_back_to_local(tmp_path, monk
     assert result["fallback_reason"] == "missing_external_provider_config"
     assert recorded == {"brain_backend_id": "ollama-local", "tool_backend_id": "ollama-local"}
     assert saved["jl_engine"]["runtime_mode"] == "hybrid"
+
+
+def test_set_game_npc_mode_persists_headless_config(tmp_path, monkeypatch):
+    config_path = tmp_path / "JLframe_Engine_Framework.headless.json"
+    config_path.write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr(backend_controller, "_HEADLESS_CONFIG_PATHS", [config_path])
+    monkeypatch.delenv("JL_GAME_NPC_MODE", raising=False)
+
+    result = backend_controller.set_game_npc_mode(True, persist=True)
+
+    assert result["enabled"] is True
+    saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved["jl_engine"]["game_npc_mode"] is True
+    assert backend_controller.get_game_npc_mode() is True
+
+
+def test_game_npc_mode_settings_endpoint_reports_state(monkeypatch):
+    monkeypatch.setattr(
+        api_main.backend_controller,
+        "get_game_npc_mode_status",
+        lambda: {"enabled": True},
+    )
+
+    result = api_main.game_npc_mode_settings()
+
+    assert result["status"] == "ok"
+    assert result["enabled"] is True

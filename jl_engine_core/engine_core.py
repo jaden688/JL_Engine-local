@@ -94,6 +94,17 @@ def apply_emotion_sampling_bias(
     return biased_temp, biased_top_p
 
 
+def _flag_enabled(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if not text:
+        return default
+    return text not in {"0", "false", "off", "no"}
+
+
 # --- JL Engine behavior profiles (engine-wide) ---
 ENGINE_BEHAVIOR_PROFILES = {
     "safe_default": {
@@ -738,6 +749,7 @@ class JLEngineCore:
             "aperture_mode": self.aperture_mode,
             "stability_score": self.stability_score,
             "modulation_fault": self.modulation_fault,
+            "game_npc_mode": self._is_game_npc_mode_enabled(),
             "temporal_loop": temporal_loop,
             "temporal_backend": temporal_backend,
         }
@@ -773,6 +785,74 @@ class JLEngineCore:
             self.shutdown()
         except Exception:
             pass
+
+    def _is_game_npc_mode_enabled(self, context: Optional[Dict[str, Any]] = None) -> bool:
+        runtime_context = context if isinstance(context, dict) else {}
+        for key in ("game_npc_mode", "game_npc_reactivity", "npc_mode"):
+            if key in runtime_context:
+                return _flag_enabled(runtime_context.get(key), default=False)
+
+        raw_env = str(os.getenv("JL_GAME_NPC_MODE") or "").strip()
+        if raw_env:
+            return _flag_enabled(raw_env, default=False)
+
+        return _flag_enabled(self.master_config.get("game_npc_mode"), default=False)
+
+    @staticmethod
+    def _scene_harm_cues(user_text: str) -> list[str]:
+        text = str(user_text or "").lower()
+        cue_map = {
+            "dismemberment": ("bitten off", "bit off", "ripped off", "torn off", "severed"),
+            "hand_loss": ("hand bitten", "missing hand", "lost hand", "left hand", "right hand"),
+            "gore": ("blood", "bloody", "gore", "mangled", "pulpy"),
+            "predation": ("devoured", "eaten", "swallowed", "consumed", "ingestion"),
+            "panic": ("scream", "screaming", "shriek", "panic", "run"),
+        }
+        cues: list[str] = []
+        for label, needles in cue_map.items():
+            if any(needle in text for needle in needles):
+                cues.append(label)
+        return cues
+
+    def _game_npc_aperture_adjustment(
+        self, user_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        if not self._is_game_npc_mode_enabled(context):
+            return {
+                "enabled": False,
+                "cues": [],
+                "aperture_bias": 0.0,
+                "focus_delta": 0.0,
+                "overload_delta": 0.0,
+            }
+
+        cues = self._scene_harm_cues(user_text)
+        if not cues:
+            return {
+                "enabled": False,
+                "cues": [],
+                "aperture_bias": 0.0,
+                "focus_delta": 0.0,
+                "overload_delta": 0.0,
+            }
+
+        severity = 0.08
+        if "dismemberment" in cues:
+            severity += 0.05
+        if "predation" in cues:
+            severity += 0.04
+        if "gore" in cues:
+            severity += 0.03
+        if "panic" in cues:
+            severity += 0.02
+
+        return {
+            "enabled": True,
+            "cues": cues,
+            "aperture_bias": min(0.18, severity),
+            "focus_delta": min(0.22, 0.05 + (severity * 0.55)),
+            "overload_delta": min(0.30, 0.10 + severity),
+        }
 
     @staticmethod
     def _looks_like_interpreter_prompt(text: Any) -> bool:
@@ -1158,6 +1238,7 @@ class JLEngineCore:
         # 4) Emotional aperture update
         #    Note: we don't yet pass full behavior/gait/rhythm semantics;
         #    this can be expanded later.
+        game_npc_aperture = self._game_npc_aperture_adjustment(user_text, context)
         self.emotional_aperture.update_from_signals(
             behavior_state=behavior_state,
             gait=self.current_gait,
@@ -1166,8 +1247,15 @@ class JLEngineCore:
             conversation_pacing=signals.pace,
             memory_density=signals.memory_density,
             drift_bias=advisory_payload.get("emotional_drift", 0.0),
-            aperture_bias=advisory_payload.get("emotional_drift", 0.0),
+            aperture_bias=advisory_payload.get("emotional_drift", 0.0)
+            + float(game_npc_aperture.get("aperture_bias", 0.0) or 0.0),
         )
+        if game_npc_aperture.get("enabled"):
+            self.emotional_aperture.update_from_signal(
+                emotion="threat_spike",
+                focus_delta=float(game_npc_aperture.get("focus_delta", 0.0) or 0.0),
+                overload_delta=float(game_npc_aperture.get("overload_delta", 0.0) or 0.0),
+            )
         aperture_state = self.emotional_aperture.get_state()
         if isinstance(self.agent_state, dict):
             self.agent_state["emotion"] = aperture_state.get("emotion")
@@ -1591,6 +1679,8 @@ class JLEngineCore:
             ),
             "drift_state": self._drift_state,
             "stability_score": self.stability_score,
+            "game_npc_mode_enabled": self._is_game_npc_mode_enabled(context),
+            "game_npc_scene_cues": list(game_npc_aperture.get("cues") or []),
             "drive_state": self.drive_state,
             "internal_tension": self.internal_tension,
             "engine_status": self.get_engine_status(),
@@ -2218,6 +2308,8 @@ class JLEngineCore:
         """
         system_chunks: List[str] = []
         runtime_context = context if isinstance(context, dict) else {}
+        game_npc_mode = self._is_game_npc_mode_enabled(runtime_context)
+        scene_harm_cues = self._scene_harm_cues(user_text) if game_npc_mode else []
 
         # 1) Core rules from master config
         if self.core_rules:
@@ -2330,6 +2422,23 @@ class JLEngineCore:
             system_chunks.append("\nAGENT BOUNDARIES:")
             for item in avoidances[:10]:
                 system_chunks.append(f"- {item}")
+
+        if game_npc_mode:
+            system_chunks.append("\nGAME NPC REACTIVITY MODE:")
+            system_chunks.append(
+                "- Treat bodily harm, dismemberment, predation, gore, and immediate physical danger as genuinely scary and destabilizing."
+            )
+            system_chunks.append(
+                "- Show reflexive shock, self-preservation, alarm, and urgency instead of staying weirdly detached."
+            )
+            system_chunks.append(
+                "- Let survival instinct interrupt banter when a scene turns physically dangerous."
+            )
+            system_chunks.append(
+                "- If the active voice naturally swears, blunt profanity under extreme stress is allowed."
+            )
+            if scene_harm_cues:
+                system_chunks.append(f"- Scene threat cues: {', '.join(scene_harm_cues[:6])}")
 
         voice = _pick_str(communication.get("voice"))
         style_notes = _as_list(communication.get("style_notes"))
@@ -2455,7 +2564,7 @@ class JLEngineCore:
         task_intent = _pick_str(runtime_context.get("task_intent"))
         action_type = _pick_str(runtime_context.get("action_type"))
         execution_directive = _pick_str(runtime_context.get("execution_directive"))
-        if ui_surface or quest_mode or task_intent or action_type or execution_directive:
+        if ui_surface or quest_mode or task_intent or action_type or execution_directive or game_npc_mode:
             system_chunks.append("\nRUNTIME CONTEXT:")
             if ui_surface:
                 system_chunks.append(f"- UI surface: {ui_surface}")
@@ -2467,6 +2576,8 @@ class JLEngineCore:
                 system_chunks.append(f"- Action type: {action_type}")
             if execution_directive:
                 system_chunks.append(f"- Execution directive: {execution_directive}")
+            if game_npc_mode:
+                system_chunks.append("- Game NPC reactivity: on")
 
         browser_panel = (
             runtime_context.get("browser_panel")

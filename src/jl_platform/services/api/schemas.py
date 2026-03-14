@@ -222,6 +222,10 @@ class RuntimeModeRequest(BaseModel):
     mode: str
 
 
+class GameNPCModeRequest(BaseModel):
+    enabled: bool
+
+
 class QuestSwitchRequest(BaseModel):
     agent_id: str = JL_FAT_AGENT_ID
     lane: str

@@ -39,6 +39,17 @@ _LOCAL_BACKEND_ID = "ollama-local"
 _EXTERNAL_BACKEND_IDS = ("openai", "openrouter", "google-gemini")
 
 
+def _coerce_bool(value, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if not text:
+        return default
+    return text not in {"0", "false", "off", "no"}
+
+
 def _enforce_ollama_base_url(raw_url: str, service_config: dict | None = None) -> str:
     base = (raw_url or "").strip()
     if not base:
@@ -218,6 +229,14 @@ def _read_runtime_mode_from_path(path: Path) -> str | None:
     return None
 
 
+def _read_game_npc_mode_from_path(path: Path) -> bool | None:
+    data = _load_json_dict(path)
+    jl_engine = data.get("jl_engine") if isinstance(data, dict) else None
+    if isinstance(jl_engine, dict) and "game_npc_mode" in jl_engine:
+        return _coerce_bool(jl_engine.get("game_npc_mode"), default=False)
+    return None
+
+
 def _persist_runtime_mode_to_path(path: Path, mode: str) -> bool:
     data = _load_json_dict(path)
     if not isinstance(data, dict):
@@ -230,6 +249,18 @@ def _persist_runtime_mode_to_path(path: Path, mode: str) -> bool:
     return _write_json_dict(path, data)
 
 
+def _persist_game_npc_mode_to_path(path: Path, enabled: bool) -> bool:
+    data = _load_json_dict(path)
+    if not isinstance(data, dict):
+        data = {}
+    jl_engine = data.setdefault("jl_engine", {})
+    if not isinstance(jl_engine, dict):
+        jl_engine = {}
+        data["jl_engine"] = jl_engine
+    jl_engine["game_npc_mode"] = bool(enabled)
+    return _write_json_dict(path, data)
+
+
 def get_runtime_mode() -> str:
     env_mode = str(os.getenv("JL_RUNTIME_MODE") or "").strip().lower()
     if env_mode in _VALID_RUNTIME_MODES:
@@ -239,6 +270,21 @@ def get_runtime_mode() -> str:
         if mode:
             return mode
     return "local_only"
+
+
+def get_game_npc_mode() -> bool:
+    raw_env = str(os.getenv("JL_GAME_NPC_MODE") or "").strip()
+    if raw_env:
+        return _coerce_bool(raw_env, default=False)
+    for path in _HEADLESS_CONFIG_PATHS:
+        enabled = _read_game_npc_mode_from_path(path)
+        if enabled is not None:
+            return bool(enabled)
+    return False
+
+
+def get_game_npc_mode_status() -> dict:
+    return {"enabled": get_game_npc_mode()}
 
 
 def _has_backend_credential(backend_id: str) -> bool:
@@ -513,6 +559,20 @@ def set_runtime_mode(mode: str, persist: bool = True) -> dict:
     status = get_runtime_mode_status()
     status["persisted_paths"] = persisted_paths
     return status
+
+
+def set_game_npc_mode(enabled: bool, persist: bool = True) -> dict:
+    normalized = bool(enabled)
+    os.environ["JL_GAME_NPC_MODE"] = "1" if normalized else "0"
+    persisted_paths: list[str] = []
+    if persist:
+        for path in _HEADLESS_CONFIG_PATHS:
+            if _persist_game_npc_mode_to_path(path, normalized):
+                persisted_paths.append(str(path))
+    return {
+        "enabled": normalized,
+        "persisted_paths": persisted_paths,
+    }
 
 
 def list_backends() -> list[dict]:

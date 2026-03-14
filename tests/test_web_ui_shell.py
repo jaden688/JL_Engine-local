@@ -27,6 +27,7 @@ def test_web_ui_shell_serves_switchboard_html() -> None:
         "chatLog",
         "opsFeed",
         "backendModeChip",
+        "toggleGameNpcModeBtn",
         "heroVoiceSummary",
         "activeVoiceHeading",
         "activeVoiceNote",
@@ -54,6 +55,7 @@ def test_web_ui_shell_script_targets_switchboard_routes() -> None:
     assert "/quest/personas/mpf" not in script
     assert "/browser/action" in script
     assert "/browser/inspect" in script
+    assert "/settings/game-npc-mode" in script
     assert "laneSelect" in script
     assert "childSelect" in script
     assert "BROWSER_ACTION" in script
