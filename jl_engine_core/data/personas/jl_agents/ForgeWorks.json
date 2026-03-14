@@ -64,6 +64,9 @@
     "industry": "AI Tools",
     "audience": "builders",
     "products": "",
-    "docs_excerpt": ""
+    "docs_excerpt": "",
+    "license_reference": "PolyForm Noncommercial 1.0.0",
+    "license_file": "LICENSE.md",
+    "proprietary_notice": "This JL Engine agent/persona configuration is proprietary project content. See LICENSE.md for permitted use and distribution terms."
   }
 }

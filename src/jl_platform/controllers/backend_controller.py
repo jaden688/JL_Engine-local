@@ -1,4 +1,7 @@
-"""Backend controller for JL Platform UI interactions."""
+"""Backend controller for JL Platform UI interactions.
+
+License: PolyForm Noncommercial 1.0.0. See LICENSE.md.
+"""
 
 from __future__ import annotations
 

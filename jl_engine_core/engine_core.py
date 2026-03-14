@@ -1,6 +1,8 @@
 """
 engine_core.py - JL Engine Core Orchestrator
 
+License: PolyForm Noncommercial 1.0.0. See LICENSE.md.
+
 This module provides a *unified, headless* orchestration layer for the JL Engine.
 
 It pulls together:
@@ -43,6 +45,7 @@ from .logging_setup import get_logger
 import os
 
 from .behavior_engine import BehaviorStateMachine
+from .cognitive_gears import select_active_runtime_gear
 from .cognitive_modes import CognitiveModeSelector, CognitiveModeState
 from .emotional_aperture import EmotionalAperture
 from .conversational_signals import SignalScorer, TurnSignals
@@ -266,6 +269,11 @@ class JLEngineCore:
         self.current_gait: str = "walk"
         self.current_rhythm_mode: str = "flop"
         self.current_cognitive_state: CognitiveModeState | None = None
+        self.current_cognitive_gear: Dict[str, Any] = {
+            "active_label": "TASK_FLOW",
+            "runtime_gear": "spur",
+            "reason": "default",
+        }
         self.last_signals: TurnSignals | None = None
         self.last_drift_response: DriftResponse | None = None
         self.drift_pressure: float = 0.0
@@ -604,6 +612,11 @@ class JLEngineCore:
         self.current_gait = "walk"
         self.current_rhythm_mode = "flop"
         self.current_cognitive_state = None
+        self.current_cognitive_gear = {
+            "active_label": "TASK_FLOW",
+            "runtime_gear": "spur",
+            "reason": "default",
+        }
         self.last_signals = None
         self.last_drift_response = None
         self.drift_pressure = 0.0
@@ -1162,12 +1175,27 @@ class JLEngineCore:
         self._update_dynamic_aperture()
 
         # 5) Cognitive mode selection
+        focus_level = 0.0
+        overload_level = 0.0
+        try:
+            focus_level = float(self.emotional_aperture.get_focus_level())
+            overload_level = float(self.emotional_aperture.get_overload_level())
+        except (TypeError, ValueError) as exc:
+            logger.exception("[EngineCore] Failed to read cognitive load state: %s", exc)
+        cognitive_gear = select_active_runtime_gear(
+            self.current_agent_data,
+            user_text=user_text,
+            context=context,
+            focus_level=focus_level,
+            overload_level=overload_level,
+        )
         mode_state = self.cognitive_selector.select_modes(
-            gear="spur",
-            focus_level=self.emotional_aperture.get_focus_level(),
-            overload_level=self.emotional_aperture.get_overload_level(),
+            gear=cognitive_gear["runtime_gear"],
+            focus_level=focus_level,
+            overload_level=overload_level,
         )
         self.current_cognitive_state = mode_state
+        self.current_cognitive_gear = dict(cognitive_gear)
 
         # pick dominant mode label for HUD
         dominant_mode = self.cognitive_selector.get_dominant_mode()
@@ -1300,12 +1328,6 @@ class JLEngineCore:
 
         task_intent = str(context.get("task_intent") or "general")
         action_type = self._infer_action_type(task_intent, context)
-        overload_level = 0.0
-        try:
-            overload_level = float(self.emotional_aperture.get_overload_level())
-        except (TypeError, ValueError) as exc:
-            logger.exception("[EngineCore] Failed to read overload level: %s", exc)
-            overload_level = 0.0
         risk_level, cognitive_load = self._derive_temporal_risk(
             signals, self.drift_pressure, overload_level
         )
@@ -1361,6 +1383,8 @@ class JLEngineCore:
             behavior_state=behavior_state,
             aperture_state=aperture_state,
             cognitive_mode=dominant_mode,
+            cognitive_state=mode_state,
+            cognitive_gear=self.current_cognitive_gear,
             rhythm_mode=self.current_rhythm_mode,
             gait=self.current_gait,
             memory_ctx=memory_ctx,
@@ -1521,6 +1545,12 @@ class JLEngineCore:
             "behavior_blend": behavior_blend,
             "aperture_state": aperture_state,
             "cognitive_mode": dominant_mode,
+            "cognitive_modes": (
+                dict(mode_state.active_modes)
+                if isinstance(mode_state, CognitiveModeState)
+                else {}
+            ),
+            "cognitive_gear": dict(self.current_cognitive_gear),
             "drift": {
                 "pressure": self.drift_pressure,
                 "action": drift_response.action_level,
@@ -2167,6 +2197,8 @@ class JLEngineCore:
         behavior_state: Any,
         aperture_state: Dict[str, Any],
         cognitive_mode: str,
+        cognitive_state: CognitiveModeState | None,
+        cognitive_gear: Dict[str, Any] | None,
         rhythm_mode: str,
         gait: str,
         memory_ctx: Dict[str, Any],
@@ -2330,14 +2362,45 @@ class JLEngineCore:
 
         preferred_gears = _as_list(cognitive_gears.get("preferred_gears"))
         active_modes = _as_list(cognitive_modes.get("active_modes"))
+        runtime_gear_label = _pick_str((cognitive_gear or {}).get("active_label"))
+        runtime_gear_class = _pick_str((cognitive_gear or {}).get("runtime_gear"))
+        runtime_gear_reason = _pick_str((cognitive_gear or {}).get("reason"))
+        mode_weights = (
+            cognitive_state.active_modes
+            if isinstance(cognitive_state, CognitiveModeState)
+            and isinstance(cognitive_state.active_modes, dict)
+            else {}
+        )
         tonal_range = _as_list(gait_profile.get("tonal_range"))
         signature_moves = _as_list(rhythm_profile.get("signature_moves"))
-        if preferred_gears or active_modes or tonal_range or signature_moves:
+        if (
+            preferred_gears
+            or active_modes
+            or tonal_range
+            or signature_moves
+            or runtime_gear_label
+            or mode_weights
+        ):
             system_chunks.append("\nEXPRESSION PROFILE:")
             if preferred_gears:
                 system_chunks.append(f"- Preferred gears: {', '.join(preferred_gears[:6])}")
+            if runtime_gear_label:
+                line = f"- Active gear: {runtime_gear_label}"
+                if runtime_gear_class:
+                    line += f" -> {runtime_gear_class}"
+                if runtime_gear_reason:
+                    line += f" ({runtime_gear_reason})"
+                system_chunks.append(line)
             if active_modes:
                 system_chunks.append(f"- Active modes: {', '.join(active_modes[:6])}")
+            if mode_weights:
+                live_modes = ", ".join(
+                    f"{name}={round(float(weight), 2)}"
+                    for name, weight in sorted(
+                        mode_weights.items(), key=lambda item: item[1], reverse=True
+                    )[:4]
+                )
+                system_chunks.append(f"- Live mode blend: {live_modes}")
             if tonal_range:
                 system_chunks.append(f"- Tonal range: {', '.join(tonal_range[:6])}")
             if signature_moves:

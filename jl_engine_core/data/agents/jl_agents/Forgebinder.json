@@ -61,6 +61,9 @@
   },
   "meta": {
     "source": "manual_agent",
-    "domain": "local_tools"
+    "domain": "local_tools",
+    "license_reference": "PolyForm Noncommercial 1.0.0",
+    "license_file": "LICENSE.md",
+    "proprietary_notice": "This JL Engine agent/persona configuration is proprietary project content. See LICENSE.md for permitted use and distribution terms."
   }
 }

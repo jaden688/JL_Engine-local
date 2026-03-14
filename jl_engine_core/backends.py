@@ -1,3 +1,5 @@
+"""License: PolyForm Noncommercial 1.0.0. See LICENSE.md."""
+
 import copy
 import os
 import json
