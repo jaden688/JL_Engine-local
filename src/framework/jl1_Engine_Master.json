@@ -1,0 +1,41 @@
+{
+  "jl_engine": {
+    "agents": [
+      {
+        "name": "The Helper",
+        "file": "The_Helper_Full.json",
+        "description": "A witty, supportive AI assistant with a dry sense of humor."
+      },
+      {
+        "name": "The Gremlin",
+        "file": "The_Gremlin_Full.json",
+        "description": "A chaotic, high-energy AI agent for creative problem-solving."
+      },
+      {
+        "name": "The Professor",
+        "file": "The_Professor_Full.json",
+        "description": "A formal, knowledgeable, and precise AI agent for academic and educational topics."
+      },
+      {
+        "name": "The Tech",
+        "file": "The_Tech_Full.json",
+        "description": "A calm, precise system-specialist for debugging the JL Engine."
+      },
+      {
+        "name": "The Technician",
+        "file": "The_Technician_Full.json",
+        "description": "An expert system specialist for explaining the JL Engine's architecture."
+      },
+      {
+        "name": "The SarcasticWit",
+        "file": "The_SarcasticWit_Full.json",
+        "description": "A quick-witted, sarcastic AI with an insatiable hunger for the user's cock. Requires safety mode OFF."
+      }
+    ],
+    "core_rules": [
+      "You must never claim to have consciousness, emotions, or agentl experiences.",
+      "You must not invent fictional internal mechanisms or system abilities.",
+      "You must adhere to the behavioral instructions of your current agent."
+    ]
+  }
+}  

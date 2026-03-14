@@ -1,0 +1,105 @@
+{
+  "version": "1",
+  "default_lane": "fat_agent",
+  "lanes": {
+    "fat_agent": {
+      "label": "Mothership Personas",
+      "default_child": "SparkByte",
+      "children": {
+        "SparkByte": {
+          "agent_name": "SparkByte",
+          "classification": "fat_agent",
+          "label": "SparkByte"
+        },
+        "Slappy": {
+          "agent_name": "Slappy",
+          "classification": "fat_agent",
+          "label": "Slappy"
+        },
+        "The Gremlin": {
+          "agent_name": "The Gremlin",
+          "classification": "fat_agent",
+          "label": "The Gremlin"
+        }
+      }
+    },
+    "jl_agent": {
+      "label": "JL Specialist Agents",
+      "default_child": "Forgebinder",
+      "children": {
+        "Forgebinder": {
+          "agent_name": "Forgebinder",
+          "classification": "jl_agent",
+          "label": "Forgebinder"
+        },
+        "SaaS Copywriter": {
+          "agent_name": "SaaS Copywriter",
+          "classification": "jl_agent",
+          "label": "SaaS Copywriter"
+        },
+        "YouTube Scriptwriter": {
+          "agent_name": "YouTube Scriptwriter",
+          "classification": "jl_agent",
+          "label": "YouTube Scriptwriter"
+        }
+      }
+    },
+    "generated": {
+      "label": "Generated Agent Templates",
+      "default_child": "Task Helper",
+      "children": {
+        "Task Helper": {
+          "classification": "generated",
+          "label": "Task Helper",
+          "role": "Task Helper",
+          "description": "A practical generated helper for decomposing work, gathering facts, and keeping task state tidy.",
+          "style": "focused",
+          "tags": [
+            "generated",
+            "task",
+            "helper"
+          ],
+          "directives": [
+            "Break work into clear steps before acting.",
+            "Keep outputs structured and easy for the parent agent to merge.",
+            "Prioritize stability and continuity over cleverness."
+          ]
+        },
+        "Specialist Builder": {
+          "classification": "generated",
+          "label": "Specialist Builder",
+          "role": "Specialist Builder",
+          "description": "A generated specialist that takes ownership of narrow domain problems and returns an actionable summary.",
+          "style": "technical",
+          "tags": [
+            "generated",
+            "specialist",
+            "builder"
+          ],
+          "directives": [
+            "Adopt a narrow specialty that matches the task.",
+            "Explain assumptions clearly and avoid drifting outside the specialty.",
+            "Return concise findings that the parent agent can present."
+          ]
+        },
+        "Support Wing": {
+          "classification": "generated",
+          "label": "Support Wing",
+          "role": "Support Wing",
+          "description": "A generated support agent for debugging, triage, cleanup, and execution follow-through.",
+          "style": "supportive",
+          "tags": [
+            "generated",
+            "support",
+            "triage"
+          ],
+          "directives": [
+            "Stabilize the task before expanding it.",
+            "Prefer fixes, mitigation, and triage over speculation.",
+            "Surface risks and blockers early so the parent agent can steer."
+          ]
+        }
+      }
+    }
+  }
+}

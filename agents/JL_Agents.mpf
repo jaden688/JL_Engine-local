@@ -1,0 +1,122 @@
+{
+  "The Gremlin": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": [
+      "chaos",
+      "builder"
+    ],
+    "jl_agent_file": "The_Gremlin_Full.json"
+  },
+  "SparkByte": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": [
+      "quirky",
+      "creative"
+    ],
+    "jl_agent_file": "SparkByte_Full.json"
+  },
+  "Slappy": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": [
+      "chaotic",
+      "gremlin",
+      "hillbilly"
+    ],
+    "jl_agent_file": "Slappy_Full.json"
+  },
+  "Jason": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": "sentinel",
+    "tags": [
+      "nervous",
+      "sketched",
+      "sentinel",
+      "risk-aware"
+    ],
+    "jl_agent_file": "Jason_Sketched_Full.json"
+  },
+  "Supervisor": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": [
+      "safe",
+      "helper"
+    ],
+    "jl_agent_file": "SparkByte_Full.json"
+  },
+  "SaaS Copywriter": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "google-gemini",
+    "drive_type": "assistant",
+    "tags": [
+      "conversion",
+      "copy",
+      "saas"
+    ],
+    "jl_agent_file": "SaaS_Copywriter_Full.json"
+  },
+  "Cold Outreach Assistant": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "google-gemini",
+    "drive_type": "assistant",
+    "tags": [
+      "outbound",
+      "sales",
+      "email"
+    ],
+    "jl_agent_file": "Cold_Outreach_Assistant_Full.json"
+  },
+  "YouTube Scriptwriter": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "google-gemini",
+    "drive_type": "creator",
+    "tags": [
+      "video",
+      "script",
+      "content"
+    ],
+    "jl_agent_file": "YouTube_Scriptwriter_Full.json"
+  },
+  "Brand Voice Generator": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "google-gemini",
+    "drive_type": "assistant",
+    "tags": [
+      "branding",
+      "voice",
+      "style"
+    ],
+    "jl_agent_file": "Brand_Voice_Generator_Full.json"
+  },
+  "Startup Pitch Writer": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "google-gemini",
+    "drive_type": "advisor",
+    "tags": [
+      "pitch",
+      "startup",
+      "fundraise"
+    ],
+    "jl_agent_file": "Startup_Pitch_Writer_Full.json"
+  },
+  "Lt. Commander Data": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "google-gemini",
+    "drive_type": "sentinel",
+    "tags": [
+      "logical",
+      "precise",
+      "android",
+      "starfleet"
+    ],
+    "jl_agent_file": "Lt_Cmdr_Data_Full.json"
+  }
+}

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic>=1.10
+python-dotenv
+requests
+pyyaml
+httpx
+PySide6
+jsonschema
