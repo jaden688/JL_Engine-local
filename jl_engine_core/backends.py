@@ -125,6 +125,12 @@ DEFAULT_GEMINI_TIMEOUT = 60
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_OPENAI_MODEL = "gpt-5.2"
 DEFAULT_OPENAI_TIMEOUT = 90
+DEFAULT_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
+DEFAULT_TOGETHER_BASE_URL = "https://api.together.xyz/v1"
+DEFAULT_TOGETHER_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 DEFAULT_OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_OPENROUTER_MODEL = "openrouter/auto"
 DEFAULT_OPENROUTER_TIMEOUT = 90
@@ -301,6 +307,63 @@ BACKEND_REGISTRY = {
         "openai_base_url": DEFAULT_OPENAI_BASE_URL,
         "openai_model": DEFAULT_OPENAI_MODEL,
         "openai_timeout": GEMINI_LOCAL_CONFIG.get("openai_timeout") or DEFAULT_OPENAI_TIMEOUT,
+    },
+    "groq": {
+        "id": "groq",
+        "label": "Groq",
+        "provider": "openai",
+        "openai_api_key": GEMINI_LOCAL_CONFIG.get("groq_api_key")
+        or os.getenv("GROQ_API_KEY")
+        or os.getenv("OPENAI_API_KEY"),
+        "openai_base_url": _first_non_empty(
+            os.getenv("JL_GROQ_BASE_URL"),
+            GEMINI_LOCAL_CONFIG.get("groq_base_url"),
+            fallback=DEFAULT_GROQ_BASE_URL,
+        ),
+        "openai_model": _first_non_empty(
+            os.getenv("JL_GROQ_MODEL"),
+            GEMINI_LOCAL_CONFIG.get("groq_model"),
+            fallback=DEFAULT_GROQ_MODEL,
+        ),
+        "openai_timeout": GEMINI_LOCAL_CONFIG.get("groq_timeout") or DEFAULT_OPENAI_TIMEOUT,
+    },
+    "deepseek": {
+        "id": "deepseek",
+        "label": "DeepSeek",
+        "provider": "openai",
+        "openai_api_key": GEMINI_LOCAL_CONFIG.get("deepseek_api_key")
+        or os.getenv("DEEPSEEK_API_KEY")
+        or os.getenv("OPENAI_API_KEY"),
+        "openai_base_url": _first_non_empty(
+            os.getenv("JL_DEEPSEEK_BASE_URL"),
+            GEMINI_LOCAL_CONFIG.get("deepseek_base_url"),
+            fallback=DEFAULT_DEEPSEEK_BASE_URL,
+        ),
+        "openai_model": _first_non_empty(
+            os.getenv("JL_DEEPSEEK_MODEL"),
+            GEMINI_LOCAL_CONFIG.get("deepseek_model"),
+            fallback=DEFAULT_DEEPSEEK_MODEL,
+        ),
+        "openai_timeout": GEMINI_LOCAL_CONFIG.get("deepseek_timeout") or DEFAULT_OPENAI_TIMEOUT,
+    },
+    "together": {
+        "id": "together",
+        "label": "Together AI",
+        "provider": "openai",
+        "openai_api_key": GEMINI_LOCAL_CONFIG.get("together_api_key")
+        or os.getenv("TOGETHER_API_KEY")
+        or os.getenv("OPENAI_API_KEY"),
+        "openai_base_url": _first_non_empty(
+            os.getenv("JL_TOGETHER_BASE_URL"),
+            GEMINI_LOCAL_CONFIG.get("together_base_url"),
+            fallback=DEFAULT_TOGETHER_BASE_URL,
+        ),
+        "openai_model": _first_non_empty(
+            os.getenv("JL_TOGETHER_MODEL"),
+            GEMINI_LOCAL_CONFIG.get("together_model"),
+            fallback=DEFAULT_TOGETHER_MODEL,
+        ),
+        "openai_timeout": GEMINI_LOCAL_CONFIG.get("together_timeout") or DEFAULT_OPENAI_TIMEOUT,
     },
     "openrouter": {
         "id": "openrouter",

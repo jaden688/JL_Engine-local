@@ -287,3 +287,56 @@ def test_runtime_mode_hybrid_without_provider_falls_back_to_local(tmp_path, monk
     assert result["fallback_reason"] == "missing_external_provider_config"
     assert recorded == {"brain_backend_id": "ollama-local", "tool_backend_id": "ollama-local"}
     assert saved["jl_engine"]["runtime_mode"] == "hybrid"
+
+
+def test_new_openai_compatible_backends_are_registered():
+    for backend_id in ("groq", "deepseek", "together"):
+        cfg = core_backends.BACKEND_REGISTRY.get(backend_id)
+        assert isinstance(cfg, dict)
+        assert cfg.get("provider") == "openai"
+        assert str(cfg.get("openai_base_url") or "").strip()
+        assert str(cfg.get("openai_model") or "").strip()
+
+
+def test_runtime_mode_status_accepts_openai_compatible_external_backend(monkeypatch):
+    monkeypatch.setattr(backend_controller, "get_runtime_mode", lambda: "hybrid")
+    monkeypatch.setattr(backend_controller, "has_external_provider_configured", lambda: True)
+    monkeypatch.setattr(backend_controller.core_backends, "brain_backend_id", "groq")
+    monkeypatch.setattr(backend_controller.core_backends, "tool_backend_id", "ollama-local")
+
+    status = backend_controller.get_runtime_mode_status()
+
+    assert status["configured_mode"] == "hybrid"
+    assert status["effective_mode"] == "hybrid"
+    assert status["brain_backend_id"] == "groq"
+    assert status["tool_backend_id"] == "ollama-local"
+
+
+def test_effective_model_name_reads_openai_model_for_non_openai_id(monkeypatch):
+    monkeypatch.setattr(
+        backend_controller,
+        "get_runtime_mode_status",
+        lambda: {
+            "configured_mode": "hybrid",
+            "effective_mode": "hybrid",
+            "fallback_reason": None,
+            "brain_backend_id": "together",
+            "tool_backend_id": "ollama-local",
+        },
+    )
+    monkeypatch.setattr(
+        backend_controller,
+        "BACKEND_REGISTRY",
+        {
+            "together": {
+                "id": "together",
+                "provider": "openai",
+                "openai_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            }
+        },
+    )
+
+    assert (
+        backend_controller.get_effective_model_name()
+        == "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+    )
