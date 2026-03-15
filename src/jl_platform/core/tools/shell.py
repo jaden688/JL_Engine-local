@@ -8,6 +8,10 @@ from jl_platform.core.models import ToolSpec
 from jl_platform.core.tools.cc import run_cc_command
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
 def _normalize_windows_command(command: str) -> str:
     normalized = str(command or "").strip()
     if not normalized:
@@ -61,7 +65,7 @@ def run_shell(payload: dict) -> dict:
     # Keep compatibility with run_shell while routing execution through CC runtime.
     command = payload.get("command")
     shell = True
-    if os.name == "nt":
+    if _is_windows():
         command = _normalize_windows_command(str(command or ""))
         shell_host = shutil.which("pwsh") or shutil.which("powershell") or "powershell"
         command = [
