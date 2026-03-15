@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import ntpath
 import os
 import re
 from dataclasses import dataclass, field
@@ -947,7 +948,7 @@ class InterpreterSession:
         if pending.tool == "bridge_local":
             mode = str(pending.input.get("mode") or "").strip().lower()
             path = self._result_path(tool_result)
-            path_name = re.split(r"[\\/]", str(path).rstrip("\\/"))[-1] if path else ""
+            path_name = ntpath.basename(str(path).rstrip("\\/")) if path else ""
             if mode == "fs_mkdir":
                 if not visible or (path and path not in visible and path_name and path_name not in visible):
                     fallback = f"Created folder at {path or pending.input.get('data', {}).get('path') or 'the requested path'}."

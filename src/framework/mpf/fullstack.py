@@ -8,8 +8,11 @@ can build its jl-agent menu without scanning the folder directly.
 
 from dataclasses import dataclass, field
 import json
+import logging
 import os
 from typing import Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -63,35 +66,35 @@ def load_mpf_registry(registry_path: str) -> Dict[str, MPFProfile]:
         A dict mapping display name -> MPFProfile.
     """
     if not registry_path:
-        print("[MPF] No registry path provided.")
+        logger.warning("[MPF] No registry path provided.")
         return {}
 
     resolved_path = _resolve_registry_path(registry_path)
 
     if not os.path.exists(resolved_path):
-        print(f"[MPF] Registry file not found at '{resolved_path}'")
+        logger.warning("[MPF] Registry file not found at '%s'", resolved_path)
         return {}
 
     try:
         with open(resolved_path, "r", encoding="utf-8") as f:
             raw_registry = json.load(f)
     except Exception as exc:
-        print(f"[MPF] Failed to read registry '{resolved_path}': {exc}")
+        logger.error("[MPF] Failed to read registry '%s': %s", resolved_path, exc)
         return {}
 
     if not isinstance(raw_registry, dict):
-        print(f"[MPF] Invalid registry format in '{resolved_path}' (expected an object).")
+        logger.error("[MPF] Invalid registry format in '%s' (expected an object).", resolved_path)
         return {}
 
     profiles: Dict[str, MPFProfile] = {}
     for display_name, entry in raw_registry.items():
         if not isinstance(entry, dict):
-            print(f"[MPF] Skipping '{display_name}' - entry must be an object.")
+            logger.warning("[MPF] Skipping '%s' - entry must be an object.", display_name)
             continue
 
         jl_agent_file = entry.get("jl_agent_file") or entry.get("agent_file")
         if not jl_agent_file:
-            print(f"[MPF] Skipping '{display_name}' - missing 'jl_agent_file'.")
+            logger.warning("[MPF] Skipping '%s' - missing 'jl_agent_file'.", display_name)
             continue
 
         profiles[display_name] = MPFProfile(
@@ -105,5 +108,5 @@ def load_mpf_registry(registry_path: str) -> Dict[str, MPFProfile]:
             aliases=entry.get("aliases") or [],
         )
 
-    print(f"[MPF] Loaded {len(profiles)} jl-agent profiles from '{resolved_path}'")
+    logger.info("[MPF] Loaded %d jl-agent profiles from '%s'", len(profiles), resolved_path)
     return profiles
