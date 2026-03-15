@@ -139,54 +139,90 @@ def _thinking_pause_seconds(interval_seconds: float) -> float:
     return max(2.0, min(12.0, base * random.uniform(1.2, 2.0)))
 
 
-def mutate_function_logic(copy_root: Path) -> MutationResult | None:
-    """Use LLM to rewrite actual Python function logic in engine_core.py."""
-    engine_path = copy_root / "jl_engine_core" / "engine_core.py"
-    if not engine_path.exists():
+def _mutate_file_logic(
+    file_path: Path,
+    target_functions: list[str],
+    description_prefix: str,
+    prompt_template: str,
+) -> MutationResult | None:
+    """Use LLM to rewrite a randomly selected function's logic in the given file."""
+    if not file_path.exists():
         return None
-    
-    old_text = _read_text(engine_path)
-    
-    func_name = random.choice(TARGET_FUNCTIONS_ENGINE)
+
+    old_text = _read_text(file_path)
+
+    func_name = random.choice(target_functions)
     old_func = _extract_function(old_text, func_name)
     if not old_func:
         return None
-    
-    prompt = f"""You are a Python code editor. CRITICAL: Maintain EXACT indentation using spaces (4 spaces per indent level).
 
-Rewrite this Python function to change its LOGIC:
-- Keep EXACT function signature: def {func_name}(...)
-- Use EXACTLY 4 spaces for each indentation level
-- Change the function's behavior/logic, not just variable names
-- Keep same number of lines approximately
-- Do NOT change weights, parameters, thresholds, or sampling knobs (temperature/top_p/strain/invariants)
-- Return ONLY raw Python code, NO markdown, NO backticks
-
-Original (note the 4-space indentation):
-{old_func}
-
-Rewritten with different logic:"""
+    prompt = prompt_template.format(func_name=func_name, old_func=old_func)
 
     new_func = _call_ollama(prompt)
     if not new_func:
         return None
-    
+
     new_func = _clean_code(new_func)
-    
+
     if f"def {func_name}" not in new_func:
         return None
-    
+
     new_text = old_text[:old_text.find(old_func)] + new_func + "\n" + old_text[old_text.find(old_func) + len(old_func):]
-    
+
     if new_text == old_text:
         return None
-    
-    _write_text(engine_path, new_text)
+
+    _write_text(file_path, new_text)
     return MutationResult(
-        file_path=engine_path,
-        description=f"LLM rewrote {func_name} logic",
+        file_path=file_path,
+        description=f"{description_prefix} rewrote {func_name} logic",
         old_text=old_text,
         new_text=new_text,
+    )
+
+
+_PROMPT_ENGINE = (
+    "You are a Python code editor. CRITICAL: Maintain EXACT indentation using spaces (4 spaces per indent level).\n"
+    "\n"
+    "Rewrite this Python function to change its LOGIC:\n"
+    "- Keep EXACT function signature: def {func_name}(...)\n"
+    "- Use EXACTLY 4 spaces for each indentation level\n"
+    "- Change the function's behavior/logic, not just variable names\n"
+    "- Keep same number of lines approximately\n"
+    "- Do NOT change weights, parameters, thresholds, or sampling knobs (temperature/top_p/strain/invariants)\n"
+    "- Return ONLY raw Python code, NO markdown, NO backticks\n"
+    "\n"
+    "Original (note the 4-space indentation):\n"
+    "{old_func}\n"
+    "\n"
+    "Rewritten with different logic:"
+)
+
+_PROMPT_TQA = (
+    "You are a Python code editor. Rewrite this Python function to change its LOGIC and BEHAVIOR (not just variable names).\n"
+    "\n"
+    "Requirements:\n"
+    "- Keep the SAME function signature (def {func_name}(...) )\n"
+    "- Keep SAME indentation (4 spaces)\n"
+    "- Change HOW the function works, not just what it returns\n"
+    "- Add new behavior, different conditions, alternative logic paths\n"
+    "- Do NOT change weights, parameters, thresholds, or sampling knobs\n"
+    "- Return ONLY raw Python code, NO markdown, NO explanations\n"
+    "\n"
+    "Original function:\n"
+    "{old_func}\n"
+    "\n"
+    "Rewrite with different logic:"
+)
+
+
+def mutate_function_logic(copy_root: Path) -> MutationResult | None:
+    """Use LLM to rewrite actual Python function logic in engine_core.py."""
+    return _mutate_file_logic(
+        file_path=copy_root / "jl_engine_core" / "engine_core.py",
+        target_functions=TARGET_FUNCTIONS_ENGINE,
+        description_prefix="LLM",
+        prompt_template=_PROMPT_ENGINE,
     )
 
 
@@ -289,52 +325,11 @@ Find and modify a condition:"""
 
 def mutate_tqa_logic(copy_root: Path) -> MutationResult | None:
     """Use LLM to rewrite actual Python function logic in temporal_quantum_agent.py."""
-    tqa_path = copy_root / "jl_engine_core" / "temporal_quantum_agent.py"
-    if not tqa_path.exists():
-        return None
-    
-    old_text = _read_text(tqa_path)
-    
-    func_name = random.choice(TARGET_FUNCTIONS_TQA)
-    old_func = _extract_function(old_text, func_name)
-    if not old_func:
-        return None
-    
-    prompt = f"""You are a Python code editor. Rewrite this Python function to change its LOGIC and BEHAVIOR (not just variable names).
-
-Requirements:
-- Keep the SAME function signature (def {func_name}(...) )
-- Keep SAME indentation (4 spaces)
-- Change HOW the function works, not just what it returns
-- Add new behavior, different conditions, alternative logic paths
-- Do NOT change weights, parameters, thresholds, or sampling knobs
-- Return ONLY raw Python code, NO markdown, NO explanations
-
-Original function:
-{old_func}
-
-Rewrite with different logic:"""
-
-    new_func = _call_ollama(prompt)
-    if not new_func:
-        return None
-    
-    new_func = _clean_code(new_func)
-    
-    if f"def {func_name}" not in new_func:
-        return None
-    
-    new_text = old_text[:old_text.find(old_func)] + new_func + "\n" + old_text[old_text.find(old_func) + len(old_func):]
-    
-    if new_text == old_text:
-        return None
-    
-    _write_text(tqa_path, new_text)
-    return MutationResult(
-        file_path=tqa_path,
-        description=f"LLM rewrote TQA {func_name} logic",
-        old_text=old_text,
-        new_text=new_text,
+    return _mutate_file_logic(
+        file_path=copy_root / "jl_engine_core" / "temporal_quantum_agent.py",
+        target_functions=TARGET_FUNCTIONS_TQA,
+        description_prefix="LLM rewrote TQA",
+        prompt_template=_PROMPT_TQA,
     )
 
 

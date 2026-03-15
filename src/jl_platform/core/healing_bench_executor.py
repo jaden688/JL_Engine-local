@@ -483,16 +483,23 @@ class HealingBenchExecutor:
             if ch == "\x03":
                 raise KeyboardInterrupt
 
-    def _pick_slash_command(self) -> Optional[str]:
-        items = self._slash_menu_items()
+    def _pick_from_menu(
+        self,
+        items: list[tuple[str, str]],
+        title: str,
+        list_heading: str,
+        prompt_text: str,
+        col_width: int,
+    ) -> Optional[str]:
+        """Display an interactive menu and return the selected item name, or None on cancel."""
         if not items:
             return None
         # Fallback for non-Windows or terminals without msvcrt.
         if msvcrt is None:
-            print("\nSlash commands:")
+            print(f"\n{list_heading}:")
             for idx, (name, desc) in enumerate(items, start=1):
-                print(f"  {idx}. {name:<11} {desc}")
-            raw = input("Select command number (blank to cancel): ").strip()
+                print(f"  {idx}. {name:<{col_width}} {desc}")
+            raw = input(f"{prompt_text} (blank to cancel): ").strip()
             if not raw:
                 return None
             try:
@@ -504,7 +511,7 @@ class HealingBenchExecutor:
             return items[selected - 1][0]
 
         selected = 0
-        print("\n\033[96m[/ menu]\033[0m Use up/down then Enter. Esc to cancel.")
+        print(f"\n\033[96m[{title}]\033[0m Use up/down then Enter. Esc to cancel.")
         print("")
         for _ in items:
             print("")
@@ -513,9 +520,9 @@ class HealingBenchExecutor:
             for idx, (name, desc) in enumerate(items):
                 marker = ">" if idx == selected else " "
                 if idx == selected:
-                    line = f"\033[1;95m {marker} {name:<11}\033[0m {desc}"
+                    line = f"\033[1;95m {marker} {name:<{col_width}}\033[0m {desc}"
                 else:
-                    line = f" {marker} {name:<11} {desc}"
+                    line = f" {marker} {name:<{col_width}} {desc}"
                 sys.stdout.write("\033[2K\r" + line + "\n")
             sys.stdout.flush()
 
@@ -530,6 +537,15 @@ class HealingBenchExecutor:
                 return None
             if key == "enter":
                 return items[selected][0]
+
+    def _pick_slash_command(self) -> Optional[str]:
+        return self._pick_from_menu(
+            items=self._slash_menu_items(),
+            title="/ menu",
+            list_heading="Slash commands",
+            prompt_text="Select command number",
+            col_width=11,
+        )
 
     def _pick_worker_agent(self) -> Optional[str]:
         catalog = [entry for entry in self._load_agent_catalog() if entry.get("exists")]
@@ -543,49 +559,23 @@ class HealingBenchExecutor:
                     str(entry.get("jl_agent_file") or entry.get("agent_file") or ""),
                 )
             )
+        return self._pick_from_menu(
+            items=items,
+            title="agent menu",
+            list_heading="Worker agents",
+            prompt_text="Select agent number",
+            col_width=28,
+        )
 
-        if msvcrt is None:
-            print("\nWorker agents:")
-            for idx, (name, desc) in enumerate(items, start=1):
-                print(f"  {idx}. {name:<28} {desc}")
-            raw = input("Select agent number (blank to cancel): ").strip()
-            if not raw:
-                return None
-            try:
-                selected = int(raw)
-            except ValueError:
-                return None
-            if selected < 1 or selected > len(items):
-                return None
-            return items[selected - 1][0]
-
-        selected = 0
-        print("\n\033[96m[agent menu]\033[0m Use up/down then Enter. Esc to cancel.")
-        print("")
-        for _ in items:
-            print("")
-        while True:
-            sys.stdout.write(f"\033[{len(items)}A")
-            for idx, (name, desc) in enumerate(items):
-                marker = ">" if idx == selected else " "
-                if idx == selected:
-                    line = f"\033[1;95m {marker} {name:<28}\033[0m {desc}"
-                else:
-                    line = f" {marker} {name:<28} {desc}"
-                sys.stdout.write("\033[2K\r" + line + "\n")
-            sys.stdout.flush()
-
-            key = self._read_menu_key()
-            if key == "up":
-                selected = (selected - 1) % len(items)
-                continue
-            if key == "down":
-                selected = (selected + 1) % len(items)
-                continue
-            if key == "esc":
-                return None
-            if key == "enter":
-                return items[selected][0]
+    def _handle_toggle_command(self, arg: str, attr: str, label: str) -> None:
+        """Toggle a boolean attribute based on arg ('on'/'off') or flip it when arg is empty."""
+        if arg.lower() in ("on", "1", "true", "yes", "y"):
+            setattr(self, attr, True)
+        elif arg.lower() in ("off", "0", "false", "no", "n"):
+            setattr(self, attr, False)
+        else:
+            setattr(self, attr, not getattr(self, attr))
+        self.print_system(f"{label} {'ON' if getattr(self, attr) else 'OFF'}.")
 
     def _handle_slash_command(self, raw_input: str) -> str:
         text = str(raw_input or "").strip()
@@ -697,35 +687,15 @@ class HealingBenchExecutor:
             return "handled"
 
         if cmd == "/confirm":
-            if arg.lower() in ("on", "1", "true", "yes", "y"):
-                self.human_verification = True
-            elif arg.lower() in ("off", "0", "false", "no", "n"):
-                self.human_verification = False
-            else:
-                self.human_verification = not self.human_verification
-            self.print_system(
-                f"Execute confirmation {'ON' if self.human_verification else 'OFF'}."
-            )
+            self._handle_toggle_command(arg, "human_verification", "Execute confirmation")
             return "handled"
 
         if cmd == "/plan":
-            if arg.lower() in ("on", "1", "true", "yes", "y"):
-                self.show_plan = True
-            elif arg.lower() in ("off", "0", "false", "no", "n"):
-                self.show_plan = False
-            else:
-                self.show_plan = not self.show_plan
-            self.print_system(f"Plan preview {'ON' if self.show_plan else 'OFF'}.")
+            self._handle_toggle_command(arg, "show_plan", "Plan preview")
             return "handled"
 
         if cmd == "/raw":
-            if arg.lower() in ("on", "1", "true", "yes", "y"):
-                self.show_raw_output = True
-            elif arg.lower() in ("off", "0", "false", "no", "n"):
-                self.show_raw_output = False
-            else:
-                self.show_raw_output = not self.show_raw_output
-            self.print_system(f"Raw output {'ON' if self.show_raw_output else 'OFF'}.")
+            self._handle_toggle_command(arg, "show_raw_output", "Raw output")
             return "handled"
 
         if cmd == "/memory":
