@@ -11,6 +11,7 @@ def test_run_shell_routes_windows_commands_through_powershell(monkeypatch) -> No
         return {"stdout": "ok", "stderr": "", "returncode": 0, "ok": True, "duration_ms": 1.0}
 
     monkeypatch.setattr(shell_module, "run_cc_command", fake_run_cc_command)
+    monkeypatch.setattr(shell_module, "_is_windows", lambda: True)
 
     result = shell_module.run_shell({"command": "Get-Process -Name 'powershell'"})
 
@@ -29,6 +30,7 @@ def test_run_shell_normalizes_bad_select_format_power_shell_pattern(monkeypatch)
         return {"stdout": "ok", "stderr": "", "returncode": 0, "ok": True, "duration_ms": 1.0}
 
     monkeypatch.setattr(shell_module, "run_cc_command", fake_run_cc_command)
+    monkeypatch.setattr(shell_module, "_is_windows", lambda: True)
 
     shell_module.run_shell(
         {
