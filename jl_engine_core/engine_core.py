@@ -2253,6 +2253,52 @@ class JLEngineCore:
                 return [text] if text else []
             return []
 
+        def _merge_unique(primary: list[str], secondary: list[str]) -> list[str]:
+            merged: list[str] = []
+            seen: set[str] = set()
+            for item in [*primary, *secondary]:
+                key = item.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(item)
+            return merged
+
+        # Task-specific adaptation for agents that provide engine_alignment.task_adaptation.
+        task_adaptation: dict[str, Any] = {}
+        if isinstance(engine_alignment, dict):
+            maybe_task_adaptation = engine_alignment.get("task_adaptation")
+            if isinstance(maybe_task_adaptation, dict):
+                task_adaptation = maybe_task_adaptation
+        active_task_profile_id = ""
+        active_task_profile: dict[str, Any] = {}
+        if bool(task_adaptation.get("enabled")):
+            profile_map: dict[str, Any] = {}
+            maybe_profile_map = task_adaptation.get("profiles")
+            if isinstance(maybe_profile_map, dict):
+                profile_map = maybe_profile_map
+
+            signal_map: dict[str, Any] = {}
+            maybe_signal_map = task_adaptation.get("task_signal_map")
+            if isinstance(maybe_signal_map, dict):
+                signal_map = maybe_signal_map
+            text = str(user_text or "").lower()
+            for raw_signal, profile_id in signal_map.items():
+                pid = str(profile_id or "").strip()
+                if not pid or not isinstance(profile_map.get(pid), dict):
+                    continue
+                keywords = [s.strip().lower() for s in str(raw_signal or "").split("|") if s.strip()]
+                if keywords and any(keyword in text for keyword in keywords):
+                    active_task_profile_id = pid
+                    active_task_profile = profile_map.get(pid) or {}
+                    break
+
+            if not active_task_profile:
+                default_profile = str(task_adaptation.get("default_profile") or "").strip()
+                if default_profile and isinstance(profile_map.get(default_profile), dict):
+                    active_task_profile_id = default_profile
+                    active_task_profile = profile_map.get(default_profile) or {}
+
         name = _pick_str(
             identity.get("name"),
             agent_source.get("display_name"),
@@ -2329,19 +2375,28 @@ class JLEngineCore:
                 system_chunks.append(f"- Dynamic trait weight: {dyn_weight}")
 
         preferred_gears = _as_list(cognitive_gears.get("preferred_gears"))
+        task_profile_gears = _as_list(active_task_profile.get("preferred_gears"))
+        effective_gears = _merge_unique(task_profile_gears, preferred_gears)
         active_modes = _as_list(cognitive_modes.get("active_modes"))
         tonal_range = _as_list(gait_profile.get("tonal_range"))
         signature_moves = _as_list(rhythm_profile.get("signature_moves"))
-        if preferred_gears or active_modes or tonal_range or signature_moves:
+        if effective_gears or active_modes or tonal_range or signature_moves:
             system_chunks.append("\nEXPRESSION PROFILE:")
-            if preferred_gears:
-                system_chunks.append(f"- Preferred gears: {', '.join(preferred_gears[:6])}")
+            if effective_gears:
+                system_chunks.append(f"- Preferred gears: {', '.join(effective_gears[:6])}")
             if active_modes:
                 system_chunks.append(f"- Active modes: {', '.join(active_modes[:6])}")
             if tonal_range:
                 system_chunks.append(f"- Tonal range: {', '.join(tonal_range[:6])}")
             if signature_moves:
                 system_chunks.append(f"- Signature moves: {', '.join(signature_moves[:6])}")
+
+        if active_task_profile_id:
+            system_chunks.append("\nTASK ADAPTATION:")
+            system_chunks.append(f"- Active task profile: {active_task_profile_id}")
+            pattern = str(active_task_profile.get("delivery_pattern") or "").strip()
+            if pattern:
+                system_chunks.append(f"- Delivery pattern: {pattern}")
 
         if engine_alignment:
             agent_class = _pick_str(engine_alignment.get("agent_class"))

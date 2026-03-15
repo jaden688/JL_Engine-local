@@ -34,6 +34,8 @@ def test_registry_marks_mothership_agents_as_fat_agents():
         ("Slappy", "fat_agents/Slappy_Full.json"),
         ("The Gremlin", "fat_agents/The_Gremlin_Full.json"),
         ("Supervisor", "fat_agents/SparkByte_Full.json"),
+        ("JL Engine Operator", "fat_agents/JL_Engine_Operator_Full.json"),
+        ("Copilot JL Operator", "fat_agents/Copilot_JL_Operator_Full.json"),
     ):
         entry = registry[agent_name]
         assert entry["jl_agent_file"] == relative_path
@@ -48,6 +50,10 @@ def test_runtime_lists_fat_agent_classification():
     assert agents["SparkByte"]["jl_agent_file"] == "fat_agents/SparkByte_Full.json"
     assert agents["Slappy"]["classification"] == "fat_agent"
     assert agents["The Gremlin"]["classification"] == "fat_agent"
+    assert agents["JL Engine Operator"]["classification"] == "fat_agent"
+    assert agents["JL Engine Operator"]["drive_type"] == "planetary"
+    assert agents["Copilot JL Operator"]["classification"] == "fat_agent"
+    assert agents["Copilot JL Operator"]["drive_type"] == "planetary"
 
 
 def test_registry_marks_jl_agents_as_jl_agents():

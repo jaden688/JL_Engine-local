@@ -56,6 +56,31 @@
     ],
     "jl_agent_file": "fat_agents/SparkByte_Full.json"
   },
+  "JL Engine Operator": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": "planetary",
+    "classification": "fat_agent",
+    "tags": [
+      "engine",
+      "runtime",
+      "operator"
+    ],
+    "jl_agent_file": "fat_agents/JL_Engine_Operator_Full.json"
+  },
+  "Copilot JL Operator": {
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": "planetary",
+    "classification": "fat_agent",
+    "tags": [
+      "copilot",
+      "engine",
+      "runtime",
+      "operator"
+    ],
+    "jl_agent_file": "fat_agents/Copilot_JL_Operator_Full.json"
+  },
   "SaaS Copywriter": {
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",

@@ -138,3 +138,50 @@ def test_engine_loads_sparkbyte_emotion_wheel(monkeypatch):
         entry.get("scene_id") == "curious_banter"
         for entry in engine.emotional_aperture.emotion_palette
     )
+
+
+def test_engine_loads_operator_emotion_wheel(monkeypatch):
+    monkeypatch.setenv("JL_TQA_INTERNAL_LOOP", "0")
+    engine = JLEngineCore()
+    engine.set_agent("JL Engine Operator")
+
+    assert engine.emotional_aperture.get_drive_type() == "planetary"
+    assert engine.emotional_aperture.emotion_wheel.get("baseline_root") == "builder_drive"
+    assert engine.emotional_aperture.emotion_wheel.get("baseline_family") == "build_flow"
+    assert any(
+        entry.get("scene_id") == "measured_work"
+        for entry in engine.emotional_aperture.emotion_palette
+    )
+
+
+def test_engine_loads_copilot_operator_emotion_wheel(monkeypatch):
+    monkeypatch.setenv("JL_TQA_INTERNAL_LOOP", "0")
+    engine = JLEngineCore()
+    engine.set_agent("Copilot JL Operator")
+
+    assert engine.emotional_aperture.get_drive_type() == "planetary"
+    assert engine.emotional_aperture.emotion_wheel.get("baseline_root") == "builder_drive"
+    assert any(
+        entry.get("scene_id") == "witty_guide"
+        for entry in engine.emotional_aperture.emotion_palette
+    )
+
+
+def test_operator_task_adaptation_falls_back_to_balanced_profile(monkeypatch):
+    monkeypatch.setenv("JL_TQA_INTERNAL_LOOP", "0")
+    engine = JLEngineCore()
+    engine.set_agent("JL Engine Operator")
+
+    messages = engine._build_messages(
+        user_text="just checking status",
+        behavior_state=None,
+        aperture_state={"mode": "BALANCED", "score": 0.5},
+        cognitive_mode="balanced",
+        rhythm_mode="flip",
+        gait="walk",
+        memory_ctx={},
+    )
+
+    system_text = messages[0]["content"]
+    assert "TASK ADAPTATION:" in system_text
+    assert "Active task profile: balanced_operator" in system_text
