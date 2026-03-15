@@ -32,6 +32,28 @@ def test_select_active_runtime_gear_prefers_creative_path() -> None:
     assert selection["reason"] == "creative"
 
 
+def test_select_active_runtime_gear_prefers_structured_path_from_user_text() -> None:
+    selection = select_active_runtime_gear(
+        _sparkbyte_gears(),
+        user_text="Give me a clear 3-step plan to implement this feature",
+    )
+
+    # Any structured-oriented gear is acceptable; selector should mark reason as structured.
+    assert selection["active_label"] in {"TASK_FLOW", "LITE_REASONING"}
+    assert selection["reason"] == "structured"
+
+
+def test_select_active_runtime_gear_defaults_when_no_gears_configured() -> None:
+    selection = select_active_runtime_gear(
+        {},
+        user_text="do something reasonable with defaults",
+    )
+
+    assert selection["active_label"] == "TASK_FLOW"
+    assert selection["runtime_gear"] == "spur"
+    assert selection["reason"] == "default"
+
+
 def test_select_active_runtime_gear_prefers_precision_fallback() -> None:
     selection = select_active_runtime_gear(
         _sparkbyte_gears(),
