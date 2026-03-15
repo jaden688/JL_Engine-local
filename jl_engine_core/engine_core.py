@@ -34,7 +34,7 @@ from difflib import SequenceMatcher
 import json
 import logging
 from dataclasses import dataclass, asdict
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event, RLock, Thread
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypedDict
@@ -1628,7 +1628,7 @@ class JLEngineCore:
             return
         try:
             payload = {
-                "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "user_input": user_text,
                 "reply": reply_text,
                 "feedback": feedback,
