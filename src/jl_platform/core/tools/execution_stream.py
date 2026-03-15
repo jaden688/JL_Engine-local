@@ -1,0 +1,101 @@
+from __future__ import annotations
+
+import contextlib
+import hashlib
+import io
+import time
+import traceback
+import tracemalloc
+import cProfile
+import pstats
+from typing import Dict, Any
+
+from jl_platform.core.models import ToolSpec
+
+
+def _sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def run_py_exec_stream(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Execute Python code in-process with telemetry:
+    - wall time
+    - peak memory (tracemalloc)
+    - call graph summary (cProfile)
+    - stdout/stderr capture
+    """
+    code = str(payload.get("code", "") or "")
+    if not code.strip():
+        return {
+            "status": "error",
+            "error": "missing_code",
+            "message": "Payload requires a non-empty 'code' field.",
+        }
+
+    stdout_buf = io.StringIO()
+    stderr_buf = io.StringIO()
+    profile = cProfile.Profile()
+
+    start = time.perf_counter()
+    tracemalloc.start()
+    error = None
+    tb = None
+
+    # Use a single execution namespace so imports are visible to functions/classes
+    # defined in the executed code (avoids NameError for imported symbols).
+    exec_namespace: Dict[str, Any] = {}
+    try:
+        with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
+            profile.enable()
+            exec(code, exec_namespace, exec_namespace)
+    except Exception as exc:
+        error = str(exc)
+        tb = traceback.format_exc()
+    finally:
+        profile.disable()
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+    duration_ms = (time.perf_counter() - start) * 1000.0
+    stdout_val = stdout_buf.getvalue()
+    stderr_val = stderr_buf.getvalue()
+
+    stats_stream = io.StringIO()
+    stats = pstats.Stats(profile, stream=stats_stream)
+    stats.strip_dirs().sort_stats("cumtime").print_stats(15)
+    call_graph = stats_stream.getvalue()
+
+    output_text = (stdout_val + ("\n" if stderr_val else "") + stderr_val).strip()
+    response = {
+        "status": "ok" if error is None else "error",
+        "stdout": stdout_val,
+        "stderr": stderr_val,
+        "output": output_text,
+        "error": error,
+        "traceback": tb,
+        "metrics": {
+            "duration_ms": round(duration_ms, 2),
+            "memory_current_kb": round(current / 1024.0, 2),
+            "memory_peak_kb": round(peak / 1024.0, 2),
+        },
+        "hashes": {
+            "code_sha256": _sha256_text(code),
+            "output_sha256": _sha256_text(output_text),
+        },
+        "profile": call_graph,
+    }
+    return response
+
+
+def get_tool_spec() -> ToolSpec:
+    return ToolSpec(
+        name="py_exec_stream",
+        description="Execute Python code with time/memory/call telemetry and capture stdout/stderr.",
+        input_schema={
+            "type": "object",
+            "properties": {"code": {"type": "string"}},
+            "required": ["code"],
+        },
+        output_schema={"type": "object"},
+    )

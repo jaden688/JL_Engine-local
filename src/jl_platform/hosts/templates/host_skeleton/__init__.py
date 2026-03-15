@@ -1,0 +1,1 @@
+# Skeleton template package

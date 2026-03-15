@@ -1,0 +1,5 @@
+{
+  "safety_strictness": "high",
+  "clarity_check": true,
+  "style_refine": true
+}

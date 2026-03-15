@@ -1,0 +1,8 @@
+{
+  "mode": "creative",
+  "steps": [
+    "expand",
+    "cluster",
+    "rank"
+  ]
+}

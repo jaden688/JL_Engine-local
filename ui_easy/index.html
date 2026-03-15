@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JL Engine Flow</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">JL Engine</p>
+          <h1>Flow Deck</h1>
+          <p class="hero-text">
+            One cleaner front door for the engine. Chat first, approvals visible, activity live,
+            machinery still real.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <label class="voice-field">
+            <span>Active voice</span>
+            <select id="voiceSelect"></select>
+          </label>
+          <label class="toggle-field">
+            <input id="autoToolsToggle" type="checkbox" checked />
+            <span>Auto tools on</span>
+          </label>
+          <a class="legacy-link" href="/ui/" target="_blank" rel="noreferrer">Open legacy deck</a>
+        </div>
+      </header>
+
+      <section class="status-strip panel">
+        <div class="status-chip" id="healthChip">API checking...</div>
+        <div class="status-chip" id="modeChip">Mode ...</div>
+        <div class="status-chip" id="modelChip">Model ...</div>
+        <div class="status-chip" id="browserChip">Browser ...</div>
+        <div class="status-chip" id="selectionChip">Voice ...</div>
+      </section>
+
+      <main class="layout">
+        <section class="panel chat-panel">
+          <div class="panel-head">
+            <div>
+              <p class="kicker">Conversation</p>
+              <h2>Main chat</h2>
+            </div>
+            <button id="refreshStatusBtn" class="ghost-button" type="button">Refresh state</button>
+          </div>
+          <div id="chatLog" class="chat-log" aria-live="polite"></div>
+          <div class="quick-actions" id="quickActions">
+            <button class="quick-action" data-prompt="Inspect the active browser page and tell me the title in one sentence." type="button">Inspect page</button>
+            <button class="quick-action" data-prompt="List the files on my desktop." type="button">List desktop</button>
+            <button class="quick-action" data-prompt="Create a folder on my desktop named Squishy 3." type="button">Create folder</button>
+            <button class="quick-action" data-prompt="Search the web for the latest local-first AI agent frameworks and give me a short cited summary." type="button">Web research</button>
+          </div>
+          <form id="chatForm" class="composer">
+            <textarea
+              id="chatInput"
+              rows="4"
+              placeholder="Tell JL Engine what you want done..."
+            ></textarea>
+            <div class="composer-actions">
+              <p class="composer-note" id="composerNote">Agentic mode is ready.</p>
+              <button id="sendBtn" class="primary-button" type="submit">Send</button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel approval-panel" id="approvalPanel">
+            <div class="panel-head">
+              <div>
+                <p class="kicker">Decision gate</p>
+                <h2>Approval</h2>
+              </div>
+            </div>
+            <div id="approvalEmpty" class="empty-state">No action waiting for approval.</div>
+            <div id="approvalCard" class="approval-card hidden">
+              <p id="approvalSummary" class="approval-summary"></p>
+              <div class="approval-meta">
+                <span id="approvalTool" class="approval-chip"></span>
+                <span id="approvalRisk" class="approval-chip"></span>
+              </div>
+              <div class="approval-actions">
+                <button id="approveBtn" class="primary-button" type="button">Approve</button>
+                <button id="rejectBtn" class="ghost-button" type="button">Reject</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel composition-panel">
+            <div class="panel-head">
+              <div>
+                <p class="kicker">Agent build</p>
+                <h2>Composition</h2>
+              </div>
+            </div>
+            <div id="compositionPanel" class="composition-grid"></div>
+          </section>
+
+          <section class="panel activity-panel">
+            <div class="panel-head">
+              <div>
+                <p class="kicker">Engine trace</p>
+                <h2>Activity</h2>
+              </div>
+            </div>
+            <div id="activityFeed" class="activity-feed"></div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

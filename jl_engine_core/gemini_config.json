@@ -1,0 +1,7 @@
+{
+  "gemini_api_key": "",
+  "gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+  "gemini_model": "gemini-3-flash-preview",
+  "google_gemini_timeout": 30,
+  "ollama_model": "gemma3:4b"
+}

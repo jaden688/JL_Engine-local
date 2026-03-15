@@ -1,0 +1,6 @@
+{
+  "name": "npc",
+  "description": "Game NPC host adapter using JL Platform core.",
+  "privacy_mode": "local",
+  "tools": ["npc_action"]
+}

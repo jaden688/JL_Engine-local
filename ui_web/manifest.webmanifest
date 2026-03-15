@@ -1,0 +1,20 @@
+{
+  "name": "JL Quest Command Deck",
+  "short_name": "JL Deck",
+  "id": "/ui/",
+  "description": "Standalone web command deck for JL fat agents, quest runtime, and RAM tools.",
+  "start_url": "/ui/",
+  "scope": "/ui/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#000000",
+  "theme_color": "#00ff41",
+  "icons": [
+    {
+      "src": "/ui/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

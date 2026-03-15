@@ -1,0 +1,9 @@
+{
+  "loadout_id": "default_assistant",
+  "tone_profile": "sassy_light",
+  "gate_profile": "balanced",
+  "tool_profile": "general_assistant",
+  "state_profile": "steady_helpful",
+  "behavior_profile": "practical_support",
+  "task_profile": "general_user"
+}
