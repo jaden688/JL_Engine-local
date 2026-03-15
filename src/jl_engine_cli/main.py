@@ -1230,7 +1230,7 @@ def _set_ollama_model(model_name: str) -> None:
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="j-engine",
+        prog="jl-engine",
         description="Agentic CLI on top of J_engine Core (agents + tool-calling).",
     )
     parser.add_argument("--config", help="Optional path to JSON/YAML config overrides")

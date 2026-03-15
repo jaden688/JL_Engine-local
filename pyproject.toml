@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "j_engine"
-version = "1.0.0"
+version = "1.0.1"
 description = "Headless J_engine core package with a menu-driven CLI and optional FastAPI API."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,8 +36,6 @@ full = [
 ]
 
 [project.scripts]
-j-engine = "jl_engine_cli.main:main"
-j-agent = "jl_engine_core.agent_cli:main"
 jl-engine = "jl_engine_cli.main:main"
 jl-agent = "jl_engine_core.agent_cli:main"
 cli = "jl_engine_cli.lsp_cli:main"

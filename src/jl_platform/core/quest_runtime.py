@@ -983,6 +983,19 @@ class FatQuestRuntime:
             "aperture_score": (aperture or {}).get("score"),
         }
 
+    def _format_output_numbers(self, value: Any, *, decimals: int = 6) -> Any:
+        if isinstance(value, bool) or value is None:
+            return value
+        if isinstance(value, float):
+            return round(value, decimals)
+        if isinstance(value, dict):
+            return {str(k): self._format_output_numbers(v, decimals=decimals) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._format_output_numbers(item, decimals=decimals) for item in value]
+        if isinstance(value, tuple):
+            return [self._format_output_numbers(item, decimals=decimals) for item in value]
+        return value
+
     def _merge_delegated_reply(
         self,
         *,
@@ -1029,7 +1042,7 @@ class FatQuestRuntime:
     ) -> dict[str, Any]:
         resolved_agent_id = str(agent_id or JL_FAT_AGENT_ID)
         self.ensure_agent(resolved_agent_id, agent_name=agent or "SparkByte")
-        return self._submit_agent_job(
+        result = self._submit_agent_job(
             resolved_agent_id,
             "chat",
             {
@@ -1045,6 +1058,9 @@ class FatQuestRuntime:
                 "allow_clone": allow_clone,
             },
         )
+        if isinstance(result, dict):
+            return self._format_output_numbers(result)
+        return result
 
     def _chat_impl(
         self,
@@ -1090,8 +1106,10 @@ class FatQuestRuntime:
         )
 
         requested_mode = str(execution_mode or "auto").strip().lower()
-        if requested_mode not in {"auto", "chat", "execute"}:
+        if requested_mode not in {"auto", "chat", "execute", "operator"}:
             requested_mode = "auto"
+        if requested_mode == "operator":
+            delegation = None
         mode_used = requested_mode
 
         try:
@@ -1161,8 +1179,13 @@ class FatQuestRuntime:
                     "telemetry_summary": self._telemetry_summary(telemetry, visible_agent.session.engine),
                 }
 
-            if mode_used in {"auto", "execute"}:
-                context_mode = "main_chat_auto" if mode_used == "auto" else "main_chat_execute"
+            if mode_used in {"auto", "execute", "operator"}:
+                if mode_used == "auto":
+                    context_mode = "main_chat_auto"
+                elif mode_used == "operator":
+                    context_mode = "main_chat_operator"
+                else:
+                    context_mode = "main_chat_execute"
                 result = visible_agent.session.run(
                     message,
                     context=self._sharp_context(
@@ -1380,7 +1403,7 @@ class FatQuestRuntime:
     def _classify_message_mode(self, message: str, context: dict[str, Any] | None = None) -> str:
         ctx = context or {}
         forced = str(ctx.get("execution_mode", "")).strip().lower()
-        if forced in {"chat", "execute"}:
+        if forced in {"chat", "execute", "operator"}:
             return forced
 
         text = str(message or "").strip()
@@ -1981,6 +2004,18 @@ class FatQuestRuntime:
             merged.setdefault(
                 "execution_directive",
                 "Agent defines needed tools and execution strategy from task intent.",
+            )
+        elif mode == "main_chat_operator":
+            merged.setdefault("task_intent", "operator_live_execution")
+            merged.setdefault("action_type", "execution")
+            merged.setdefault("autonomous_toolsmith", True)
+            merged.setdefault("tool_creation_mode", "dynamic_ram")
+            merged.setdefault("respect_selected_agent", True)
+            merged.setdefault("live_operation", True)
+            merged.setdefault("npc_style", False)
+            merged.setdefault(
+                "execution_directive",
+                "Operate as a live execution operator. Do not roleplay. Report only actions grounded in this runtime.",
             )
         else:
             merged.setdefault("task_intent", "quest_execution")

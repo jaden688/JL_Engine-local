@@ -33,11 +33,10 @@ from __future__ import annotations
 from difflib import SequenceMatcher
 import json
 import logging
+import time
 from dataclasses import dataclass, asdict
-from datetime import UTC, datetime
 from pathlib import Path
-from threading import Event, RLock, Thread
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypedDict
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from .logging_setup import get_logger
 import os
@@ -49,7 +48,7 @@ from .conversational_signals import SignalScorer, TurnSignals
 from .rhythm import RhythmEngine
 from .drift_pressure import DriftPressureSystem, DriftPressureInput, DriftResponse
 from framework.mpf import MPFProfile, get_llm_boot_prompt, load_mpf_registry
-from .backends import configure_backends, get_brain_backend
+from .backends import get_brain_backend
 from .helper_supervisor import HelperSupervisor
 from .hybrid_memory import build_hybrid_memory
 from .agent_validation import ValidationError, validate_agent
@@ -156,8 +155,8 @@ class EngineConfig:
     enable_feedback: bool = True
     feedback_log_path: str = "logs/engine_feedback.log"
     debug_feedback_notes: bool = False
-    drive_weights: Dict[str, float] = None  # late init
-    invariants: List[Dict[str, Any]] = None  # late init
+    drive_weights: Optional[Dict[str, float]] = None  # late init
+    invariants: Optional[List[Dict[str, Any]]] = None  # late init
     strain: float = 0.6  # higher = tolerates more instability
     memory_db_path: Optional[str] = None
 
@@ -431,7 +430,7 @@ class JLEngineCore:
         Set the active agent by display name (as used in JL_Agents.mpf.json).
         Falls back to the default agent if not found.
         """
-        import json, os
+        import json
 
         profile = self.mpf_profiles.get(agent_name)
         if not profile:
@@ -548,12 +547,7 @@ class JLEngineCore:
                 candidates.extend(alternates)
             else:
                 relative_candidates = [raw_agent, *alternates]
-                # Prefer explicit project agents first, then bundled data agents.
-                candidates.extend(
-                    [REPO_ROOT / "agents" / rel_path for rel_path in relative_candidates]
-                    + [DATA_DIR / "agents" / rel_path for rel_path in relative_candidates]
-                    + [Path.cwd() / "agents" / rel_path for rel_path in relative_candidates]
-                )
+                candidates.extend([DATA_DIR / "agents" / rel_path for rel_path in relative_candidates])
 
             seen: set[str] = set()
             existing_candidates: list[Path] = []
@@ -678,7 +672,7 @@ class JLEngineCore:
         This simply wraps the MPF helper so other layers (bridges, tools) can
         fetch the correct agent script without re-parsing the JSON layout.
         """
-        return get_llm_boot_prompt(self.current_agent_data, target)
+        return str(get_llm_boot_prompt(self.current_agent_data, target) or "")
 
     # ------------------------------------------------------------------
     # Test mode controls
@@ -924,7 +918,6 @@ class JLEngineCore:
             if not user_clean and not output_clean:
                 continue
 
-            user_norm = self._normalize_memory_text(user_clean)
             output_norm = self._normalize_memory_text(output_clean)
 
             if (
@@ -1141,7 +1134,6 @@ class JLEngineCore:
         signals = self.signal_scorer.score(user_text or "")
         self.last_signals = signals
 
-        state_snapshot = self.state_manager.export_snapshot() if self.state_manager else {}
         advisory_payload = (
             self.state_manager.advisory_payload(self.stability_score, self.drift_pressure)
             if self.state_manager
@@ -1239,11 +1231,8 @@ class JLEngineCore:
 
         # Apply any forced gait / rhythm from drift response
         gait = self.current_gait
-        rhythm_mode = self.current_rhythm_mode
         if drift_response.force_gait:
             gait = drift_response.force_gait
-        if drift_response.force_rhythm:
-            rhythm_mode = drift_response.force_rhythm
 
         modulation_hint = dict(advisory_payload) if isinstance(advisory_payload, dict) else {}
         if isinstance(sup_arbitration, dict):
@@ -1681,7 +1670,7 @@ class JLEngineCore:
             return
         try:
             payload = {
-                "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                "timestamp_unix_s": time.time(),
                 "user_input": user_text,
                 "reply": reply_text,
                 "feedback": feedback,
@@ -1974,7 +1963,7 @@ class JLEngineCore:
         if len(severe) == 1 and strain >= 0.45:
             return None
 
-        reasons = ", ".join([v.get("id") or v.get("type") for v in severe])
+        reasons = ", ".join(str(v.get("id") or v.get("type") or "unknown") for v in severe)
         return f"[INTERNAL REFUSAL] Invariant breach: {reasons}. System preserves coherence."
 
     def _update_temporal_projection(
@@ -2124,13 +2113,13 @@ class JLEngineCore:
         if not profile:
             return
 
-        min_temp = profile.get("min_temp", 0.7)
-        max_temp = profile.get("max_temp", 0.9)
-        min_top_p = profile.get("min_top_p", 0.8)
-        max_top_p = profile.get("max_top_p", 0.96)
+        min_temp = float(profile.get("min_temp", 0.7))
+        max_temp = float(profile.get("max_temp", 0.9))
+        min_top_p = float(profile.get("min_top_p", 0.8))
+        max_top_p = float(profile.get("max_top_p", 0.96))
 
-        stability_floor = profile.get("stability_soft_floor", 0.3)
-        stability_ceiling = profile.get("stability_soft_ceiling", 0.85)
+        stability_floor = float(profile.get("stability_soft_floor", 0.3))
+        stability_ceiling = float(profile.get("stability_soft_ceiling", 0.85))
 
         stability = getattr(self, "stability_score", 0.5)
 
@@ -2166,8 +2155,8 @@ class JLEngineCore:
         Applies globally to all agents.
         """
         profile = self.behavior_profile or ENGINE_BEHAVIOR_PROFILES.get(self.behavior_profile_name)
-        base_drift = profile.get("base_drift_pressure", 0.2) if profile else 0.2
-        max_drift_pressure = profile.get("max_drift_pressure", 0.4) if profile else 0.4
+        base_drift = float(profile.get("base_drift_pressure", 0.2)) if profile else 0.2
+        max_drift_pressure = float(profile.get("max_drift_pressure", 0.4)) if profile else 0.4
 
         reply_text = output or ""
         length_factor = min(1.0, len(reply_text) / 800.0)
@@ -2246,50 +2235,47 @@ class JLEngineCore:
             for rule in self.core_rules:
                 system_chunks.append(f"- {rule}")
 
+        system_chunks.append("\nEXECUTION INTEGRITY:")
+        system_chunks.append(
+            "- Never claim edits, commands, tests, or runtime actions unless they were actually executed."
+        )
+        system_chunks.append(
+            "- If an action was not executed, state it as a proposal or a next step, not as completed work."
+        )
+
         # 2) Agent identity & behavior (if loaded)
         agent_source = agent_projection or self.current_agent_data or {}
-        identity = (
-            agent_source.get("identity") if isinstance(agent_source.get("identity"), dict) else {}
-        )
-        behavior = (
-            agent_source.get("behavior") if isinstance(agent_source.get("behavior"), dict) else {}
-        )
-        communication = (
-            agent_source.get("communication_style")
-            if isinstance(agent_source.get("communication_style"), dict)
-            else {}
-        )
-        core_identity = (
-            agent_source.get("core_identity")
-            if isinstance(agent_source.get("core_identity"), dict)
-            else {}
-        )
-        behavior_traits = (
-            agent_source.get("operational_behavioral_traits")
-            if isinstance(agent_source.get("operational_behavioral_traits"), dict)
-            else {}
-        )
-        engine_alignment = (
-            agent_source.get("engine_alignment")
-            if isinstance(agent_source.get("engine_alignment"), dict)
-            else {}
-        )
-        cognitive_gears = (
-            agent_source.get("cognitive_gears")
-            if isinstance(agent_source.get("cognitive_gears"), dict)
-            else {}
-        )
-        cognitive_modes = (
-            agent_source.get("cognitive_modes")
-            if isinstance(agent_source.get("cognitive_modes"), dict)
-            else {}
-        )
-        rhythm_profile = (
-            agent_source.get("rhythm") if isinstance(agent_source.get("rhythm"), dict) else {}
-        )
-        gait_profile = (
-            agent_source.get("gait") if isinstance(agent_source.get("gait"), dict) else {}
-        )
+        identity: Dict[str, Any] = {}
+        behavior: Dict[str, Any] = {}
+        communication: Dict[str, Any] = {}
+        core_identity: Dict[str, Any] = {}
+        behavior_traits: Dict[str, Any] = {}
+        engine_alignment: Dict[str, Any] = {}
+        cognitive_gears: Dict[str, Any] = {}
+        cognitive_modes: Dict[str, Any] = {}
+        rhythm_profile: Dict[str, Any] = {}
+        gait_profile: Dict[str, Any] = {}
+
+        if isinstance(agent_source.get("identity"), dict):
+            identity = agent_source.get("identity")
+        if isinstance(agent_source.get("behavior"), dict):
+            behavior = agent_source.get("behavior")
+        if isinstance(agent_source.get("communication_style"), dict):
+            communication = agent_source.get("communication_style")
+        if isinstance(agent_source.get("core_identity"), dict):
+            core_identity = agent_source.get("core_identity")
+        if isinstance(agent_source.get("operational_behavioral_traits"), dict):
+            behavior_traits = agent_source.get("operational_behavioral_traits")
+        if isinstance(agent_source.get("engine_alignment"), dict):
+            engine_alignment = agent_source.get("engine_alignment")
+        if isinstance(agent_source.get("cognitive_gears"), dict):
+            cognitive_gears = agent_source.get("cognitive_gears")
+        if isinstance(agent_source.get("cognitive_modes"), dict):
+            cognitive_modes = agent_source.get("cognitive_modes")
+        if isinstance(agent_source.get("rhythm"), dict):
+            rhythm_profile = agent_source.get("rhythm")
+        if isinstance(agent_source.get("gait"), dict):
+            gait_profile = agent_source.get("gait")
 
         def _pick_str(*values: Any) -> str:
             for value in values:
@@ -2513,16 +2499,12 @@ class JLEngineCore:
             if execution_directive:
                 system_chunks.append(f"- Execution directive: {execution_directive}")
 
-        browser_panel = (
-            runtime_context.get("browser_panel")
-            if isinstance(runtime_context.get("browser_panel"), dict)
-            else {}
-        )
-        browser_session = (
-            runtime_context.get("browser_session")
-            if isinstance(runtime_context.get("browser_session"), dict)
-            else {}
-        )
+        browser_panel: Dict[str, Any] = {}
+        browser_session: Dict[str, Any] = {}
+        if isinstance(runtime_context.get("browser_panel"), dict):
+            browser_panel = runtime_context.get("browser_panel")
+        if isinstance(runtime_context.get("browser_session"), dict):
+            browser_session = runtime_context.get("browser_session")
         total_agent_control = runtime_context.get("total_agent_control")
         if browser_panel or browser_session or total_agent_control is not None:
             browser_surface = dict(browser_panel)
@@ -2748,8 +2730,6 @@ class JLEngineCore:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import sys
-
     engine = JLEngineCore()
     print("JL Engine Core (headless) ready. Type messages, Ctrl+C to exit.\n")
     try:

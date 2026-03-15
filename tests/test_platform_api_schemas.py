@@ -28,6 +28,12 @@ def test_chat_request_defaults_match_current_route_contract() -> None:
     assert payload.new_instance is False
 
 
+def test_chat_request_accepts_operator_execution_mode() -> None:
+    payload = QuestChatRequest(message="run operator flow", execution_mode="operator")
+
+    assert payload.execution_mode == "operator"
+
+
 def test_mission_request_keeps_optional_dynamic_agent_toggle() -> None:
     payload = QuestMissionRequest(task="ship docs")
 

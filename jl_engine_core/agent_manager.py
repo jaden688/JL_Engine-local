@@ -12,11 +12,14 @@ orchestrator for prompt construction.
 
 from copy import deepcopy
 import json
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .logging_setup import get_logger
 
 logger = get_logger(__name__)
+PACKAGE_ROOT = Path(__file__).resolve().parent
+CANONICAL_AGENTS_DIR = PACKAGE_ROOT / "data" / "agents"
 
 
 def _clamp(val: float, lo: float = 0.0, hi: float = 1.0) -> float:
@@ -51,12 +54,13 @@ class AgentManager:
                     if base_tags and tags and base_tags.intersection(tags):
                         candidate_file = getattr(profile, "agent_file", None)
                         if candidate_file:
-                            import json, os
-
-                            agent_path = os.path.join("agents", candidate_file)
-                            if os.path.exists(agent_path):
+                            candidate_rel = Path(str(candidate_file))
+                            agent_path = CANONICAL_AGENTS_DIR / candidate_rel
+                            if agent_path.exists():
                                 with open(agent_path, "r", encoding="utf-8") as f:
-                                    return json.load(f)
+                                    payload = json.load(f)
+                                if isinstance(payload, dict):
+                                    return payload
         except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
             logger.exception("[AgentManager] Unable to find related agent: %s", exc)
         return None
@@ -94,13 +98,13 @@ class AgentManager:
         base_traits = base.get("operational_behavioral_traits") or {}
         sec_traits = secondary.get("operational_behavioral_traits") or {}
 
-        def _merge_list(key: str) -> list:
-            merged = []
+        def _merge_list(key: str) -> list[Any]:
+            merged: list[Any] = []
             merged.extend(base_traits.get(key) or [])
             merged.extend(sec_traits.get(key) or [])
             # keep order stable but unique
             seen = set()
-            uniq = []
+            uniq: list[Any] = []
             for item in merged:
                 if item in seen:
                     continue
@@ -108,12 +112,12 @@ class AgentManager:
                 uniq.append(item)
             return uniq
 
-        blended = {
+        blended: Dict[str, Any] = {
             "positive": _merge_list("positive"),
             "negative": _merge_list("negative"),
             "boundaries": _merge_list("boundaries"),
         }
-        blended["dynamic_weight"] = round(weight, 3)
+        blended["dynamic_weight"] = round(float(weight), 3)
         return blended
 
     def get_projection(self) -> Dict[str, Any]:

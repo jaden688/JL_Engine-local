@@ -708,6 +708,37 @@ def test_chat_auto_uses_interpreter_path_even_for_normal_messages(monkeypatch):
     assert session.calls[0]["context"]["quest_mode"] == "main_chat_auto"
 
 
+def test_chat_operator_uses_operator_execution_context(monkeypatch):
+    runtime = FatQuestRuntime()
+    session = StubSession()
+    agent = QuestAgent(
+        agent_id="jl_fat_agent",
+        agent="SparkByte",
+        session=session,
+        forge=PrivilegedMemoryForge(),
+    )
+    runtime._agents[agent.agent_id] = agent
+    monkeypatch.setattr(runtime, "_activate_engine", lambda engine: None)
+
+    result = runtime._chat_impl(
+        agent_id=agent.agent_id,
+        message="patch the API and run focused tests",
+        agent="SparkByte",
+        context={"ui_surface": "chat_tab"},
+        execution_mode="operator",
+        return_trace=True,
+        allow_clone=False,
+    )
+
+    assert result["status"] == "ok"
+    assert result["mode_used"] == "operator"
+    assert result["reply"] == "Auto mode handled this normally."
+    assert len(session.calls) == 1
+    assert session.calls[0]["context"]["quest_mode"] == "main_chat_operator"
+    assert session.calls[0]["context"]["live_operation"] is True
+    assert session.calls[0]["context"]["npc_style"] is False
+
+
 def test_sync_agent_agent_reasserts_selected_agent_on_engine(monkeypatch):
     runtime = FatQuestRuntime()
     engine = RecordingEngine()
@@ -733,10 +764,14 @@ def test_main_chat_context_respects_selected_agent():
     auto_context = runtime._sharp_context({}, mode="main_chat_auto")
     chat_context = runtime._sharp_context({}, mode="main_chat")
     execute_context = runtime._sharp_context({}, mode="main_chat_execute")
+    operator_context = runtime._sharp_context({}, mode="main_chat_operator")
 
     assert auto_context["respect_selected_agent"] is True
     assert chat_context["respect_selected_agent"] is True
     assert execute_context["respect_selected_agent"] is True
+    assert operator_context["respect_selected_agent"] is True
+    assert operator_context["live_operation"] is True
+    assert operator_context["npc_style"] is False
 
 
 def test_register_mpf_agent_agent_uses_registry_binding(tmp_path: Path, monkeypatch):

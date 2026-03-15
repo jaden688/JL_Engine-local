@@ -10,7 +10,7 @@ This repository is source-available under the non-commercial license in `LICENSE
 - `src/jl_platform/`: the full local platform runtime, quest/interpreter flow, browser bridge, and operator tools
 - `ui_web/`: the main command deck served at `/ui/`
 - `ui_easy/`: the lighter flow deck served at `/ui-easy/`
-- `src/jl_engine_cli/`: CLI entrypoints such as `j-engine`
+- `src/jl_engine_cli/`: CLI entrypoints such as `jl-engine`
 
 ## Quick start
 
@@ -64,7 +64,7 @@ Then open:
 
 ```powershell
 pip install -e .
-j-engine --agent SparkByte
+jl-engine --agent SparkByte
 ```
 
 ## Runtime layout

@@ -208,3 +208,5 @@ def test_operator_task_adaptation_falls_back_to_balanced_profile(monkeypatch):
     system_text = messages[0]["content"]
     assert "TASK ADAPTATION:" in system_text
     assert "Active task profile: balanced_operator" in system_text
+    assert "EXECUTION INTEGRITY:" in system_text
+    assert "Never claim edits, commands, tests, or runtime actions unless they were actually executed." in system_text

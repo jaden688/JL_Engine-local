@@ -181,7 +181,7 @@ def _repl(session, *, show_trace: bool, allow_bias_redirect: bool = False, auto_
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="j-agent",
+        prog="jl-agent",
         description="Agentic CLI on top of J_engine Core (agents + tool-calling).",
     )
     parser.add_argument("--config", help="Optional path to JSON/YAML config overrides")
