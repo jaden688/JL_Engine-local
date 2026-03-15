@@ -22,7 +22,7 @@ flowchart LR
     Core --> Registry["MPF registry\njl_engine_core/data/agents/JL_Agents.mpf.json"]
     Registry --> Payloads["Fat-agent and JL-agent payloads"]
     Core --> State["Behavior + memory + rhythm + backend routing"]
-    State --> Backends["Ollama / OpenAI / other configured transports"]
+    State --> Backends["Ollama / OpenAI / MiniMax / other configured transports"]
 ```
 
 ## Execution flow

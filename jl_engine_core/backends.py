@@ -125,9 +125,18 @@ DEFAULT_GEMINI_TIMEOUT = 60
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_OPENAI_MODEL = "gpt-5.2"
 DEFAULT_OPENAI_TIMEOUT = 90
+DEFAULT_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
+DEFAULT_TOGETHER_BASE_URL = "https://api.together.xyz/v1"
+DEFAULT_TOGETHER_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 DEFAULT_OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_OPENROUTER_MODEL = "openrouter/auto"
 DEFAULT_OPENROUTER_TIMEOUT = 90
+DEFAULT_MINIMAX_BASE_URL = "https://api.minimax.io/v1"
+DEFAULT_MINIMAX_MODEL = "MiniMax-M2.5"
+DEFAULT_MINIMAX_TIMEOUT = 90
 GEMINI_CONFIG_PATH = Path(__file__).resolve().parent / "gemini_config.json"
 
 
@@ -302,6 +311,63 @@ BACKEND_REGISTRY = {
         "openai_model": DEFAULT_OPENAI_MODEL,
         "openai_timeout": GEMINI_LOCAL_CONFIG.get("openai_timeout") or DEFAULT_OPENAI_TIMEOUT,
     },
+    "groq": {
+        "id": "groq",
+        "label": "Groq",
+        "provider": "openai",
+        "openai_api_key": GEMINI_LOCAL_CONFIG.get("groq_api_key")
+        or os.getenv("GROQ_API_KEY")
+        or os.getenv("OPENAI_API_KEY"),
+        "openai_base_url": _first_non_empty(
+            os.getenv("JL_GROQ_BASE_URL"),
+            GEMINI_LOCAL_CONFIG.get("groq_base_url"),
+            fallback=DEFAULT_GROQ_BASE_URL,
+        ),
+        "openai_model": _first_non_empty(
+            os.getenv("JL_GROQ_MODEL"),
+            GEMINI_LOCAL_CONFIG.get("groq_model"),
+            fallback=DEFAULT_GROQ_MODEL,
+        ),
+        "openai_timeout": GEMINI_LOCAL_CONFIG.get("groq_timeout") or DEFAULT_OPENAI_TIMEOUT,
+    },
+    "deepseek": {
+        "id": "deepseek",
+        "label": "DeepSeek",
+        "provider": "openai",
+        "openai_api_key": GEMINI_LOCAL_CONFIG.get("deepseek_api_key")
+        or os.getenv("DEEPSEEK_API_KEY")
+        or os.getenv("OPENAI_API_KEY"),
+        "openai_base_url": _first_non_empty(
+            os.getenv("JL_DEEPSEEK_BASE_URL"),
+            GEMINI_LOCAL_CONFIG.get("deepseek_base_url"),
+            fallback=DEFAULT_DEEPSEEK_BASE_URL,
+        ),
+        "openai_model": _first_non_empty(
+            os.getenv("JL_DEEPSEEK_MODEL"),
+            GEMINI_LOCAL_CONFIG.get("deepseek_model"),
+            fallback=DEFAULT_DEEPSEEK_MODEL,
+        ),
+        "openai_timeout": GEMINI_LOCAL_CONFIG.get("deepseek_timeout") or DEFAULT_OPENAI_TIMEOUT,
+    },
+    "together": {
+        "id": "together",
+        "label": "Together AI",
+        "provider": "openai",
+        "openai_api_key": GEMINI_LOCAL_CONFIG.get("together_api_key")
+        or os.getenv("TOGETHER_API_KEY")
+        or os.getenv("OPENAI_API_KEY"),
+        "openai_base_url": _first_non_empty(
+            os.getenv("JL_TOGETHER_BASE_URL"),
+            GEMINI_LOCAL_CONFIG.get("together_base_url"),
+            fallback=DEFAULT_TOGETHER_BASE_URL,
+        ),
+        "openai_model": _first_non_empty(
+            os.getenv("JL_TOGETHER_MODEL"),
+            GEMINI_LOCAL_CONFIG.get("together_model"),
+            fallback=DEFAULT_TOGETHER_MODEL,
+        ),
+        "openai_timeout": GEMINI_LOCAL_CONFIG.get("together_timeout") or DEFAULT_OPENAI_TIMEOUT,
+    },
     "openrouter": {
         "id": "openrouter",
         "label": "OpenRouter",
@@ -322,6 +388,25 @@ BACKEND_REGISTRY = {
         "openrouter_app_name": GEMINI_LOCAL_CONFIG.get("openrouter_app_name")
         or os.getenv("OPENROUTER_APP_NAME")
         or "JL Engine Core",
+    },
+    "minimax": {
+        "id": "minimax",
+        "label": "MiniMax",
+        "provider": "minimax",
+        "minimax_api_key": GEMINI_LOCAL_CONFIG.get("minimax_api_key")
+        or os.getenv("MINIMAX_API_KEY"),
+        "minimax_base_url": _first_non_empty(
+            os.getenv("JL_MINIMAX_BASE_URL"),
+            GEMINI_LOCAL_CONFIG.get("minimax_base_url"),
+            fallback=DEFAULT_MINIMAX_BASE_URL,
+        ),
+        "minimax_model": _first_non_empty(
+            os.getenv("JL_MINIMAX_MODEL"),
+            GEMINI_LOCAL_CONFIG.get("minimax_model"),
+            fallback=DEFAULT_MINIMAX_MODEL,
+        ),
+        "minimax_timeout": GEMINI_LOCAL_CONFIG.get("minimax_timeout")
+        or DEFAULT_MINIMAX_TIMEOUT,
     },
     "custom_http": {
         "id": "custom_http",
@@ -805,6 +890,115 @@ class OpenRouterBackend(ModelBackend):
             return f"[ERROR: OpenRouter call failed: {exc}]", {"error": str(exc)}
 
 
+class MiniMaxBackend(ModelBackend):
+    """Backend for MiniMax Chat Completions API (OpenAI-compatible)."""
+
+    def __init__(self, config: dict):
+        super().__init__(config)
+        self.api_key = (
+            config.get("minimax_api_key")
+            or config.get("api_key")
+            or os.getenv("MINIMAX_API_KEY")
+        )
+        raw_url = (
+            config.get("minimax_base_url")
+            or config.get("base_url")
+            or DEFAULT_MINIMAX_BASE_URL
+        )
+        base = str(raw_url or "").strip()
+        if not base:
+            base = DEFAULT_MINIMAX_BASE_URL
+        if not base.startswith(("http://", "https://")):
+            base = f"https://{base}"
+        self.base_url = base.rstrip("/")
+        self.model = (
+            config.get("minimax_model")
+            or os.getenv("JL_MINIMAX_MODEL")
+            or DEFAULT_MINIMAX_MODEL
+        )
+        self.timeout = config.get("minimax_timeout") or DEFAULT_MINIMAX_TIMEOUT
+
+    def _normalized_messages(self, messages: list) -> list[dict]:
+        normalized = []
+        for message in messages or []:
+            if not isinstance(message, dict):
+                continue
+            role = str(message.get("role") or "user").strip() or "user"
+            content = message.get("content")
+            if isinstance(content, list):
+                parts = []
+                for item in content:
+                    if isinstance(item, dict):
+                        text = item.get("text")
+                        if text is not None:
+                            parts.append(str(text))
+                    elif item is not None:
+                        parts.append(str(item))
+                content = "\n".join(p for p in parts if p).strip()
+            else:
+                content = str(content or "").strip()
+            normalized.append({"role": role, "content": content})
+        return normalized
+
+    def generate(
+        self, messages: list, options: dict | None = None, timeout: int | float | None = None
+    ) -> tuple[str, dict]:
+        if not self.api_key:
+            return "[ERROR: MiniMax API key missing]", {"error": "api_key_missing"}
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        payload: dict = {
+            "model": self.model,
+            "messages": self._normalized_messages(messages),
+        }
+        if options and isinstance(options, dict):
+            for key in ("top_p", "max_tokens", "presence_penalty", "frequency_penalty"):
+                value = options.get(key)
+                if value is not None:
+                    payload[key] = value
+            temp = options.get("temperature")
+            if temp is not None:
+                temp = float(temp)
+                if temp <= 0.0:
+                    temp = 1.0
+                payload["temperature"] = temp
+        else:
+            payload["temperature"] = 1.0
+
+        try:
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=timeout or self.timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+            choice = ((data.get("choices") or [{}])[0]) if isinstance(data, dict) else {}
+            message = choice.get("message", {}) if isinstance(choice, dict) else {}
+            content = message.get("content", "") if isinstance(message, dict) else ""
+            if isinstance(content, list):
+                chunks = []
+                for chunk in content:
+                    if isinstance(chunk, dict):
+                        text = chunk.get("text")
+                        if text is not None:
+                            chunks.append(str(text))
+                    elif chunk is not None:
+                        chunks.append(str(chunk))
+                content = "\n".join(chunks).strip()
+            else:
+                content = str(content or "")
+            return content, {"model": self.model, "backend": "minimax"}
+        except (RequestException, KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+            logger.exception("[Backends] MiniMax call failed: %s", exc)
+            return f"[ERROR: MiniMax call failed: {exc}]", {"error": str(exc)}
+
+
 def get_backend(backend_id: str | None = None, overrides: dict | None = None) -> ModelBackend:
     target_id = backend_id or current_backend_id
     fallback_order = [
@@ -833,6 +1027,8 @@ def get_backend(backend_id: str | None = None, overrides: dict | None = None) ->
         return OpenRouterBackend(config)
     if provider == "google_gemini":
         return GoogleGeminiBackend(config)
+    if provider == "minimax":
+        return MiniMaxBackend(config)
     raise NotImplementedError(f"No provider: {provider}")
 
 

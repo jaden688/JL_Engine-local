@@ -287,3 +287,211 @@ def test_runtime_mode_hybrid_without_provider_falls_back_to_local(tmp_path, monk
     assert result["fallback_reason"] == "missing_external_provider_config"
     assert recorded == {"brain_backend_id": "ollama-local", "tool_backend_id": "ollama-local"}
     assert saved["jl_engine"]["runtime_mode"] == "hybrid"
+
+
+def test_new_openai_compatible_backends_are_registered():
+    for backend_id in ("groq", "deepseek", "together"):
+        cfg = core_backends.BACKEND_REGISTRY.get(backend_id)
+        assert isinstance(cfg, dict)
+        assert cfg.get("provider") == "openai"
+        assert str(cfg.get("openai_base_url") or "").strip()
+        assert str(cfg.get("openai_model") or "").strip()
+
+
+def test_runtime_mode_status_accepts_openai_compatible_external_backend(monkeypatch):
+    monkeypatch.setattr(backend_controller, "get_runtime_mode", lambda: "hybrid")
+    monkeypatch.setattr(backend_controller, "has_external_provider_configured", lambda: True)
+    monkeypatch.setattr(backend_controller.core_backends, "brain_backend_id", "groq")
+    monkeypatch.setattr(backend_controller.core_backends, "tool_backend_id", "ollama-local")
+
+    status = backend_controller.get_runtime_mode_status()
+
+    assert status["configured_mode"] == "hybrid"
+    assert status["effective_mode"] == "hybrid"
+    assert status["brain_backend_id"] == "groq"
+    assert status["tool_backend_id"] == "ollama-local"
+
+
+def test_effective_model_name_reads_openai_model_for_non_openai_id(monkeypatch):
+    monkeypatch.setattr(
+        backend_controller,
+        "get_runtime_mode_status",
+        lambda: {
+            "configured_mode": "hybrid",
+            "effective_mode": "hybrid",
+            "fallback_reason": None,
+            "brain_backend_id": "together",
+            "tool_backend_id": "ollama-local",
+        },
+    )
+    monkeypatch.setattr(
+        backend_controller,
+        "BACKEND_REGISTRY",
+        {
+            "together": {
+                "id": "together",
+                "provider": "openai",
+                "openai_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            }
+        },
+    )
+
+    assert (
+        backend_controller.get_effective_model_name()
+        == "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+    )
+
+
+def test_minimax_backend_is_registered():
+    cfg = core_backends.BACKEND_REGISTRY.get("minimax")
+    assert isinstance(cfg, dict)
+    assert cfg.get("provider") == "minimax"
+    assert str(cfg.get("minimax_base_url") or "").strip()
+    assert str(cfg.get("minimax_model") or "").strip()
+
+
+def test_minimax_backend_generates_text_from_chat_completions(monkeypatch):
+    captured: dict = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "id": "chatcmpl-123",
+                "model": "MiniMax-M2.5",
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": "hello from minimax",
+                        },
+                    }
+                ],
+            }
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse()
+
+    monkeypatch.setattr(core_backends.requests, "post", fake_post)
+
+    backend = core_backends.MiniMaxBackend(
+        {
+            "minimax_api_key": "test-key",
+            "minimax_model": "MiniMax-M2.5",
+            "minimax_base_url": "https://api.minimax.io/v1",
+        }
+    )
+    text, meta = backend.generate(
+        [{"role": "user", "content": "Say hello"}],
+        options={"temperature": 0.7},
+    )
+
+    assert captured["url"] == "https://api.minimax.io/v1/chat/completions"
+    assert captured["json"]["model"] == "MiniMax-M2.5"
+    assert captured["json"]["messages"][0]["role"] == "user"
+    assert captured["json"]["temperature"] == 0.7
+    assert text == "hello from minimax"
+    assert meta["backend"] == "minimax"
+
+
+def test_minimax_backend_clamps_zero_temperature(monkeypatch):
+    captured: dict = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [{"message": {"content": "ok"}}],
+            }
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["json"] = json
+        return DummyResponse()
+
+    monkeypatch.setattr(core_backends.requests, "post", fake_post)
+
+    backend = core_backends.MiniMaxBackend(
+        {"minimax_api_key": "test-key", "minimax_model": "MiniMax-M2.5"}
+    )
+    backend.generate(
+        [{"role": "user", "content": "test"}],
+        options={"temperature": 0},
+    )
+
+    assert captured["json"]["temperature"] == 1.0
+
+
+def test_minimax_backend_returns_error_without_api_key():
+    backend = core_backends.MiniMaxBackend({"minimax_model": "MiniMax-M2.5"})
+    text, meta = backend.generate([{"role": "user", "content": "test"}])
+    assert "ERROR" in text
+    assert meta.get("error") == "api_key_missing"
+
+
+def test_get_backend_returns_minimax_backend(monkeypatch):
+    monkeypatch.setattr(
+        core_backends,
+        "BACKEND_REGISTRY",
+        {
+            "minimax": {
+                "id": "minimax",
+                "provider": "minimax",
+                "minimax_api_key": "test-key",
+                "minimax_model": "MiniMax-M2.5",
+                "minimax_base_url": "https://api.minimax.io/v1",
+            }
+        },
+    )
+    monkeypatch.setattr(core_backends, "current_backend_id", "minimax")
+
+    backend = core_backends.get_backend("minimax")
+    assert isinstance(backend, core_backends.MiniMaxBackend)
+
+
+def test_effective_model_name_reads_minimax_model(monkeypatch):
+    monkeypatch.setattr(
+        backend_controller,
+        "get_runtime_mode_status",
+        lambda: {
+            "configured_mode": "hybrid",
+            "effective_mode": "hybrid",
+            "fallback_reason": None,
+            "brain_backend_id": "minimax",
+            "tool_backend_id": "ollama-local",
+        },
+    )
+    monkeypatch.setattr(
+        backend_controller,
+        "BACKEND_REGISTRY",
+        {
+            "minimax": {
+                "id": "minimax",
+                "provider": "minimax",
+                "minimax_model": "MiniMax-M2.5",
+            }
+        },
+    )
+
+    assert backend_controller.get_effective_model_name() == "MiniMax-M2.5"
+
+
+def test_runtime_mode_status_accepts_minimax_external_backend(monkeypatch):
+    monkeypatch.setattr(backend_controller, "get_runtime_mode", lambda: "hybrid")
+    monkeypatch.setattr(backend_controller, "has_external_provider_configured", lambda: True)
+    monkeypatch.setattr(backend_controller.core_backends, "brain_backend_id", "minimax")
+    monkeypatch.setattr(backend_controller.core_backends, "tool_backend_id", "ollama-local")
+
+    status = backend_controller.get_runtime_mode_status()
+
+    assert status["configured_mode"] == "hybrid"
+    assert status["effective_mode"] == "hybrid"
+    assert status["brain_backend_id"] == "minimax"
+    assert status["tool_backend_id"] == "ollama-local"

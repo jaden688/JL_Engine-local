@@ -30,10 +30,19 @@ _SENSITIVE_KEYS = {
     "gemini_api_key",
     "openai_api_key",
     "openrouter_api_key",
+    "minimax_api_key",
 }
 _VALID_RUNTIME_MODES = {"local_only", "hybrid"}
 _LOCAL_BACKEND_ID = "ollama-local"
-_EXTERNAL_BACKEND_IDS = ("openai", "openrouter", "google-gemini")
+_EXTERNAL_BACKEND_IDS = (
+    "openai",
+    "openrouter",
+    "google-gemini",
+    "groq",
+    "deepseek",
+    "together",
+    "minimax",
+)
 
 
 def _enforce_ollama_base_url(raw_url: str, service_config: dict | None = None) -> str:
@@ -241,8 +250,23 @@ def get_runtime_mode() -> str:
 def _has_backend_credential(backend_id: str) -> bool:
     cfg = dict(BACKEND_REGISTRY.get(backend_id, {}) or {})
     provider = str(cfg.get("provider") or "").strip().lower()
-    if backend_id == "openai" or provider == "openai":
-        return bool(str(cfg.get("openai_api_key") or os.getenv("OPENAI_API_KEY") or "").strip())
+    if provider == "openai" or backend_id == "openai":
+        env_key_map = {
+            "openai": "OPENAI_API_KEY",
+            "groq": "GROQ_API_KEY",
+            "deepseek": "DEEPSEEK_API_KEY",
+            "together": "TOGETHER_API_KEY",
+        }
+        env_key = env_key_map.get(backend_id, "OPENAI_API_KEY")
+        return bool(
+            str(
+                cfg.get("openai_api_key")
+                or cfg.get("api_key")
+                or os.getenv(env_key)
+                or os.getenv("OPENAI_API_KEY")
+                or ""
+            ).strip()
+        )
     if backend_id == "openrouter" or provider == "openrouter":
         return bool(
             str(cfg.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY") or "").strip()
@@ -256,6 +280,10 @@ def _has_backend_credential(backend_id: str) -> bool:
                 or os.getenv("GEMINI_API_KEY")
                 or ""
             ).strip()
+        )
+    if backend_id == "minimax" or provider == "minimax":
+        return bool(
+            str(cfg.get("minimax_api_key") or os.getenv("MINIMAX_API_KEY") or "").strip()
         )
     return False
 
@@ -298,7 +326,14 @@ def get_effective_model_name() -> str:
     if backend_id == "ollama-local":
         return get_ollama_model() or get_ollama_configured_model()
     cfg = dict(BACKEND_REGISTRY.get(backend_id, {}) or {})
-    for key in ("model_name", "modelName", "openrouter_model", "gemini_model"):
+    for key in (
+        "openai_model",
+        "model_name",
+        "modelName",
+        "openrouter_model",
+        "gemini_model",
+        "minimax_model",
+    ):
         text = str(cfg.get(key) or "").strip()
         if text:
             return text
