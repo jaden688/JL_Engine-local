@@ -18,14 +18,6 @@ BACKEND_REGISTRY = core_backends.BACKEND_REGISTRY
 OLLAMA_CONNECT_TIMEOUT = core_backends.OLLAMA_CONNECT_TIMEOUT
 OLLAMA_READ_TIMEOUT = core_backends.OLLAMA_READ_TIMEOUT
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-# _HEADLESS_CONFIG_PATHS lists both known config locations in priority order.
-# This is intentional dual-path design:
-#   1. jl_engine_core/data/config/ — runtime source-of-truth used by JLEngineCore directly.
-#   2. config/                     — top-level "headless" copy used by standalone scripts,
-#                                    the desktop UI launcher, and external tooling that may
-#                                    not have the engine package installed.
-# All write operations (model selection, backend switching, runtime mode) persist to every
-# path that exists so both locations stay in sync at all times.
 _HEADLESS_CONFIG_PATHS = [
     _REPO_ROOT / "jl_engine_core" / "data" / "config" / "JLframe_Engine_Framework.headless.json",
     _REPO_ROOT / "config" / "JLframe_Engine_Framework.headless.json",

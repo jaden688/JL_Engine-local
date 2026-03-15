@@ -59,29 +59,13 @@ That means fat agents are not bypassing the engine. They are the persona capsule
 - Desktop UI: `ui/pyside_ui.py`
 - Web UIs: `ui_web/` and `ui_easy/`
 
-## Config file layout
-
-The `JLframe_Engine_Framework.headless.json` config exists in two places, both of which are read and
-kept in sync at runtime:
-
-| Path | Consumer |
-|------|----------|
-| `jl_engine_core/data/config/` | `JLEngineCore` class (runtime source-of-truth) |
-| `config/` | Desktop UI launcher, standalone headless scripts, external tooling |
-
-`backend_controller.py` maintains `_HEADLESS_CONFIG_PATHS` pointing at both locations and writes
-every backend/model/runtime-mode change to all existing paths simultaneously. This is intentional:
-the two locations serve distinct consumers (engine vs. tooling), so neither is "stale" — they are
-kept in sync by design.
-
-The same pattern applies to `behavior_states.json` (also referenced by both consumers).
-
 ## Current pressure points
 
 These are the main maintainability weak spots without changing behavior:
 
 - very large files in `engine_core.py`, `quest_runtime.py`, `interpreter.py`, and `ui/pyside_ui.py`
 - mixed admin and user-facing routes in the same API module
+- multiple mirrored data trees at repo root versus the runtime data tree under `jl_engine_core/data/`
 - inconsistent error response shapes across some API surfaces
 
 ## Safe direction for future refactors
@@ -89,4 +73,4 @@ These are the main maintainability weak spots without changing behavior:
 - keep user-facing task execution on engine-mediated quest/interpreter flows
 - keep local operator routes available, but document and fence them as local/admin only
 - extract large modules by concern rather than rewriting behavior
-- treat `jl_engine_core/data/...` as the canonical runtime tree; all writes must go through `backend_controller` so both config locations stay in sync
+- keep `jl_engine_core/data/...` as the canonical runtime tree and avoid editing mirrored root copies unless the runtime truly reads them

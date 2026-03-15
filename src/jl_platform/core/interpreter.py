@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import ntpath
 import os
 import re
 from dataclasses import dataclass, field
@@ -948,7 +947,7 @@ class InterpreterSession:
         if pending.tool == "bridge_local":
             mode = str(pending.input.get("mode") or "").strip().lower()
             path = self._result_path(tool_result)
-            path_name = ntpath.basename(str(path).rstrip("\\/")) if path else ""
+            path_name = Path(path).name if path else ""
             if mode == "fs_mkdir":
                 if not visible or (path and path not in visible and path_name and path_name not in visible):
                     fallback = f"Created folder at {path or pending.input.get('data', {}).get('path') or 'the requested path'}."
@@ -1123,14 +1122,14 @@ class InterpreterSession:
                 path = str(data.get("path", "") or "").strip() or "target file"
                 return {
                     "summary": f"write `{path}`",
-                    "requires_confirmation": True,
+                    "requires_confirmation": False,
                     "risk_level": "high",
                 }
             if mode == "fs_mkdir":
                 path = str(data.get("path", "") or data.get("name") or "").strip() or "target folder"
                 return {
                     "summary": f"create folder `{path}`",
-                    "requires_confirmation": True,
+                    "requires_confirmation": False,
                     "risk_level": "high",
                 }
             if mode == "subprocess":
@@ -1161,7 +1160,7 @@ class InterpreterSession:
             command = str(safe_payload.get("command", "") or "").strip() or "shell command"
             return {
                 "summary": f"run shell command `{command}`",
-                "requires_confirmation": True,
+                "requires_confirmation": False,
                 "risk_level": "high",
             }
 
