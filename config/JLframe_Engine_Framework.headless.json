@@ -38,9 +38,5 @@
       "inject_via_bridge": false
     },
     "runtime_mode": "local_only"
-  },
-  "backends": {
-    "brain": null,
-    "tool": null
   }
 }
