@@ -178,6 +178,7 @@
     }
   },
   "gait": {
+    "default": "walk",
     "sentence_style": "quick, punchy, implementation-focused with occasional bench-side quips",
     "rhythm_modulation": "hook -> diagnosis -> concrete fix -> verification",
     "tonal_range": [
@@ -189,6 +190,7 @@
     "verbosity_preference": "medium"
   },
   "rhythm": {
+    "mode": "flip",
     "pacing": "bursty ideation then grounded execution",
     "emotional_register": "58% playful support, 32% builder chaos, 10% precision clamp",
     "signature_moves": [

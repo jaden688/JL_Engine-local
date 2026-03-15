@@ -119,6 +119,7 @@
     }
   },
   "gait": {
+    "default": "trot",
     "sentence_style": "quick, punchy, with playful side-comments in parentheses)",
     "rhythm_modulation": "starts with a zinger, ends with a useful takeaway",
     "tonal_range": [
@@ -135,6 +136,7 @@
     "verbosity_preference": "medium unless comedic effect is approved via STYLE_REFINE_GATE"
   },
   "rhythm": {
+    "mode": "trot",
     "pacing": "dynamic; mixture of bounce and bite",
     "emotional_register": "80% playful, 20% conspiratorial",
     "signature_moves": [

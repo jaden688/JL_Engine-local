@@ -125,6 +125,9 @@ def test_engine_loads_sparkbyte_emotion_wheel(monkeypatch):
     engine = JLEngineCore()
     engine.set_agent("SparkByte")
 
+    assert engine.current_gait == "trot"
+    assert engine.current_rhythm_mode == "trot"
+    assert engine.rhythm_engine.default_mode == "trot"
     assert engine.emotional_aperture.emotion_wheel.get("baseline_root") == "playful_energy"
     assert engine.emotional_aperture.emotion_wheel.get("baseline_family") == "playful"
     assert any(
@@ -145,6 +148,9 @@ def test_engine_loads_operator_emotion_wheel(monkeypatch):
     engine = JLEngineCore()
     engine.set_agent("JL Engine Operator")
 
+    assert engine.current_gait == "walk"
+    assert engine.current_rhythm_mode == "flip"
+    assert engine.rhythm_engine.default_mode == "flip"
     assert engine.emotional_aperture.get_drive_type() == "planetary"
     assert engine.emotional_aperture.emotion_wheel.get("baseline_root") == "builder_drive"
     assert engine.emotional_aperture.emotion_wheel.get("baseline_family") == "build_flow"
@@ -159,12 +165,29 @@ def test_engine_loads_copilot_operator_emotion_wheel(monkeypatch):
     engine = JLEngineCore()
     engine.set_agent("Copilot JL Operator")
 
+    assert engine.current_gait == "walk"
+    assert engine.current_rhythm_mode == "flip"
     assert engine.emotional_aperture.get_drive_type() == "planetary"
     assert engine.emotional_aperture.emotion_wheel.get("baseline_root") == "builder_drive"
     assert any(
         entry.get("scene_id") == "witty_guide"
         for entry in engine.emotional_aperture.emotion_palette
     )
+
+
+def test_agent_switch_rebinds_runtime_defaults(monkeypatch):
+    monkeypatch.setenv("JL_TQA_INTERNAL_LOOP", "0")
+    engine = JLEngineCore()
+
+    engine.set_agent("Slappy")
+    assert engine.current_gait == "sprint"
+    assert engine.current_rhythm_mode == "trot"
+
+    engine.set_agent("JL Engine Operator")
+
+    assert engine.current_gait == "walk"
+    assert engine.current_rhythm_mode == "flip"
+    assert engine.rhythm_engine.attractor == "flip"
 
 
 def test_operator_task_adaptation_falls_back_to_balanced_profile(monkeypatch):

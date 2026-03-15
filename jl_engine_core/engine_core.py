@@ -376,6 +376,52 @@ class JLEngineCore:
             tool_backend_cfg,
         )
 
+    def _normalize_agent_gait_default(self, value: Any) -> str:
+        text = str(value or "").strip().lower()
+        if not text:
+            return "walk"
+        if "sprint" in text or "gallop" in text:
+            return "sprint"
+        if "trot" in text:
+            return "trot"
+        if "idle" in text:
+            return "idle"
+        if "walk" in text:
+            return "walk"
+        return "walk"
+
+    def _normalize_agent_rhythm_default(self, value: Any) -> str:
+        text = str(value or "").strip()
+        if not text:
+            return "flip"
+        try:
+            return self.rhythm_engine._normalize_mode(text)
+        except AttributeError:
+            normalized = text.lower()
+            if "trot" in normalized:
+                return "trot"
+            if "flop" in normalized:
+                return "flop"
+            return "flip"
+
+    def _resolve_agent_runtime_defaults(self, payload: Dict[str, Any]) -> tuple[str, str]:
+        gait_profile: Dict[str, Any] = {}
+        rhythm_profile: Dict[str, Any] = {}
+        raw_gait_profile = payload.get("gait")
+        raw_rhythm_profile = payload.get("rhythm")
+        if isinstance(raw_gait_profile, dict):
+            gait_profile = raw_gait_profile
+        if isinstance(raw_rhythm_profile, dict):
+            rhythm_profile = raw_rhythm_profile
+
+        gait_default = self._normalize_agent_gait_default(
+            gait_profile.get("default") or gait_profile.get("mode")
+        )
+        rhythm_default = self._normalize_agent_rhythm_default(
+            rhythm_profile.get("mode") or rhythm_profile.get("default")
+        )
+        return gait_default, rhythm_default
+
     # ------------------------------------------------------------------
     # Agent management
     # ------------------------------------------------------------------
@@ -601,8 +647,15 @@ class JLEngineCore:
                 )
 
         # Reset dynamic state for new agent
-        self.current_gait = "walk"
-        self.current_rhythm_mode = "flop"
+        gait_default, rhythm_default = self._resolve_agent_runtime_defaults(self.current_agent_data)
+        self.gait = gait_default.upper()
+        self.rhythm = rhythm_default.upper()
+        self.current_gait = gait_default
+        self.current_rhythm_mode = rhythm_default
+        self.rhythm_engine.default_mode = rhythm_default
+        self.rhythm_engine.attractor = rhythm_default
+        self.rhythm_engine.momentum = 0.0
+        self.rhythm_engine._last_state = None
         self.current_cognitive_state = None
         self.last_signals = None
         self.last_drift_response = None

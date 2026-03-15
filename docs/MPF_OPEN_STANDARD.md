@@ -53,6 +53,7 @@ The runtime still accepts older JL payload shapes for compatibility, but new bui
 - treat `jl_engine_core/data/...` as the canonical runtime tree
 - treat `jl_engine_core/data/agents/` as the canonical runtime agent tree
 - the old root `personas/` mirror has been retired
-- `jl_engine_core/data/personas/` remains only as a legacy compatibility mirror and should not be edited directly
+- `jl_engine_core/data/personas/` has been retired to avoid mirror drift and self-edit confusion
 - keep registry entries readable and move large behavior definitions into payload files
 - use modular fat agents when you want a reusable shell with generated or composed layers
+- fat-agent payloads can define initial runtime modulation defaults such as `gait.default` and `rhythm.mode`; the headless engine keeps the same subsystems but hot-swaps the active settings they consume

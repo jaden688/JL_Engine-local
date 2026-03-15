@@ -19,6 +19,12 @@ def test_root_personas_mirror_is_gone():
     assert not root_personas.exists()
 
 
+def test_runtime_personas_mirror_is_gone():
+    runtime_personas = Path(__file__).resolve().parents[1] / "jl_engine_core" / "data" / "personas"
+
+    assert not runtime_personas.exists()
+
+
 def test_registry_marks_mothership_agents_as_fat_agents():
     registry_path = (
         Path(__file__).resolve().parents[1]
