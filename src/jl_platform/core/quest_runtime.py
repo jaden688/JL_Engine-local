@@ -798,6 +798,9 @@ class FatQuestRuntime:
         registry = self._load_registry()
         agents: list[dict[str, Any]] = []
         for agent_name in sorted(registry.keys(), key=lambda item: str(item).lower()):
+            if str(agent_name).startswith("_"):
+                # Underscore-prefixed keys are metadata (e.g. _license) — skip silently.
+                continue
             entry = registry.get(agent_name) if isinstance(registry.get(agent_name), dict) else {}
             jl_agent_file = str((entry or {}).get("jl_agent_file") or (entry or {}).get("agent_file") or "").strip()
             agent_path = (self._agents_dir / jl_agent_file) if jl_agent_file else self._agents_dir

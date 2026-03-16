@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://jl-engine.dev/schemas/mpf/registry.schema.json",
+  "$comment": "Copyright 2026 Jaden Lindenbach (https://github.com/jaden688/JL_Engine-local). Licensed under PolyForm Noncommercial 1.0.0. See LICENSE.md.",
   "title": "MPF Registry Schema (Open Standard)",
   "description": "Schema for JL_Agents.mpf.json registry maps.",
   "type": "object",
