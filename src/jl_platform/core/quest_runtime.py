@@ -794,6 +794,27 @@ class FatQuestRuntime:
         result["path"] = str(agent_path)
         return result
 
+    def _build_agent_info(self, agent_name: str, entry: dict[str, Any]) -> dict[str, Any]:
+        jl_agent_file = str(entry.get("jl_agent_file") or entry.get("agent_file") or "").strip()
+        agent_path = (self._agents_dir / jl_agent_file) if jl_agent_file else self._agents_dir
+        tags_raw = entry.get("tags")
+        tags = [str(tag) for tag in tags_raw] if isinstance(tags_raw, list) else []
+        payload = self._load_agent_payload_by_name(str(agent_name)) if jl_agent_file else {}
+        modular_summary = get_modular_agent_summary(payload)
+        return {
+            "agent_name": str(agent_name),
+            "name": str(agent_name),
+            "jl_agent_file": jl_agent_file,
+            "path": str(agent_path),
+            "exists": agent_path.exists() if jl_agent_file else False,
+            "default_backend_id": entry.get("default_backend_id"),
+            "default_memory_mode": entry.get("default_memory_mode"),
+            "drive_type": entry.get("drive_type"),
+            "classification": entry.get("classification"),
+            "tags": tags,
+            "modular_summary": modular_summary,
+        }
+
     def list_mpf_agents(self) -> list[dict[str, Any]]:
         registry = self._load_registry()
         agents: list[dict[str, Any]] = []
@@ -801,25 +822,10 @@ class FatQuestRuntime:
             if str(agent_name).startswith("_"):
                 # Underscore-prefixed keys are metadata (e.g. _license) — skip silently.
                 continue
-            entry = registry.get(agent_name) if isinstance(registry.get(agent_name), dict) else {}
-            jl_agent_file = str((entry or {}).get("jl_agent_file") or (entry or {}).get("agent_file") or "").strip()
-            agent_path = (self._agents_dir / jl_agent_file) if jl_agent_file else self._agents_dir
-            tags_raw = (entry or {}).get("tags")
-            tags = [str(tag) for tag in tags_raw] if isinstance(tags_raw, list) else []
-            payload = self._load_agent_payload_by_name(str(agent_name)) if jl_agent_file else {}
-            modular_summary = get_modular_agent_summary(payload)
-            agents.append(
-                {
-                    "agent_name": str(agent_name),
-                    "name": str(agent_name),
-                    "jl_agent_file": jl_agent_file,
-                    "path": str(agent_path),
-                    "exists": agent_path.exists() if jl_agent_file else False,
-                    "default_backend_id": (entry or {}).get("default_backend_id"),
-                    "default_memory_mode": (entry or {}).get("default_memory_mode"),
-                    "drive_type": (entry or {}).get("drive_type"),
-                    "classification": (entry or {}).get("classification"),
-                    "tags": tags,
+            entry_obj = registry.get(agent_name)
+            entry = entry_obj if isinstance(entry_obj, dict) else {}
+            agents.append(self._build_agent_info(agent_name, entry))
+        return agents
                     "profile_type": "modular_fat_agent" if modular_summary else "classic_agent",
                     "modular_summary": modular_summary,
                 }
