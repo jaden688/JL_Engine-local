@@ -826,10 +826,6 @@ class FatQuestRuntime:
             entry = entry_obj if isinstance(entry_obj, dict) else {}
             agents.append(self._build_agent_info(agent_name, entry))
         return agents
-                    "profile_type": "modular_fat_agent" if modular_summary else "classic_agent",
-                    "modular_summary": modular_summary,
-                }
-            )
         return agents
 
     def register_agentlized_agent(
