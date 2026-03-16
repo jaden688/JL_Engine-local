@@ -85,6 +85,9 @@ def load_mpf_registry(registry_path: str) -> Dict[str, MPFProfile]:
 
     profiles: Dict[str, MPFProfile] = {}
     for display_name, entry in raw_registry.items():
+        if str(display_name).startswith("_"):
+            # Underscore-prefixed keys are metadata (e.g. _license) — skip silently.
+            continue
         if not isinstance(entry, dict):
             print(f"[MPF] Skipping '{display_name}' - entry must be an object.")
             continue
