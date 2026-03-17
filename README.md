@@ -4,6 +4,8 @@ JL Engine Local is the local-first JL Engine runtime and UI stack. The engine is
 
 This repository is source-available under the non-commercial license in `LICENSE.md`. It is not an OSI open-source license.
 
+> **New here?** Start with [`ONBOARDING.md`](ONBOARDING.md) for a step-by-step first-run guide, then return here for a reference overview.
+
 ## What ships here
 
 - `jl_engine_core/`: the core engine, MPF registry loader, backends, and compatibility API
@@ -117,9 +119,12 @@ python -m uvicorn jl_platform.services.api.main:app --host 127.0.0.1 --port 8000
 
 ## More docs
 
+- `ONBOARDING.md`
+- `CONTRIBUTING.md`
 - `ARCHITECTURE.md`
 - `TROUBLESHOOTING.md`
 - `docs/README.md`
+- `docs/AGENTS.md`
 - `docs/MPF_OPEN_STANDARD.md`
 - `docs/TOOL_FORGE.md`
 - `docs/ERROR_HANDLING.md`
