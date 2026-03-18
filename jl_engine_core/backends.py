@@ -1,4 +1,4 @@
-"""License: PolyForm Noncommercial 1.0.0. See LICENSE.md."""
+"""Licensed under the MIT License. See LICENSE.md."""
 
 import copy
 import os

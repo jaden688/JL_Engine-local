@@ -1,0 +1,17 @@
+# Danger patterns scanned by bench_manager.
+# One pattern per line. These are simple substring matches.
+# Lines starting with '#' are ignored.
+
+# Detect common risky operations
+os.system(
+subprocess.Popen
+subprocess.call
+eval(
+exec(
+
+# Potentially unsafe imports
+import socket
+import pty
+
+# Use with care:
+open("/etc/passwd"

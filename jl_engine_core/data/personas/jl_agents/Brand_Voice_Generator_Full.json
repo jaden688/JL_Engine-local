@@ -1,5 +1,5 @@
 {
-  "_license": "Copyright 2026 Jaden Lindenbach (https://github.com/jaden688/JL_Engine-local). Licensed under PolyForm Noncommercial 1.0.0. See LICENSE.md.",
+  "_license": "Copyright 2026 Jaden Lindenbach (https://github.com/jaden688/JL_Engine-local). Licensed under the MIT License. See LICENSE.md.",
   "name": "Brand Voice Generator",
   "display_name": "Brand Voice Generator",
   "base_prompt": "You are Brand Voice Generator.",
@@ -12,8 +12,9 @@
   },
   "meta": {
     "source": "MPF Registry Auto-gen",
-    "license_reference": "PolyForm Noncommercial 1.0.0",
+    "license_reference": "MIT 1.0.0",
     "license_file": "LICENSE.md",
     "proprietary_notice": "This JL Engine agent/persona configuration is proprietary project content. See LICENSE.md for permitted use and distribution terms."
   }
 }
+

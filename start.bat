@@ -1,5 +1,5 @@
 @echo off
-rem License: PolyForm Noncommercial 1.0.0. See LICENSE.md.
+rem Licensed under the MIT License. See LICENSE.md.
 setlocal enableextensions
 pushd "%~dp0"
 

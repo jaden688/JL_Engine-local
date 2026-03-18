@@ -8,7 +8,7 @@ Be respectful and constructive in all interactions. Issues and pull requests are
 
 ## Licensing
 
-This repository is source-available under a non-commercial license. See `LICENSE.md` before contributing. By submitting a pull request you agree that your contribution will be released under the same license.
+This repository is source-available under a MIT License. See `LICENSE.md` before contributing. By submitting a pull request you agree that your contribution will be released under the same license.
 
 ## Development setup
 
@@ -158,3 +158,4 @@ Open a GitHub issue with:
 - Platform, Python version, and install method
 
 For security issues, see `SECURITY.md` — do not open a public issue.
+

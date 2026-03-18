@@ -116,9 +116,20 @@ def resolve_modular_agent_payload(
 def get_modular_agent_summary(payload: dict[str, Any] | None) -> dict[str, Any] | None:
     if not isinstance(payload, dict):
         return None
+
+    # If payload is a modular agent shell (base_shell + loadout), resolve it first
+    # so that we can rely on the `modular` key for summary metadata.
+    if is_modular_agent_payload(payload):
+        try:
+            payload = resolve_modular_agent_payload(payload)
+        except ModularAgentError:
+            # If resolution fails, fall back to returning None rather than crashing.
+            return None
+
     modular = payload.get("modular")
     if not isinstance(modular, dict):
         return None
+
     identity = payload.get("identity") if isinstance(payload.get("identity"), dict) else {}
     helpers = modular.get("helpers") if isinstance(modular.get("helpers"), list) else []
     tasks_profile = (
@@ -215,7 +226,14 @@ def _resolve_helpers(root: Path, payload: dict[str, Any], loadout: dict[str, Any
         if not isinstance(source, list):
             continue
         for item in source:
-            helper_id = str(item or "").strip()
+            # Helpers may be specified as just an id string (e.g. "option_generator")
+            # or as a dict containing a helper_id and metadata.
+            helper_id = None
+            if isinstance(item, str):
+                helper_id = item
+            elif isinstance(item, dict):
+                helper_id = item.get("helper_id")
+            helper_id = str(helper_id or "").strip()
             if helper_id and helper_id not in helper_ids:
                 helper_ids.append(helper_id)
     if not helper_ids:

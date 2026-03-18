@@ -1197,7 +1197,7 @@ function formatToolTrace(trace) {
 function formatHostLabel(value) {
   const raw = String(value || "").trim();
   const key = normalizeToken(raw);
-  if (key === "npc" || key === "computercontrol" || key === "mycomputer") return "my-computer";
+  if (key === "computercontrol" || key === "mycomputer") return "my-computer";
   return raw || "unknown";
 }
 

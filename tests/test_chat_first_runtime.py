@@ -248,8 +248,11 @@ def test_interpreter_preamble_lists_real_bridge_modes_and_windows_shell_rules():
     assert "Get-ChildItem" in preamble
     assert "browser_action" in preamble
     assert "browser_inspect" in preamble
-    assert "ui_access" in preamble
-    assert "ui_info" in preamble
+    assert "fs_mkdir" in preamble
+    assert "fs_write" in preamble
+    assert "Never invent bridge modes like" in preamble
+    assert "`ui_access`" in preamble
+    assert "`ui_info`" in preamble
 
 
 def test_interpreter_write_requires_confirmation_and_approval_executes_once():
