@@ -1,7 +1,7 @@
 """
 engine_core.py - JL Engine Core Orchestrator
 
-License: PolyForm Noncommercial 1.0.0. See LICENSE.md.
+Licensed under the MIT License. See LICENSE.md.
 
 This module provides a *unified, headless* orchestration layer for the JL Engine.
 

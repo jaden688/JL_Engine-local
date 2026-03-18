@@ -1,6 +1,6 @@
 {
   "name": "my-computer",
-  "description": "Legacy compatibility host adapter using JL Platform core.",
+  "description": "Local machine host adapter using JL Platform core.",
   "privacy_mode": "local",
   "tools": ["local_action"]
 }

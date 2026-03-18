@@ -1,3 +1,5 @@
-from jl_platform.hosts.npc.mapper import NPCHostAdapter
+from jl_platform.hosts.local.mapper import LocalHostAdapter
 
-__all__ = ["NPCHostAdapter"]
+NPCHostAdapter = LocalHostAdapter
+
+__all__ = ["LocalHostAdapter", "NPCHostAdapter"]

@@ -1,4 +1,4 @@
-"""License: PolyForm Noncommercial 1.0.0. See LICENSE.md."""
+"""Licensed under the MIT License. See LICENSE.md."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from jl_platform.core.engine import CoreEngine
 from jl_platform.core.quest_runtime import FatQuestRuntime
 from jl_platform.core.runtime.app import PlatformApp
-from jl_platform.sdk.client import HOST_REGISTRY, start_app
+from jl_platform.sdk.client import HOST_REGISTRY, resolve_host_name, start_app
 from jl_platform.core.tools.builtin import register_core_tools
 from jl_platform.core.tools.registry import ToolRegistry
 from jl_platform.core.interpreter import InterpreterSession
@@ -547,18 +547,19 @@ def host_chat(host: str, payload: ChatRequest):
     """
     Generic chat endpoint that routes through a host adapter + CoreEngine.
     """
-    if host not in HOST_REGISTRY:
+    resolved_host = resolve_host_name(host)
+    if resolved_host is None or resolved_host not in HOST_REGISTRY:
         raise HTTPException(status_code=404, detail="Unknown host")
 
-    app_instance = _HOST_APPS.get(host)
+    app_instance = _HOST_APPS.get(resolved_host)
     if app_instance is None:
         engine = CoreEngine()
-        app_instance = start_app(host_name=host, config_path=None, engine=engine)
-        _HOST_APPS[host] = app_instance
+        app_instance = start_app(host_name=resolved_host, config_path=None, engine=engine)
+        _HOST_APPS[resolved_host] = app_instance
     context = payload.context or {}
     agent_profile = _resolve_agent_profile(agent_name=payload.agent, agent_alias=payload.agent)
     requested_agent = context.get("agent_id") if isinstance(context, dict) else None
-    agent_id = str(requested_agent or f"api_{host}_{agent_profile.replace(' ', '_')}")
+    agent_id = str(requested_agent or f"api_{resolved_host}_{agent_profile.replace(' ', '_')}")
     existing_agents = getattr(app_instance.engine, "_engines", {})
     if agent_id not in existing_agents:
         app_instance.register_agent(agent_id, agent=agent_profile)
@@ -566,7 +567,7 @@ def host_chat(host: str, payload: ChatRequest):
     result = app_instance.process_host(
         agent_id, text=payload.message, events=events, context=context
     )
-    return {"host": host, "agent_id": agent_id, "result": result}
+    return {"host": resolved_host, "agent_id": agent_id, "result": result}
 
 
 @app.post("/tools/py-exec")
@@ -930,9 +931,14 @@ def interpreter_run(payload: InterpreterRequest):
     sid = payload.session_id or "default"
     session = _INTERPRETER_SESSIONS.get(sid)
     if session is None:
+        # Keep the interpreter's tool surface aligned with the local engine defaults,
+        # but do not silently execute direct file actions unless explicitly enabled.
         session = InterpreterSession(
-            allow_unsafe_tools=True,
-            allow_direct_action_fallback=True,
+            allow_unsafe_tools=None,
+            allow_direct_action_fallback=_env_bool(
+                "JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK",
+                False,
+            ),
         )
         _INTERPRETER_SESSIONS[sid] = session
     result = session.run(payload.message)

@@ -26,6 +26,11 @@ DEFAULT_SWITCHBOARD_PATH = (
 )
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = str(os.getenv(name, "1" if default else "0")).strip().lower()
+    return raw not in {"0", "false", "off", "no"}
+
+
 def _hash_text(value: str) -> str:
     return hashlib.sha256((value or "").encode("utf-8")).hexdigest()
 
@@ -663,8 +668,11 @@ class FatQuestRuntime:
                 session = InterpreterSession(
                     engine=engine,
                     memory_forge=forge,
-                    allow_unsafe_tools=True,
-                    allow_direct_action_fallback=True,
+                    allow_unsafe_tools=None,
+                    allow_direct_action_fallback=_env_bool(
+                        "JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK",
+                        False,
+                    ),
                 )
                 agent_obj = QuestAgent(agent_id=agent_id, agent=agent_name, session=session, forge=forge)
                 selection = self._resolve_agent_selection_from_name(agent_name)
@@ -801,6 +809,7 @@ class FatQuestRuntime:
         tags = [str(tag) for tag in tags_raw] if isinstance(tags_raw, list) else []
         payload = self._load_agent_payload_by_name(str(agent_name)) if jl_agent_file else {}
         modular_summary = get_modular_agent_summary(payload)
+        profile_type = "modular_fat_agent" if modular_summary else "classic_agent"
         return {
             "agent_name": str(agent_name),
             "name": str(agent_name),
@@ -812,6 +821,7 @@ class FatQuestRuntime:
             "drive_type": entry.get("drive_type"),
             "classification": entry.get("classification"),
             "tags": tags,
+            "profile_type": profile_type,
             "modular_summary": modular_summary,
         }
 
@@ -1583,8 +1593,11 @@ class FatQuestRuntime:
             clone_session = InterpreterSession(
                 engine=clone_engine,
                 memory_forge=clone_forge,
-                allow_unsafe_tools=True,
-                allow_direct_action_fallback=True,
+                allow_unsafe_tools=None,
+                allow_direct_action_fallback=_env_bool(
+                    "JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK",
+                    False,
+                ),
             )
             # Start cloned sessions with clean short-term interpreter history.
             clone_session.history = []

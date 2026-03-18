@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import importlib
+import os
 import shlex
+import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +13,7 @@ from jl_platform.core.models import ToolSpec
 def get_tool_spec() -> ToolSpec:
     return ToolSpec(
         name="run_cc_command",
-        description="Execute a local command through modules/cc.py (legacy CC.py shim) and return structured output.",
+        description="Execute a local command and return structured output.",
         input_schema={
             "type": "object",
             "properties": {
@@ -40,15 +42,6 @@ def get_tool_spec() -> ToolSpec:
     )
 
 
-def _load_cc_module():
-    for module_name in ("modules.cc", "CC"):
-        try:
-            return importlib.import_module(module_name)
-        except Exception:
-            continue
-    return None
-
-
 def _normalize_command(command: Any, shell: bool) -> str | list[str]:
     if isinstance(command, list):
         if shell:
@@ -58,16 +51,6 @@ def _normalize_command(command: Any, shell: bool) -> str | list[str]:
 
 
 def run_cc_command(payload: dict) -> dict:
-    cc_module = _load_cc_module()
-    if cc_module is None or not hasattr(cc_module, "run_command"):
-        return {
-            "ok": False,
-            "returncode": None,
-            "stdout": "",
-            "stderr": "CC module is not importable. Expected modules.cc or legacy CC with run_command().",
-            "error": "cc_unavailable",
-        }
-
     command = payload.get("command")
     if command is None or command == "":
         return {
@@ -87,28 +70,55 @@ def run_cc_command(payload: dict) -> dict:
             timeout = float(timeout_raw)
         except (TypeError, ValueError):
             timeout = None
+
     if isinstance(cwd, str) and cwd.strip():
         cwd = str(Path(cwd).expanduser())
     else:
         cwd = None
 
     normalized = _normalize_command(command, shell=shell)
+
+    start = time.perf_counter()
     try:
-        result = cc_module.run_command(normalized, cwd=cwd, timeout=timeout, shell=shell)
+        completed = subprocess.run(
+            normalized,
+            cwd=cwd or None,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            shell=shell,
+        )
+        duration_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return {
+            "ok": completed.returncode == 0,
+            "returncode": completed.returncode,
+            "stdout": completed.stdout or "",
+            "stderr": completed.stderr or "",
+            "duration_ms": duration_ms,
+            "cwd": os.path.abspath(cwd or os.getcwd()),
+            "command": normalized,
+        }
+    except subprocess.TimeoutExpired as exc:
+        duration_ms = round((time.perf_counter() - start) * 1000.0, 2)
+        return {
+            "ok": False,
+            "returncode": None,
+            "stdout": exc.stdout or "",
+            "stderr": exc.stderr or f"Timed out after {timeout}s",
+            "duration_ms": duration_ms,
+            "cwd": os.path.abspath(cwd or os.getcwd()),
+            "command": normalized,
+            "error": "timeout",
+        }
     except Exception as exc:
+        duration_ms = round((time.perf_counter() - start) * 1000.0, 2)
         return {
             "ok": False,
             "returncode": None,
             "stdout": "",
             "stderr": str(exc),
-            "error": "cc_runtime_error",
+            "duration_ms": duration_ms,
+            "cwd": os.path.abspath(cwd or os.getcwd()),
+            "command": normalized,
+            "error": "exception",
         }
-    if isinstance(result, dict):
-        return result
-    return {
-        "ok": False,
-        "returncode": None,
-        "stdout": "",
-        "stderr": "CC returned non-dict response",
-        "error": "cc_invalid_response",
-    }

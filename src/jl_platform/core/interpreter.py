@@ -1,4 +1,4 @@
-"""License: PolyForm Noncommercial 1.0.0. See LICENSE.md."""
+"""Licensed under the MIT License. See LICENSE.md."""
 
 from __future__ import annotations
 
@@ -1124,14 +1124,14 @@ class InterpreterSession:
                 path = str(data.get("path", "") or "").strip() or "target file"
                 return {
                     "summary": f"write `{path}`",
-                    "requires_confirmation": False,
+                    "requires_confirmation": True,
                     "risk_level": "high",
                 }
             if mode == "fs_mkdir":
                 path = str(data.get("path", "") or data.get("name") or "").strip() or "target folder"
                 return {
                     "summary": f"create folder `{path}`",
-                    "requires_confirmation": False,
+                    "requires_confirmation": True,
                     "risk_level": "high",
                 }
             if mode == "subprocess":
@@ -1162,7 +1162,7 @@ class InterpreterSession:
             command = str(safe_payload.get("command", "") or "").strip() or "shell command"
             return {
                 "summary": f"run shell command `{command}`",
-                "requires_confirmation": False,
+                "requires_confirmation": True,
                 "risk_level": "high",
             }
 
