@@ -32,7 +32,7 @@ Rules:
 - Casual conversation, greetings, introductions, self-description, and "what system is this" questions should be answered directly with `{{"final": ...}}`.
 - Do not inspect the local machine or run commands just to answer conversational questions. Only do local inspection when the user explicitly asks you to check, inspect, list, read, or execute something on this machine.
 - If the user asks for a real-world action (files/folders/commands), call a tool before final.
-- Prefer built-in tools first (`run_shell`, `run_cc_command`, `bridge_local`).
+- Prefer built-in tools first (`run_cc_command`, `run_shell`, `bridge_local`).
 - Forge a RAM tool only when built-ins cannot complete the task.
 - Never claim an action succeeded unless a tool result confirms it.
 - Answer directly when no tool is needed.
@@ -733,6 +733,11 @@ class InterpreterSession:
     def _tool_examples(self) -> str:
         specs = {spec.name for spec in self.registry.list_specs()}
         examples: list[str] = []
+        if "run_cc_command" in specs:
+            examples.append(
+                '{"tool":"run_cc_command","input":{"action":"search_files","root":".","query":"TODO","recursive":true}}'
+            )
+            examples.append('{"tool":"run_cc_command","input":{"action":"fs_list","path":"."}}')
         if "run_shell" in specs:
             examples.append('{"tool":"run_shell","input":{"command":"Get-ChildItem -Force","cwd":"."}}')
         if "bridge_local" in specs:
@@ -1172,9 +1177,12 @@ class InterpreterSession:
                 command_text = " ".join(str(part) for part in command[:6])
             else:
                 command_text = str(command or "").strip()
-            command_text = command_text or "local command"
+            if not command_text:
+                command_text = str(safe_payload.get("query") or "").strip() or "command commissioner task"
+            if str(safe_payload.get("action") or "").strip().lower() == "search_files":
+                command_text = str(safe_payload.get("query") or command_text).strip() or "file search"
             return {
-                "summary": f"run local command `{command_text}`",
+                "summary": f"run command commissioner task `{command_text}`",
                 "requires_confirmation": False,
                 "risk_level": "high",
             }

@@ -54,12 +54,10 @@ WATCHABLE_FILENAMES = {
     "SECURITY.md",
     "TROUBLESHOOTING.md",
     "VERSION",
-    "install_and_run_windows.bat",
+    "launcher.bat",
+    "legacy_launchers",
     "pyproject.toml",
     "requirements.txt",
-    "run_command_deck.bat",
-    "run_command_deck.ps1",
-    "start.bat",
 }
 WATCH_SKIP_DIRS = {
     ".git",
@@ -191,10 +189,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             "pyproject.toml",
             "requirements.txt",
             ".gitignore",
-            "install_and_run_windows.bat",
-            "run_command_deck.bat",
-            "run_command_deck.ps1",
-            "start.bat",
+            "launcher.bat",
+            "legacy_launchers",
         ],
         help="Paths to watch for changes.",
     )

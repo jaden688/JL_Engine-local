@@ -16,9 +16,9 @@ from jl_platform.core.tools.forge import (
     forge_promote,
     forge_promote_last,
 )
+from jl_platform.core.tools.cc import get_tool_spec as get_cc_spec, run_cc_command
 from jl_platform.core.tools.bridge import get_tool_spec as get_bridge_spec, run_bridge
 from jl_platform.core.tools.shell import get_tool_spec as get_shell_spec, run_shell
-from jl_platform.core.tools.cc import get_tool_spec as get_cc_spec, run_cc_command
 from jl_platform.core.models import ToolSpec
 
 
@@ -46,9 +46,9 @@ def register_core_tools(registry, allow_unsafe: bool | None = None) -> None:
         elif spec.name == "forge_promote_last":
             registry.register(spec, forge_promote_last)
     if allow_unsafe:
+        registry.register(get_cc_spec(), run_cc_command)
         registry.register(get_bridge_spec(), run_bridge)
         registry.register(get_shell_spec(), run_shell)
-        registry.register(get_cc_spec(), run_cc_command)
     else:
         _register_safe_fallback_tools(registry)
     _register_promoted_tools(registry)

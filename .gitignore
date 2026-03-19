@@ -21,6 +21,7 @@ app_backend.log
 .self_edit_lab/
 .self_edit_lab_test/
 .self_edit_lab_ui_test/
+artifacts/
 src/tools_runtime/
 docs/REAL_RUN_*.md
 

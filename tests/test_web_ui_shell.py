@@ -54,11 +54,14 @@ def test_web_ui_shell_script_targets_switchboard_routes() -> None:
     assert "/quest/personas/mpf" not in script
     assert "/browser/action" in script
     assert "/browser/inspect" in script
+    assert "/tools/cc-run" in script
+    assert "/tools/shell-run" not in script
     assert "laneSelect" in script
     assert "childSelect" in script
     assert "BROWSER_ACTION" in script
     assert "BROWSER_INSPECT" in script
     assert "fs_mkdir" in script
+    assert "run_cc_command" in script
     assert "pendingChatActionDecisionPending" in script
     assert "Resolve the pending action card first" in script
     assert 'execution_mode: state.totalAgentControlEnabled ? "auto" : "chat"' in script

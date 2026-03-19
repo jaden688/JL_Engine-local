@@ -5,10 +5,10 @@
 If this is a fresh Windows checkout, start with:
 
 ```powershell
-.\install_and_run_windows.bat
+.\launcher.bat
 ```
 
-That uses your current Python install, installs `.[api]`, and then calls the normal launcher.
+Choose option `1` to install `.[api]` and launch the normal command deck flow.
 
 If the first install prints lines like:
 
@@ -35,29 +35,29 @@ If you explicitly want a virtual environment, set:
 
 ```powershell
 $env:JL_PLATFORM_USE_VENV = "1"
-.\install_and_run_windows.bat
+.\launcher.bat
 ```
 
 Use the Windows launcher from the repo root:
 
 ```powershell
-.\run_command_deck.bat
+.\launcher.bat
 ```
 
-The launcher starts `jl_platform.services.api.main:app`, waits for `/health`, and then opens the selected UI.
+Choose option `2` to start `jl_platform.services.api.main:app`, wait for `/health`, and open the selected UI.
 
 If you want a normal browser tab instead of an app-style window:
 
 ```powershell
 $env:JL_PLATFORM_LAUNCH_MODE = "browser"
-.\run_command_deck.bat
+.\launcher.bat
 ```
 
 If you want the lighter flow deck:
 
 ```powershell
 $env:JL_PLATFORM_UI_PATH = "/ui-easy/"
-.\run_command_deck.bat
+.\launcher.bat
 ```
 
 ## `/health` fails
@@ -87,14 +87,14 @@ The launcher defaults to `/ui/`. Override it before starting:
 
 ```powershell
 $env:JL_PLATFORM_UI_PATH = "/ui/"
-.\run_command_deck.bat
+.\launcher.bat
 ```
 
 or
 
 ```powershell
 $env:JL_PLATFORM_UI_PATH = "/ui-easy/"
-.\run_command_deck.bat
+.\launcher.bat
 ```
 
 ## The browser bridge is unavailable

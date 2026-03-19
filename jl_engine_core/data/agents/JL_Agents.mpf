@@ -1,5 +1,6 @@
 {
   "The Gremlin": {
+    "jl_agent_file": "fat_agents/The_Gremlin_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": null,
@@ -7,10 +8,10 @@
     "tags": [
       "chaos",
       "builder"
-    ],
-    "jl_agent_file": "fat_agents/The_Gremlin_Full.json"
+    ]
   },
   "SparkByte": {
+    "jl_agent_file": "fat_agents/SparkByte_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": null,
@@ -18,10 +19,10 @@
     "tags": [
       "quirky",
       "creative"
-    ],
-    "jl_agent_file": "fat_agents/SparkByte_Full.json"
+    ]
   },
   "SparkByte Modular": {
+    "jl_agent_file": "../modular_fat_agent_pack/fat_agents/SparkByte_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": null,
@@ -30,10 +31,10 @@
       "modular",
       "sparkbyte",
       "cleaner-ui"
-    ],
-    "jl_agent_file": "../modular_fat_agent_pack/fat_agents/SparkByte_Full.json"
+    ]
   },
   "Slappy": {
+    "jl_agent_file": "fat_agents/Slappy_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": null,
@@ -42,10 +43,10 @@
       "chaotic",
       "gremlin",
       "hillbilly"
-    ],
-    "jl_agent_file": "fat_agents/Slappy_Full.json"
+    ]
   },
   "Supervisor": {
+    "jl_agent_file": "fat_agents/SparkByte_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": null,
@@ -53,10 +54,10 @@
     "tags": [
       "safe",
       "helper"
-    ],
-    "jl_agent_file": "fat_agents/SparkByte_Full.json"
+    ]
   },
   "SaaS Copywriter": {
+    "jl_agent_file": "jl_agents/SaaS_Copywriter_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": "assistant",
@@ -65,10 +66,10 @@
       "conversion",
       "copy",
       "saas"
-    ],
-    "jl_agent_file": "jl_agents/SaaS_Copywriter_Full.json"
+    ]
   },
   "Cold Outreach Assistant": {
+    "jl_agent_file": "jl_agents/Cold_Outreach_Assistant_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": "assistant",
@@ -77,10 +78,10 @@
       "outbound",
       "sales",
       "email"
-    ],
-    "jl_agent_file": "jl_agents/Cold_Outreach_Assistant_Full.json"
+    ]
   },
   "YouTube Scriptwriter": {
+    "jl_agent_file": "jl_agents/YouTube_Scriptwriter_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": "creator",
@@ -89,10 +90,10 @@
       "video",
       "script",
       "content"
-    ],
-    "jl_agent_file": "jl_agents/YouTube_Scriptwriter_Full.json"
+    ]
   },
   "Brand Voice Generator": {
+    "jl_agent_file": "jl_agents/Brand_Voice_Generator_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": "assistant",
@@ -101,10 +102,10 @@
       "branding",
       "voice",
       "style"
-    ],
-    "jl_agent_file": "jl_agents/Brand_Voice_Generator_Full.json"
+    ]
   },
   "Startup Pitch Writer": {
+    "jl_agent_file": "jl_agents/Startup_Pitch_Writer_Full.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": "advisor",
@@ -113,10 +114,10 @@
       "pitch",
       "startup",
       "fundraise"
-    ],
-    "jl_agent_file": "jl_agents/Startup_Pitch_Writer_Full.json"
+    ]
   },
   "Deck Agent": {
+    "jl_agent_file": "Deck_Agent.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": null,
@@ -124,10 +125,10 @@
     "tags": [
       "agentlized",
       "fat-agent"
-    ],
-    "jl_agent_file": "Deck_Agent.json"
+    ]
   },
   "Forgebinder": {
+    "jl_agent_file": "jl_agents/Forgebinder.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": "toolsmith",
@@ -136,10 +137,10 @@
       "forge",
       "toolsmith",
       "builder"
-    ],
-    "jl_agent_file": "jl_agents/Forgebinder.json"
+    ]
   },
   "ForgeWorks": {
+    "jl_agent_file": "jl_agents/ForgeWorks.json",
     "default_memory_mode": "HYBRID",
     "default_backend_id": "ollama-local",
     "drive_type": null,
@@ -148,8 +149,7 @@
       "business",
       "brand",
       "ai_tools"
-    ],
-    "jl_agent_file": "jl_agents/ForgeWorks.json"
+    ]
   },
   "Task Helper (jl_fat_agent)": {
     "jl_agent_file": "generated/Task_Helper__jl_fat_agent.json",
@@ -161,15 +161,7 @@
       "generated",
       "task",
       "helper"
-    ],
-    "switchboard": {
-      "lane": "generated",
-      "child": "Task Helper",
-      "parent_lane": "jl_agent",
-      "parent_agent_id": "jl_fat_agent",
-      "parent_agent_name": "Forgebinder",
-      "created_at": 1773137528.8052685
-    }
+    ]
   },
   "Support Wing (jl_fat_agent)": {
     "jl_agent_file": "generated/Support_Wing__jl_fat_agent.json",
@@ -181,15 +173,7 @@
       "generated",
       "support",
       "triage"
-    ],
-    "switchboard": {
-      "lane": "generated",
-      "child": "Support Wing",
-      "parent_lane": "generated",
-      "parent_agent_id": "jl_fat_agent",
-      "parent_agent_name": "Support Wing (jl_fat_agent)",
-      "created_at": 1773182052.2651076
-    }
+    ]
   },
   "Support Wing (jl_fat_agent_clone_1773182180354)": {
     "jl_agent_file": "generated/Support_Wing__jl_fat_agent_clone_1773182180354.json",
@@ -201,14 +185,14 @@
       "generated",
       "support",
       "triage"
-    ],
-    "switchboard": {
-      "lane": "generated",
-      "child": "Support Wing",
-      "parent_lane": "generated",
-      "parent_agent_id": "jl_fat_agent__clone_1773182180354",
-      "parent_agent_name": "Support Wing (jl_fat_agent)",
-      "created_at": 1773182189.8524618
-    }
+    ]
+  },
+  "JL_Agents": {
+    "jl_agent_file": "JL_Agents.mpf",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "classification": null,
+    "tags": []
   }
 }

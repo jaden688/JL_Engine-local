@@ -2,7 +2,8 @@
 setlocal enableextensions
 pushd "%~dp0"
 
-set "ROOT=%CD%"
+set "SCRIPT_DIR=%CD%"
+for %%I in ("%SCRIPT_DIR%\..") do set "ROOT=%%~fI"
 set "VENV_DIR=%ROOT%\.venv"
 set "VENV_PYTHON=%VENV_DIR%\Scripts\python.exe"
 set "BOOTSTRAP_PYTHON="
@@ -44,7 +45,7 @@ if "%USE_VENV%"=="1" (
 )
 
 echo [JL Engine] Launching standalone command deck...
-call "%ROOT%\run_command_deck.bat" %*
+call "%SCRIPT_DIR%\run_command_deck.bat" %*
 set "EXITCODE=%errorlevel%"
 goto :end
 
