@@ -36,11 +36,16 @@ You do not need any API key to run the engine with a local Ollama model.
 
 ### Windows one-click (recommended for first run)
 
-Double-click `install_and_run_windows.bat` in the repository root. It will:
+Double-click `launcher.bat` in the repository root. It will show three options:
 
-1. Install `.[api]` into your current Python environment
-2. Start the JL Platform API
-3. Open the command deck in a standalone window
+1. Install `.[api]` into your current Python environment and open the command deck
+2. Start the JL Platform API and open the command deck
+3. Start the CLI
+
+If you want the old direct first-run path, the helper lives under `legacy_launchers/install_and_run_windows.bat`.
+Inside the launcher, press `U` to toggle unsafe tools and `L` to toggle command-deck transcript logging before you choose a path.
+
+The legacy helper scripts are now tucked under `legacy_launchers/`; the normal entrypoint is `launcher.bat`.
 
 ### Manual install
 
@@ -60,8 +65,10 @@ python -m playwright install
 ### Windows quick launcher (after first install)
 
 ```powershell
-.\run_command_deck.bat
+.\launcher.bat
 ```
+
+Then choose option `2` for the command deck.
 
 ### Any platform
 

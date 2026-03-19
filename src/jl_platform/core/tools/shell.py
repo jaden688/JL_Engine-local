@@ -76,6 +76,7 @@ def run_shell(payload: dict) -> dict:
         ]
         shell = False
     cc_payload = {
+        "action": "run",
         "command": command,
         "cwd": payload.get("cwd"),
         "timeout": payload.get("timeout", 60),

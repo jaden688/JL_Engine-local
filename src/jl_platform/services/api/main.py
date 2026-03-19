@@ -22,6 +22,8 @@ from jl_platform.core.runtime.app import PlatformApp
 from jl_platform.sdk.client import HOST_REGISTRY, resolve_host_name, start_app
 from jl_platform.core.tools.builtin import register_core_tools
 from jl_platform.core.tools.registry import ToolRegistry
+from jl_platform.core.tools.cc import run_cc_command
+from jl_platform.core.tools.shell import run_shell
 from jl_platform.core.interpreter import InterpreterSession
 from jl_platform.core.browser_bridge import BrowserBridgeManager
 from jl_platform.controllers import backend_controller
@@ -225,6 +227,7 @@ def _chat_loop_worker(
     return_trace: bool,
     stop_event: Event,
 ) -> None:
+    logger.info("[ChatLoop] started agent_id=%s agent=%s", agent_id, agent)
     turns = 0
     while not stop_event.is_set():
         turns += 1
@@ -250,6 +253,16 @@ def _chat_loop_worker(
                 state["waiting_for_confirmation"] = False
                 state["last_run_at"] = run_started
                 state["last_duration_ms"] = round((time.time() - run_started) * 1000.0, 2)
+            reply_preview = str(result.get("reply") or result.get("final") or "").strip().replace("\n", " ")
+            if len(reply_preview) > 240:
+                reply_preview = reply_preview[:240] + "..."
+            logger.info(
+                "[ChatLoop] agent_id=%s turn=%s status=%s reply=%s",
+                agent_id,
+                turns,
+                str(result.get("status") or "ok"),
+                reply_preview or "<empty>",
+            )
         except Exception as exc:
             with _CHAT_LOOP_LOCK:
                 state = _CHAT_LOOP_STATE.setdefault(agent_id, {})
@@ -259,8 +272,12 @@ def _chat_loop_worker(
                 state["waiting_for_confirmation"] = False
                 state["last_run_at"] = run_started
                 state["last_duration_ms"] = round((time.time() - run_started) * 1000.0, 2)
+            logger.exception("[ChatLoop] agent_id=%s turn=%s failed: %s", agent_id, turns, exc)
 
         if str(result.get("status") or "") == "confirmation_required":
+            pending_summary = str((result.get("pending_action") or {}).get("summary") or "").strip()
+            if pending_summary:
+                logger.info("[ChatLoop] agent_id=%s waiting_for_confirmation=%s", agent_id, pending_summary)
             with _CHAT_LOOP_LOCK:
                 state = _CHAT_LOOP_STATE.setdefault(agent_id, {})
                 state["waiting_for_confirmation"] = True
@@ -278,6 +295,7 @@ def _chat_loop_worker(
             stop_event.wait(interval_seconds)
             continue
         if max_iterations > 0 and turns >= max_iterations:
+            logger.info("[ChatLoop] agent_id=%s reached max_iterations=%s", agent_id, max_iterations)
             break
         stop_event.wait(interval_seconds)
 
@@ -289,6 +307,7 @@ def _chat_loop_worker(
         if thread and not thread.is_alive():
             _CHAT_LOOP_THREADS.pop(agent_id, None)
         _CHAT_LOOP_STOPS.pop(agent_id, None)
+    logger.info("[ChatLoop] stopped agent_id=%s", agent_id)
 
 
 def _start_chat_loop(payload: ChatLoopStartRequest) -> dict[str, Any]:
@@ -313,6 +332,13 @@ def _start_chat_loop(payload: ChatLoopStartRequest) -> dict[str, Any]:
         _QUEST_RUNTIME.start_agent_loop(agent_id=agent_id, agent_name=agent)
     else:
         _QUEST_RUNTIME.ensure_agent(agent_id, agent_name=agent)
+    logger.info(
+        "[ChatLoop] starting agent_id=%s agent=%s interval_seconds=%.2f max_iterations=%s",
+        agent_id,
+        agent,
+        interval_seconds,
+        max_iterations,
+    )
 
     with _CHAT_LOOP_LOCK:
         existing = _CHAT_LOOP_THREADS.get(agent_id)
@@ -378,6 +404,7 @@ def _stop_chat_loop(payload: ChatLoopStopRequest) -> dict[str, Any]:
         stop_event.set()
     if thread is not None:
         thread.join(timeout=wait_seconds)
+    logger.info("[ChatLoop] stop requested agent_id=%s wait_seconds=%.2f", agent_id, wait_seconds)
 
     with _CHAT_LOOP_LOCK:
         thread_now = _CHAT_LOOP_THREADS.get(agent_id)
@@ -669,18 +696,31 @@ def browser_reset():
     return _BROWSER_BRIDGE.status()
 
 
+def run_cc_command_route(payload: CCRunRequest):
+    command_payload = {
+        "action": "run",
+        "command": payload.command,
+        "cwd": payload.cwd,
+        "timeout": payload.timeout,
+        "shell": payload.shell if payload.shell is not None else True,
+    }
+    return run_cc_command(command_payload)
+
+
 @app.post("/tools/cc-run")
-def run_cc(payload: CCRunRequest):
-    registry = ToolRegistry()
-    register_core_tools(registry)
-    return registry.call(
-        "run_cc_command",
+def cc_run(payload: CCRunRequest):
+    return run_cc_command_route(payload)
+
+
+@app.post("/tools/shell-run")
+def shell_run(payload: CCRunRequest):
+    return run_shell(
         {
             "command": payload.command,
             "cwd": payload.cwd,
             "timeout": payload.timeout,
             "shell": payload.shell if payload.shell is not None else True,
-        },
+        }
     )
 
 
@@ -1070,13 +1110,16 @@ def self_edit_start(payload: SelfEditStartRequest):
             if bool(payload.reseed_copy):
                 cmd.append("--reseed-copy")
 
+            creationflags = 0
+            if os.name == "nt" and hasattr(subprocess, "CREATE_NEW_CONSOLE"):
+                creationflags = subprocess.CREATE_NEW_CONSOLE
+
             proc = subprocess.Popen(
                 cmd,
                 cwd=str(_WORKSPACE_ROOT),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
                 shell=False,
                 env=dict(os.environ),
+                creationflags=creationflags,
             )
             _SELF_EDIT_PROC = proc
             _SELF_EDIT_STARTED_AT = time.time()
@@ -1087,6 +1130,13 @@ def self_edit_start(payload: SelfEditStartRequest):
                 "reseed_copy": bool(payload.reseed_copy),
                 "command": cmd,
             }
+            logger.info(
+                "[SelfEdit] started pid=%s lab_dir=%s log_file=%s visible_console=%s",
+                proc.pid,
+                _workspace_rel(lab_dir),
+                str(lab_dir / "loop.log"),
+                bool(creationflags),
+            )
 
     if already_running:
         status = _self_edit_status(log_lines=120)

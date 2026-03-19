@@ -1,7 +1,45 @@
 $ErrorActionPreference = "Stop"
 
-$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$root = Split-Path -Parent $scriptRoot
 Set-Location $root
+
+$logDir = Join-Path $root "logs"
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+
+$launchLogPath = Join-Path $logDir ("command_deck_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
+$transcriptEnabled = $true
+if ($env:JL_COMMAND_DECK_TRANSCRIPT) {
+    $transcriptEnabled = @("1", "true", "yes", "on") -contains $env:JL_COMMAND_DECK_TRANSCRIPT.Trim().ToLowerInvariant()
+}
+$transcriptStarted = $false
+if ($transcriptEnabled) {
+    try {
+        Start-Transcript -Path $launchLogPath -Append | Out-Null
+        $transcriptStarted = $true
+    } catch {
+        Write-Host ("[JL Command Deck] Unable to start transcript at {0}: {1}" -f $launchLogPath, $_.Exception.Message)
+    }
+} else {
+    Write-Host "[JL Command Deck] Transcript logging disabled by JL_COMMAND_DECK_TRANSCRIPT=0"
+}
+
+function Write-LaunchLog {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+
+    Write-Host "[JL Command Deck] $Message"
+}
+
+$unsafeToolsEnabled = $true
+if ($env:JL_LOCAL_UNSAFE_TOOLS) {
+    $unsafeToolsEnabled = @("1", "true", "yes", "on") -contains $env:JL_LOCAL_UNSAFE_TOOLS.Trim().ToLowerInvariant()
+}
+Write-Host ("[JL Command Deck] Unsafe tools: {0}" -f ($(if ($unsafeToolsEnabled) { "ON" } else { "OFF" })))
 
 $pythonPathParts = @($root, (Join-Path $root "src"))
 if ($env:PYTHONPATH) {
@@ -74,6 +112,12 @@ if ($startupTimeoutSeconds -lt 5) {
     $startupTimeoutSeconds = 5
 }
 
+if ($transcriptEnabled) {
+    Write-LaunchLog "Transcript logging enabled: $launchLogPath"
+} else {
+    Write-LaunchLog "Transcript logging disabled."
+}
+
 function Get-ListeningProcessId {
     $conn = Get-NetTCPConnection -LocalAddress $jlHost -LocalPort $jlPort -State Listen -ErrorAction SilentlyContinue |
         Select-Object -First 1
@@ -132,65 +176,75 @@ function Open-PlatformUi {
 $existingPid = Get-ListeningProcessId
 if ($existingPid) {
     if (Test-PlatformReady) {
-        Write-Host "[JL Command Deck] Reusing existing server on PID $existingPid."
-        Write-Host "[JL Command Deck] Open $jlUiUrl"
+        Write-LaunchLog "Reusing existing server on PID $existingPid."
+        Write-LaunchLog "Open $jlUiUrl"
         Open-PlatformUi -Url $jlUiUrl
+        if ($transcriptStarted) {
+            try {
+                Stop-Transcript | Out-Null
+            } catch {
+            }
+        }
         exit 0
     }
 
-    Write-Host "[JL Command Deck] Stale listener detected on PID $existingPid. Cleaning up..."
+    Write-LaunchLog "Stale listener detected on PID $existingPid. Cleaning up..."
     Stop-Process -Id $existingPid -Force -ErrorAction Stop
     Start-Sleep -Seconds 1
 
     $existingPid = Get-ListeningProcessId
     if ($existingPid) {
-        Write-Host "[JL Command Deck] Port $jlPort still busy after cleanup (PID $existingPid)."
+        Write-LaunchLog "Port $jlPort still busy after cleanup (PID $existingPid)."
+        if ($transcriptStarted) {
+            try {
+                Stop-Transcript | Out-Null
+            } catch {
+            }
+        }
         exit 1
     }
 
-    Write-Host "[JL Command Deck] Stale listener cleaned. Starting fresh server..."
+    Write-LaunchLog "Stale listener cleaned. Starting fresh server..."
 }
 
-Write-Host "[JL Command Deck] Starting API + Web UI..."
-Write-Host "[JL Command Deck] Open $jlUiUrl"
+Write-LaunchLog "Starting API + Web UI..."
+Write-LaunchLog "Open $jlUiUrl"
 if ($openBrowser) {
-    Start-Job -ScriptBlock {
-        param($healthUrl, $url, $timeoutSeconds, $preferredMode)
-
-        function Get-StandaloneBrowserPath {
-            $candidates = @(
-                (Join-Path ${env:ProgramFiles(x86)} "Microsoft\Edge\Application\msedge.exe"),
-                (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe"),
-                (Join-Path $env:ProgramFiles "Google\Chrome\Application\chrome.exe"),
-                (Join-Path ${env:ProgramFiles(x86)} "Google\Chrome\Application\chrome.exe")
-            ) | Where-Object { $_ }
-
-            foreach ($candidate in $candidates) {
-                if (Test-Path $candidate) {
-                    return $candidate
-                }
-            }
-            return $null
+    $browserHelper = Join-Path $root "tools\open_command_deck_browser.ps1"
+    $browserLogPath = if ($transcriptEnabled) {
+        Join-Path $logDir ("command_deck_browser_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
+    } else {
+        ""
+    }
+    try {
+        $browserArgs = @(
+            "-NoLogo",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            $browserHelper,
+            "-HealthUrl",
+            $jlHealthUrl,
+            "-Url",
+            $jlUiUrl,
+            "-TimeoutSeconds",
+            [string]$startupTimeoutSeconds,
+            "-LaunchMode",
+            $launchMode
+        )
+        if ($browserLogPath) {
+            $browserArgs += @("-LogPath", $browserLogPath)
         }
-
-        $deadline = (Get-Date).AddSeconds([int]$timeoutSeconds)
-        while ((Get-Date) -lt $deadline) {
-            try {
-                $null = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 2
-                if ($preferredMode -eq "standalone") {
-                    $browserPath = Get-StandaloneBrowserPath
-                    if ($browserPath) {
-                        Start-Process -FilePath $browserPath -ArgumentList "--app=$url" | Out-Null
-                        return
-                    }
-                }
-                Start-Process $url | Out-Null
-                return
-            } catch {
-                Start-Sleep -Milliseconds 500
-            }
+        Start-Process -FilePath "powershell.exe" -WindowStyle Normal -ArgumentList $browserArgs | Out-Null
+        if ($browserLogPath) {
+            Write-LaunchLog "Browser helper window started. Log: $browserLogPath"
+        } else {
+            Write-LaunchLog "Browser helper window started."
         }
-    } -ArgumentList $jlHealthUrl, $jlUiUrl, $startupTimeoutSeconds, $launchMode | Out-Null
+    } catch {
+        Write-LaunchLog "Browser helper failed to start: $($_.Exception.Message)"
+    }
 }
 
 $uvicornArgs = @(
@@ -209,5 +263,16 @@ if ($args.Count -gt 0) {
     $uvicornArgs += $args
 }
 
-python @uvicornArgs
-exit $LASTEXITCODE
+$exitCode = 0
+try {
+    python @uvicornArgs
+    $exitCode = $LASTEXITCODE
+} finally {
+    if ($transcriptStarted) {
+        try {
+            Stop-Transcript | Out-Null
+        } catch {
+        }
+    }
+}
+exit $exitCode

@@ -55,7 +55,7 @@ try:
 except Exception:
     sr = None
 
-from PySide6.QtCore import Qt, QEvent, Signal, QObject, QTimer, QPointF, QRectF
+from PySide6.QtCore import Qt, QEvent, QDir, Signal, QObject, QTimer, QPointF, QRectF
 from PySide6.QtGui import (
     QKeySequence,
     QShortcut,
@@ -691,9 +691,23 @@ class Main(QMainWindow):
         sl.addWidget(self.strip_tools)
         sl.addWidget(self.strip_latency)
         sl.addStretch(1)
-        sl.addWidget(QLabel("[-]"))
-        sl.addWidget(QLabel("[ ]"))
-        sl.addWidget(QLabel("[X]"))
+        self.window_min_btn = QPushButton("[-]")
+        self.window_min_btn.setFixedWidth(44)
+        self.window_min_btn.setToolTip("Minimize window")
+        self.window_min_btn.clicked.connect(self.showMinimized)
+        sl.addWidget(self.window_min_btn)
+
+        self.window_mode_btn = QPushButton("FULL")
+        self.window_mode_btn.setFixedWidth(56)
+        self.window_mode_btn.setToolTip("Toggle windowed/full-screen mode")
+        self.window_mode_btn.clicked.connect(self._toggle_window_mode)
+        sl.addWidget(self.window_mode_btn)
+
+        self.window_close_btn = QPushButton("[X]")
+        self.window_close_btn.setFixedWidth(44)
+        self.window_close_btn.setToolTip("Close window")
+        self.window_close_btn.clicked.connect(self.close)
+        sl.addWidget(self.window_close_btn)
         layout.addWidget(strip)
 
         # Main Workspace (Central Widget) - Console / Code Editor
@@ -729,16 +743,39 @@ class Main(QMainWindow):
         self._announce_agent_registry()
         self._interpreter_session = InterpreterSession()
         self._autostart_platform_services()
+        self._sync_window_mode_button()
 
     def _bind_ui_fat_agent(self) -> None:
         # Main chat runs as a "fat agent" with RAM tool forge and clone continuity.
         self.quest_runtime.register_agent(
             agent_id=self.quest_agent_id,
-            agent=self.engine.current_agent_name or "SparkByte",
+            agent_name=self.engine.current_agent_name or "SparkByte",
         )
         agent = self.quest_runtime.ensure_agent(self.quest_agent_id)
         agent.session.engine = self.engine
         agent.agent = self.engine.current_agent_name or agent.agent
+
+    def _sync_window_mode_button(self) -> None:
+        if not hasattr(self, "window_mode_btn"):
+            return
+        if self.isFullScreen():
+            self.window_mode_btn.setText("WIN")
+            self.window_mode_btn.setToolTip("Return to windowed mode")
+        else:
+            self.window_mode_btn.setText("FULL")
+            self.window_mode_btn.setToolTip("Enter full-screen mode")
+
+    def _toggle_window_mode(self) -> None:
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+        self._sync_window_mode_button()
+
+    def changeEvent(self, event) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.WindowStateChange:
+            self._sync_window_mode_button()
 
     def _runtime_env(self) -> dict:
         env = os.environ.copy()
@@ -994,8 +1031,13 @@ class Main(QMainWindow):
     def _setup_ide_docks(self) -> None:
         """Initialize global IDE-style docks (Explorer, HUD, Terminal, and all Tools)."""
         self.setDockOptions(
-            QMainWindow.AllowNestedDocks | QMainWindow.AnimatedDocks | QMainWindow.AllowTabbedDocks
+            QMainWindow.AllowNestedDocks
+            | QMainWindow.AnimatedDocks
+            | QMainWindow.AllowTabbedDocks
+            | QMainWindow.GroupedDragging
         )
+        self.setDockNestingEnabled(True)
+        self.setTabPosition(Qt.RightDockWidgetArea, QTabWidget.North)
 
         # --- Helper to create a dock from a builder method ---
         def create_dock(name: str, build_fn, area: Qt.DockWidgetArea):
@@ -1028,15 +1070,16 @@ class Main(QMainWindow):
         self.dock_explorer = create_dock(
             "Explorer", lambda w: self._build_explorer_content(w), Qt.LeftDockWidgetArea
         )
+        self.dock_explorer.setMinimumWidth(300)
 
-        # 2. Command Center (Bottom - Primary)
+        # 2. Command Center (Right - Primary)
         self.dock_hud = create_dock(
             "Command Center",
             lambda w: self._build_command_center_content(w),
-            Qt.BottomDockWidgetArea,
+            Qt.RightDockWidgetArea,
         )
 
-        # 3. Terminal (Bottom - Primary)
+        # 3. Terminal (Right - Primary)
         self.dock_terminal = QDockWidget("Terminal", self)
         self.dock_terminal.setObjectName("Dock_Terminal")
         self.dock_terminal.setAllowedAreas(Qt.AllDockWidgetAreas)
@@ -1056,40 +1099,40 @@ class Main(QMainWindow):
         self.terminal_log.setPlainText("JL Engine Terminal initialized...\n")
         term_layout.addWidget(self.terminal_log)
         self.dock_terminal.setWidget(term_content)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.dock_terminal)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_terminal)
 
-        # --- Tool Docks (Tabified with Command Center on Bottom) ---
-        self.dock_engine = create_dock("Engine", self._build_engine_tab, Qt.BottomDockWidgetArea)
-        self.dock_cnc = create_dock("CNC Control", self._build_cnc_tab, Qt.BottomDockWidgetArea)
+        # --- Tool Docks (Tabified with Command Center on Right) ---
+        self.dock_engine = create_dock("Engine", self._build_engine_tab, Qt.RightDockWidgetArea)
+        self.dock_cnc = create_dock("CNC Control", self._build_cnc_tab, Qt.RightDockWidgetArea)
         self.dock_services = create_dock(
-            "Services", self._build_services_tab, Qt.BottomDockWidgetArea
+            "Services", self._build_services_tab, Qt.RightDockWidgetArea
         )
         self.dock_business = create_dock(
-            "Business Builder", self._build_business_tab, Qt.BottomDockWidgetArea
+            "Business Builder", self._build_business_tab, Qt.RightDockWidgetArea
         )
         self.dock_commander = create_dock(
-            "Commander Hub", self._build_commander_tab, Qt.BottomDockWidgetArea
+            "Commander Hub", self._build_commander_tab, Qt.RightDockWidgetArea
         )
 
-        # --- Log/Analysis Docks (Tabified with Terminal on Bottom) ---
+        # --- Log/Analysis Docks (Tabified with Terminal on Right) ---
         self.dock_diagnostics = create_dock(
-            "Diagnostics", self._build_diagnostics_tab, Qt.BottomDockWidgetArea
+            "Diagnostics", self._build_diagnostics_tab, Qt.RightDockWidgetArea
         )
         self.dock_benchmarks = create_dock(
-            "Benchmarks", self._build_benchmarks_tab, Qt.BottomDockWidgetArea
+            "Benchmarks", self._build_benchmarks_tab, Qt.RightDockWidgetArea
         )
         self.dock_construction = create_dock(
-            "Construction", self._build_construction_tab, Qt.BottomDockWidgetArea
+            "Construction", self._build_construction_tab, Qt.RightDockWidgetArea
         )
 
-        # Tabify All Bottom Docks
+        # Tabify All Right-Side Feature Docks
         self.tabifyDockWidget(self.dock_terminal, self.dock_hud)
         self.tabifyDockWidget(self.dock_hud, self.dock_engine)
         self.tabifyDockWidget(self.dock_engine, self.dock_cnc)
         self.tabifyDockWidget(self.dock_cnc, self.dock_services)
         self.tabifyDockWidget(self.dock_services, self.dock_business)
         self.tabifyDockWidget(self.dock_business, self.dock_commander)
-        self.tabifyDockWidget(self.dock_business, self.dock_diagnostics)
+        self.tabifyDockWidget(self.dock_commander, self.dock_diagnostics)
         self.tabifyDockWidget(self.dock_diagnostics, self.dock_benchmarks)
         self.tabifyDockWidget(self.dock_benchmarks, self.dock_construction)
         self.dock_hud.raise_()  # Bring HUD to front
@@ -1100,19 +1143,61 @@ class Main(QMainWindow):
         layout = QVBoxLayout(parent)
         layout.setContentsMargins(0, 0, 0, 0)
         self.file_model = QFileSystemModel()
-        self.file_model.setRootPath(str(BASE_DIR))
+        self.file_model.setRootPath(QDir.rootPath())
+
+        explorer_bar = QHBoxLayout()
+        explorer_bar.setContentsMargins(6, 6, 6, 6)
+        explorer_bar.setSpacing(6)
+
+        self.explorer_root_combo = QComboBox()
+        self.explorer_root_combo.setEditable(False)
+        self.explorer_root_combo.addItem("Computer", QDir.rootPath())
+        self.explorer_root_combo.addItem("Home", QDir.homePath())
+        self.explorer_root_combo.addItem("Project", str(BASE_DIR))
+        for drive in QDir.drives():
+            drive_path = drive.filePath()
+            self.explorer_root_combo.addItem(drive_path, drive_path)
+        self.explorer_root_combo.currentIndexChanged.connect(self._on_explorer_root_changed)
+        explorer_bar.addWidget(self.explorer_root_combo, 1)
+
+        home_btn = QPushButton("Home")
+        home_btn.clicked.connect(lambda: self._set_explorer_root(QDir.homePath()))
+        explorer_bar.addWidget(home_btn)
+
+        project_btn = QPushButton("Project")
+        project_btn.clicked.connect(lambda: self._set_explorer_root(str(BASE_DIR)))
+        explorer_bar.addWidget(project_btn)
+
+        layout.addLayout(explorer_bar)
+
         self.file_tree = QTreeView()
         self.file_tree.setModel(self.file_model)
-        self.file_tree.setRootIndex(self.file_model.index(str(BASE_DIR)))
+        self._set_explorer_root(QDir.rootPath())
         self.file_tree.setHeaderHidden(True)
         self.file_tree.setColumnHidden(1, True)
         self.file_tree.setColumnHidden(2, True)
         self.file_tree.setColumnHidden(3, True)
         self.file_tree.setDragEnabled(True)
         self.file_tree.setDragDropMode(QTreeView.DragOnly)
+        self.file_tree.setAnimated(True)
+        self.file_tree.setEditTriggers(QTreeView.NoEditTriggers)
+        self.file_tree.setUniformRowHeights(True)
+        self.file_tree.setExpandsOnDoubleClick(True)
         self.file_tree.setStyleSheet("background: #020403; border: none;")
-        self.file_tree.clicked.connect(self._on_file_selected)
+        self.file_tree.clicked.connect(self._on_file_tree_clicked)
         layout.addWidget(self.file_tree)
+
+    def _set_explorer_root(self, path: str) -> None:
+        index = self.file_model.index(path)
+        if index.isValid():
+            self.file_tree.setRootIndex(index)
+
+    def _on_explorer_root_changed(self, index: int) -> None:
+        if index < 0:
+            return
+        path = self.explorer_root_combo.itemData(index)
+        if isinstance(path, str) and path:
+            self._set_explorer_root(path)
 
     def _build_command_center_content(self, parent: QWidget) -> None:
         layout = QVBoxLayout(parent)
@@ -1166,6 +1251,13 @@ class Main(QMainWindow):
         self.console_tabs.addTab(editor, tab_name)
         self.console_tabs.setTabToolTip(self.console_tabs.count() - 1, path)
         self.console_tabs.setCurrentIndex(self.console_tabs.count() - 1)
+
+    def _on_file_tree_clicked(self, index) -> None:
+        """Toggle folders in the explorer and open files in the console."""
+        if self.file_model.isDir(index):
+            self.file_tree.setExpanded(index, not self.file_tree.isExpanded(index))
+            return
+        self._on_file_selected(index)
 
     def _build_quick_tools(self, parent: QWidget) -> None:
         layout = QVBoxLayout(parent)
@@ -1296,7 +1388,7 @@ class Main(QMainWindow):
 
         self.expand_btn = QPushButton("□")
         self.expand_btn.setFixedSize(40, 40)
-        self.expand_btn.setToolTip("Toggle Bottom Docks (Maximize Chat)")
+        self.expand_btn.setToolTip("Toggle Right Sidebar Docks")
 
         chat_row.addWidget(self.chat_input, 1)
         chat_row.addWidget(self.chat_send_btn)
@@ -1321,7 +1413,7 @@ class Main(QMainWindow):
         layout.addWidget(input_panel)
 
         self.controls_btn.clicked.connect(self._toggle_side_docks)
-        self.expand_btn.clicked.connect(self._toggle_bottom_docks)
+        self.expand_btn.clicked.connect(self._toggle_feature_sidebar)
 
     def _toggle_side_docks(self) -> None:
         """Toggle the visibility of the new side control docks."""
@@ -1330,8 +1422,8 @@ class Main(QMainWindow):
         self.dock_supervisor.setVisible(visible)
         self.dock_monitor.setVisible(visible)
 
-    def _toggle_bottom_docks(self) -> None:
-        """Toggle the visibility of the bottom docking area."""
+    def _toggle_feature_sidebar(self) -> None:
+        """Toggle the visibility of the right-side feature dock area."""
         # We check one of them to decide state
         visible = not self.dock_terminal.isVisible()
 
@@ -1595,7 +1687,6 @@ class Main(QMainWindow):
         sup_card.layout().addWidget(self.sup_gating_check)
         sup_card.layout().addWidget(self.sup_post_check)
         sup_card.layout().addWidget(self.sup_emotion_check)
-        sup_card.layout().addWidget(self.sup_emotion_check)
         sup_layout.addWidget(sup_card)
 
         # Emotion Status [RESTORED]
@@ -1657,6 +1748,10 @@ class Main(QMainWindow):
         # Tabify
         self.tabifyDockWidget(self.dock_ops, self.dock_supervisor)
         self.tabifyDockWidget(self.dock_supervisor, self.dock_monitor)
+
+        # Place the feature stack under the supervisor stack on the right side.
+        if hasattr(self, "dock_terminal"):
+            self.splitDockWidget(self.dock_monitor, self.dock_terminal, Qt.Vertical)
 
         # Connect signals
         self.agent_combo.currentTextChanged.connect(self._on_agent_change)
@@ -1796,7 +1891,6 @@ class Main(QMainWindow):
         self.engine_backoff_btn.clicked.connect(self._toggle_backoff)
         self.engine_gain_slider.valueChanged.connect(self._on_gain_change)
         self.sup_enabled_check.stateChanged.connect(self._toggle_supervisor_flags)
-        self.sup_gating_check.stateChanged.connect(self._toggle_supervisor_flags)
         self.sup_gating_check.stateChanged.connect(self._toggle_supervisor_flags)
         self.sup_post_check.stateChanged.connect(self._toggle_supervisor_flags)
         self.sup_emotion_check.stateChanged.connect(self._toggle_emotional_sampling)
@@ -4447,7 +4541,7 @@ class Main(QMainWindow):
         if value:
             self.engine.set_agent(value)
             self._apply_agent_profile_defaults(value)
-            self.quest_runtime.register_agent(self.quest_agent_id, agent=value)
+            self.quest_runtime.register_agent(self.quest_agent_id, agent_name=value)
             self._bind_ui_fat_agent()
             if hasattr(self, "_interpreter_session") and self._interpreter_session:
                 try:
@@ -4455,7 +4549,7 @@ class Main(QMainWindow):
                 except Exception:
                     pass
             try:
-                agent = self.quest_runtime.ensure_agent(self.quest_agent_id, agent=value)
+                agent = self.quest_runtime.ensure_agent(self.quest_agent_id, agent_name=value)
                 agent.session.history = []
             except Exception:
                 pass
@@ -5292,7 +5386,7 @@ class Main(QMainWindow):
 
     def _launch_engine_cli(self) -> None:
         cmd = (
-            ["cmd", "/k", "run_engine_cli.cmd"]
+            ["cmd", "/k", "call", str(REPO_ROOT / "legacy_launchers" / "start.bat")]
             if platform.system() == "Windows"
             else ["sh", "-c", "python -m jl_engine_cli.main"]
         )

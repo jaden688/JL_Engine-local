@@ -55,15 +55,23 @@ This repository is open source under the MIT License (see `LICENSE.md`).
 
 ### Windows front door
 
-For a true one-click first run on Windows, double-click:
+For the main Windows launcher, double-click:
 
 ```powershell
-.\install_and_run_windows.bat
+.\launcher.bat
 ```
 
-That script uses your current Python install, installs the API dependencies into that environment, and then launches the standalone command deck.
+That launcher gives you three choices:
 
-If you explicitly want an isolated `.venv`, set `JL_PLATFORM_USE_VENV=1` before running it.
+1. Install dependencies and launch the standalone command deck
+2. Launch the standalone command deck with the current environment
+3. Start the CLI
+
+Inside the launcher, press `U` to toggle unsafe tools on or off and `L` to toggle the command-deck transcript logs.
+
+The old direct helper scripts are tucked under `legacy_launchers/` so the repository root stays clean.
+
+If you explicitly want an isolated `.venv`, set `JL_PLATFORM_USE_VENV=1` before using the install path.
 
 Notes for the first Windows install:
 
@@ -71,13 +79,13 @@ Notes for the first Windows install:
 - `Checking if build backend supports build_editable ... done` is a normal `pip install -e` step, not a JL Engine error
 - if that window sits there for several minutes with no new output, run `py -3 -m pip install --disable-pip-version-check -e ".[api]" -v` from the repo root to see the exact package step that is stalling
 
-If you already have the environment installed, the faster launcher is:
+If you already have the environment installed, you can still jump straight to the launcher:
 
 ```powershell
-.\run_command_deck.bat
+.\launcher.bat
 ```
 
-That launcher starts the full JL Platform API at `jl_platform.services.api.main:app`, waits for `/health`, and opens the standalone command deck window using the current Python environment.
+Choose option `2` for the standalone command deck. That path starts the full JL Platform API at `jl_platform.services.api.main:app`, waits for `/health`, and opens the standalone command deck window using the current Python environment.
 
 Optional launcher switches:
 
@@ -85,6 +93,8 @@ Optional launcher switches:
 - `JL_PLATFORM_UI_PATH=/ui-easy/` opens the lighter flow deck
 - `JL_PLATFORM_LAUNCH_MODE=standalone` opens an app-style window when Edge or Chrome is available
 - `JL_PLATFORM_LAUNCH_MODE=browser` opens a normal browser tab
+- `JL_LOCAL_UNSAFE_TOOLS=0` disables shell, filesystem, and bridge tools for the API and CLI
+- `JL_COMMAND_DECK_TRANSCRIPT=0` turns off the command-deck transcript files
 
 ### Manual API start
 

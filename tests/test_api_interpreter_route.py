@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fastapi.testclient import TestClient
+
 from jl_platform.services.api import main as api_main
 from jl_platform.services.api.schemas import InterpreterRequest
 
@@ -44,3 +46,21 @@ def test_interpreter_run_respects_direct_action_fallback_env(monkeypatch):
 
     assert result["status"] == "ok"
     assert captured["allow_direct_action_fallback"] is True
+
+
+def test_cc_run_route_uses_commissioner_backend(monkeypatch):
+    captured: dict[str, object] = {}
+
+    def fake_run_cc_command(payload: dict) -> dict:
+        captured.update(payload)
+        return {"stdout": "ok", "stderr": "", "returncode": 0, "ok": True, "duration_ms": 1.0}
+
+    monkeypatch.setattr(api_main, "run_cc_command", fake_run_cc_command)
+
+    client = TestClient(api_main.app)
+    response = client.post("/tools/cc-run", json={"command": "dir", "cwd": "."})
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert captured["command"] == "dir"
+    assert captured["cwd"] == "."

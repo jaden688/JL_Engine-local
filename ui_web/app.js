@@ -985,8 +985,8 @@ function summarizeToolStep(step) {
     if (mode === "ui") return `controlled UI${data.action ? ` (${data.action})` : ""}`;
     return `used bridge_local (${mode || "unknown"})`;
   }
+  if (tool === "run_cc_command") return `ran command commissioner task`;
   if (tool === "run_shell") return `ran shell command`;
-  if (tool === "run_cc_command") return `ran local command`;
   if (tool === "py_exec_stream") return `executed Python`;
   if (tool === "forge_list") return "inspected RAM tools";
   if (tool === "forge_create") return `created RAM tool ${input.name || ""}`.trim();
