@@ -1,8 +1,0 @@
-[
-  "cogito:3b",
-  "gemma3:4b",
-  "qwen3-vl:4b",
-  "qwen3:4b",
-  "qwen3:8b",
-  "valkyriesys/eudaimonia-dryad3-vision:latest"
-]

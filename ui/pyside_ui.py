@@ -341,7 +341,8 @@ from jl_platform.core.quest_runtime import FatQuestRuntime
 BASE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BASE_DIR.parent
 SERVICE_CONFIG_PATH = REPO_ROOT / "jl_engine_core" / "gemini_config.json"
-OLLAMA_CACHE_PATH = BASE_DIR / "models" / "ollama_models.json"
+# Keep the Ollama inventory cache on the local machine, outside the repo tree.
+OLLAMA_CACHE_PATH = Path.home() / ".jl_engine" / "cache" / "ollama_models.json"
 
 QSS = """
 /* ANDY FIELDING RETRO-PHOSPHOR STANDARD */
@@ -2600,7 +2601,7 @@ class Main(QMainWindow):
         self.ollama_model_combo.setEditable(True)
         row.addWidget(self.ollama_model_combo, 1)
         self.ollama_refresh_btn = QPushButton("Refresh")
-        self.ollama_cache_btn = QPushButton("Load Cache")
+        self.ollama_cache_btn = QPushButton("Load Local Cache")
         self.ollama_pull_btn = QPushButton("Pull")
         self.ollama_apply_btn = QPushButton("Apply")
         row.addWidget(self.ollama_refresh_btn)

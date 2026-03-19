@@ -22,6 +22,7 @@ app_backend.log
 .self_edit_lab_test/
 .self_edit_lab_ui_test/
 artifacts/
+ui/models/ollama_models.json
 src/tools_runtime/
 docs/REAL_RUN_*.md
 
