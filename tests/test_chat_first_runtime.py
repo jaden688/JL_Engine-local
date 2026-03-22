@@ -110,6 +110,65 @@ def test_interpreter_plain_chat_returns_direct_final():
     assert session.get_pending_action() is None
 
 
+def test_action_detection_uses_latest_user_segment_in_transcript():
+    session = InterpreterSession(engine=FakeEngine([_json_reply({"final": "ok"})]))
+    transcript = (
+        "SYSTEM: Attached context from MAIN_LOG\n"
+        "USER: Were you able to execute this?\n"
+        "ENGINE: Created file at C:\\Users\\J_lin\\Downloads\\reg\\JL_Engine-local-main\\new_file\n"
+        "USER: Hello"
+    )
+
+    focused = session._action_detection_text(transcript)
+
+    assert focused == "Hello"
+    assert session._looks_like_action_request(transcript) is False
+
+
+def test_interpreter_transcript_greeting_does_not_trigger_action_fallback():
+    session = InterpreterSession(
+        engine=FakeEngine([_json_reply({"final": "Hey there."})]),
+        allow_direct_action_fallback=True,
+    )
+    transcript = (
+        "SYSTEM: Attached context from MAIN_LOG\n"
+        "USER: What can you tell me about the healing bench\n"
+        "ENGINE: Created file at C:\\Users\\J_lin\\Downloads\\reg\\JL_Engine-local-main\\new_file\n"
+        "USER: Hello"
+    )
+
+    result = session.run(transcript)
+
+    assert result["status"] == "ok"
+    assert result["final"] == "Hey there."
+    assert result["tool_trace"] == []
+
+
+def test_interpreter_action_request_errors_when_direct_fallback_disabled():
+    session = InterpreterSession(
+        engine=FakeEngine([_json_reply({"final": "Acknowledged."})]),
+        allow_direct_action_fallback=False,
+    )
+
+    result = session.run("create a file called notes.txt")
+
+    assert result["status"] == "error"
+    assert result["error"] == "action_request_not_executed_no_fallback"
+
+
+def test_interpreter_risky_tool_requires_confirmation_without_chat_fallback():
+    session = InterpreterSession(
+        engine=FakeEngine([_json_reply({"tool": "run_shell", "input": {"command": "echo hello"}})]),
+    )
+
+    result = session.run("hello there")
+
+    assert result["status"] == "confirmation_required"
+    pending = session.get_pending_action()
+    assert pending is not None
+    assert pending["tool"] == "run_shell"
+
+
 def test_interpreter_read_only_bridge_executes_without_confirmation():
     session = InterpreterSession(
         engine=FakeEngine(
@@ -328,6 +387,33 @@ def test_confirm_pending_action_replays_original_request_with_tool_result():
     assert "TOOL_RESULT for bridge_local:" in resumed_prompt
 
 
+def test_interpreter_run_cc_write_requires_confirmation():
+    session = InterpreterSession(
+        engine=FakeEngine(
+            [
+                _json_reply(
+                    {
+                        "tool": "run_cc_command",
+                        "input": {
+                            "action": "fs_write",
+                            "path": "notes.txt",
+                            "content": "hello",
+                        },
+                    }
+                )
+            ]
+        ),
+    )
+
+    result = session.run("create notes.txt with hello")
+
+    assert result["status"] == "confirmation_required"
+    pending = session.get_pending_action()
+    assert pending is not None
+    assert pending["tool"] == "run_cc_command"
+    assert pending["risk_level"] == "high"
+
+
 def test_confirm_pending_action_falls_back_to_clean_folder_result_when_model_drifts(monkeypatch, tmp_path: Path):
     desktop = tmp_path / "Desktop"
     desktop.mkdir()
@@ -399,7 +485,7 @@ def test_confirm_pending_action_collapses_repeated_shell_confirmation_into_compl
     assert session.get_pending_action() is None
 
 
-def test_interpreter_conversational_meta_request_falls_back_to_direct_chat_when_model_proposes_high_risk_tool():
+def test_interpreter_conversational_meta_request_requires_confirmation_for_high_risk_tool():
     session = InterpreterSession(
         engine=FakeEngine(
             [
@@ -416,13 +502,13 @@ def test_interpreter_conversational_meta_request_falls_back_to_direct_chat_when_
 
     result = session.run("Tell me what you are and what system this is.")
 
-    assert result["status"] == "ok"
-    assert "SparkByte" in result["final"]
-    assert "inspect the system" in result["final"]
-    assert session.get_pending_action() is None
+    assert result["status"] == "confirmation_required"
+    pending = session.get_pending_action()
+    assert pending is not None
+    assert pending["tool"] == "run_shell"
 
 
-def test_interpreter_greeting_falls_back_to_direct_chat_when_model_proposes_high_risk_tool():
+def test_interpreter_greeting_requires_confirmation_for_high_risk_tool():
     session = InterpreterSession(
         engine=FakeEngine(
             [
@@ -439,9 +525,10 @@ def test_interpreter_greeting_falls_back_to_direct_chat_when_model_proposes_high
 
     result = session.run("hey how goes it?")
 
-    assert result["status"] == "ok"
-    assert result["final"] == "All good over here. I'm upright, awake, and ready to roll."
-    assert session.get_pending_action() is None
+    assert result["status"] == "confirmation_required"
+    pending = session.get_pending_action()
+    assert pending is not None
+    assert pending["tool"] == "run_shell"
 
 
 def test_interpreter_folder_create_aliases_fs_create_to_real_mkdir(monkeypatch, tmp_path: Path):
@@ -711,6 +798,75 @@ def test_chat_auto_uses_interpreter_path_even_for_normal_messages(monkeypatch):
     assert session.calls[0]["context"]["quest_mode"] == "main_chat_auto"
 
 
+def test_chat_impl_auto_approves_confirmation_required_when_enabled(monkeypatch):
+    runtime = FatQuestRuntime()
+
+    class AutoApproveSession:
+        def __init__(self) -> None:
+            self.engine = SimpleNamespace(
+                set_agent=lambda _agent: None,
+                current_agent_name="SparkByte",
+            )
+            self.pending_id = "pending-1"
+
+        def run(self, message: str, context: dict | None = None, event_sink=None) -> dict:
+            return {
+                "status": "confirmation_required",
+                "final": "Awaiting confirmation: run shell command `echo hello`.",
+                "pending_action": {
+                    "id": self.pending_id,
+                    "tool": "run_shell",
+                    "input": {"command": "echo hello"},
+                    "summary": "run shell command `echo hello`",
+                    "risk_level": "high",
+                },
+                "tool_trace": [],
+            }
+
+        def confirm_pending_action(
+            self,
+            pending_action_id: str,
+            *,
+            approved: bool,
+            note: str = "",
+            event_sink=None,
+        ) -> dict:
+            assert approved is True
+            assert pending_action_id == self.pending_id
+            return {
+                "status": "ok",
+                "final": "Executed `echo hello`.",
+                "tool_trace": [{"tool": "run_shell", "input": {"command": "echo hello"}}],
+            }
+
+        def get_pending_action(self):
+            return None
+
+    agent = QuestAgent(
+        agent_id="jl_fat_agent",
+        agent="SparkByte",
+        session=AutoApproveSession(),
+        forge=PrivilegedMemoryForge(),
+    )
+    runtime._agents[agent.agent_id] = agent
+    monkeypatch.setattr(runtime, "_activate_engine", lambda engine: None)
+
+    result = runtime._chat_impl(
+        agent_id=agent.agent_id,
+        message="say hello",
+        agent="SparkByte",
+        context={"auto_approve_actions": True},
+        execution_mode="execute",
+        return_trace=True,
+        allow_clone=False,
+    )
+
+    assert result["status"] == "ok"
+    assert result["reply"] == "Executed `echo hello`."
+    assert result["auto_approved"] is True
+    assert result["auto_approve_count"] == 1
+
+
 def test_sync_agent_agent_reasserts_selected_agent_on_engine(monkeypatch):
     runtime = FatQuestRuntime()
     engine = RecordingEngine()
@@ -971,6 +1127,159 @@ def test_chat_delegation_merges_back_into_parent_reply(monkeypatch):
     assert result["delegated_to"] == "SaaS Copywriter"
 
 
+def test_chat_all_worker_mode_merges_multiple_delegates(monkeypatch):
+    runtime = FatQuestRuntime()
+    monkeypatch.setattr(runtime, "_activate_engine", lambda engine: None)
+
+    parent = QuestAgent(
+        agent_id="main",
+        agent="SparkByte",
+        session=SimpleNamespace(engine=DummyQuestEngine(["Merged crew reply."]), get_pending_action=lambda: None),
+        forge=PrivilegedMemoryForge(),
+    )
+    helpers: dict[str, QuestAgent] = {}
+
+    def fake_ensure_agent(agent_id: str, agent_name: str = "SparkByte"):
+        if not agent_id.startswith("main__delegate__"):
+            return parent
+        helper = helpers.get(agent_id)
+        if helper is None:
+            helper = QuestAgent(
+                agent_id=agent_id,
+                agent=agent_name,
+                session=SimpleNamespace(
+                    engine=DummyQuestEngine([f"{agent_id} worker output."]),
+                    get_pending_action=lambda: None,
+                ),
+                forge=PrivilegedMemoryForge(),
+            )
+            helpers[agent_id] = helper
+        return helper
+
+    monkeypatch.setattr(runtime, "ensure_agent", fake_ensure_agent)
+
+    result = runtime._chat_impl(
+        agent_id="main",
+        message="Implement python tooling, draft SaaS copy, and produce a YouTube script outline",
+        context={"delegation_mode": "all", "delegate_max_workers": 3},
+        execution_mode="chat",
+        allow_clone=False,
+    )
+
+    assert result["status"] == "ok"
+    assert result["reply"] == "Merged crew reply."
+    assert result["delegated_class"] == "multi"
+    assert result["delegation_count"] == 3
+    assert len(result["delegated_workers"]) == 3
+    assert all(worker["agent_name"] for worker in result["delegated_workers"])
+
+
+def test_delegated_workers_use_session_run_in_execute_mode(monkeypatch):
+    runtime = FatQuestRuntime()
+    monkeypatch.setattr(runtime, "_activate_engine", lambda engine: None)
+
+    parent = QuestAgent(
+        agent_id="main",
+        agent="SparkByte",
+        session=SimpleNamespace(engine=DummyQuestEngine(["Merged execution reply."]), get_pending_action=lambda: None),
+        forge=PrivilegedMemoryForge(),
+    )
+    delegated_calls: list[dict[str, object]] = []
+
+    class HelperSession:
+        def __init__(self) -> None:
+            self.engine = DummyQuestEngine(["helper chat fallback"])
+
+        def run(self, message: str, context: dict | None = None):
+            delegated_calls.append({"message": message, "context": dict(context or {})})
+            return {
+                "status": "ok",
+                "final": "helper executed",
+                "tool_trace": [{"tool": "run_shell"}],
+            }
+
+        def get_pending_action(self):
+            return None
+
+    helper = QuestAgent(
+        agent_id="main__delegate__jl_agent__Forgebinder",
+        agent="Forgebinder",
+        session=HelperSession(),
+        forge=PrivilegedMemoryForge(),
+    )
+
+    def fake_ensure_agent(agent_id: str, agent_name: str = "SparkByte"):
+        if agent_id.startswith("main__delegate__"):
+            return helper
+        return parent
+
+    monkeypatch.setattr(runtime, "ensure_agent", fake_ensure_agent)
+
+    result = runtime._chat_impl(
+        agent_id="main",
+        message="debug this python error and run fixes",
+        context={"delegation_mode": "all", "delegate_max_workers": 1, "delegated_execution_mode": "execute"},
+        execution_mode="execute",
+        allow_clone=False,
+    )
+
+    assert result["status"] == "ok"
+    assert result["executed"] is True
+    assert delegated_calls
+    assert result["delegated_workers"][0]["executed"] is True
+    assert result["delegated_workers"][0]["tool_trace_count"] == 1
+
+
+def test_agentic_profile_reads_forge_first_with_external_fallback(monkeypatch):
+    runtime = FatQuestRuntime()
+    monkeypatch.setattr(
+        runtime,
+        "_load_agent_payload_by_name",
+        lambda _name: {
+            "meta": {
+                "agentic": {
+                    "tool_mode": "forge_first",
+                    "external_fallback": True,
+                    "execution_mode": "execute",
+                    "delegated_execution_mode": "execute",
+                    "delegation_mode": "all",
+                    "delegate_max_workers": 4,
+                    "allow_direct_action_fallback": True,
+                }
+            }
+        },
+    )
+
+    profile = runtime._resolve_agentic_profile("SparkByte")
+
+    assert profile["tool_mode"] == "forge_first"
+    assert profile["external_fallback"] is True
+    assert profile["execution_mode"] == "execute"
+    assert profile["delegated_execution_mode"] == "execute"
+    assert profile["delegation_mode"] == "all"
+    assert profile["delegate_max_workers"] == 4
+    assert profile["allow_direct_action_fallback"] is True
+
+
+def test_agentic_profile_accepts_external_tool_fallback_alias(monkeypatch):
+    runtime = FatQuestRuntime()
+    monkeypatch.setattr(
+        runtime,
+        "_load_agent_payload_by_name",
+        lambda _name: {
+            "agentic": {
+                "tool_mode": "forge_first",
+                "external_tool_fallback": False,
+            }
+        },
+    )
+
+    profile = runtime._resolve_agentic_profile("SparkByte")
+
+    assert profile["tool_mode"] == "forge_first"
+    assert profile["external_fallback"] is False
+
+
 def test_quest_chat_api_passes_lane_child_and_instance_flag(monkeypatch):
     captured: dict[str, object] = {}
 
@@ -995,6 +1304,8 @@ def test_quest_chat_api_passes_lane_child_and_instance_flag(monkeypatch):
                 "lane": lane,
                 "child": child,
                 "new_instance": new_instance,
+                "context": dict(context or {}),
+                "execution_mode": execution_mode,
             }
         )
         return {"status": "ok"}
@@ -1015,6 +1326,67 @@ def test_quest_chat_api_passes_lane_child_and_instance_flag(monkeypatch):
     assert captured["lane"] == "generated"
     assert captured["child"] == "Task Helper"
     assert captured["new_instance"] is True
+    assert captured["execution_mode"] == "execute"
+    assert captured["context"]["tooling_mode"] == "forge_first"
+    assert captured["context"]["external_tool_fallback"] is True
+    assert captured["context"]["delegated_execution_mode"] == "execute"
+
+
+def test_quest_chat_execute_mode_streams_events_from_session(monkeypatch):
+    runtime = FatQuestRuntime()
+    events: list[dict] = []
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.engine = SimpleNamespace(
+                current_agent_name="SparkByte",
+                set_agent=lambda _agent: None,
+            )
+
+        def run(
+            self,
+            message: str,
+            context: dict | None = None,
+            event_sink=None,
+        ) -> dict:
+            if event_sink is not None:
+                event_sink(
+                    {
+                        "type": "tool_call_started",
+                        "tool": "run_shell",
+                        "input": {"command": "echo hello"},
+                    }
+                )
+            return {
+                "status": "ok",
+                "final": "Quest streamed reply.",
+                "reply": "Quest streamed reply.",
+                "tool_trace": [{"tool": "run_shell"}],
+                "telemetry": {},
+            }
+
+    parent = QuestAgent(
+        agent_id="main",
+        agent="SparkByte",
+        session=FakeSession(),
+        forge=PrivilegedMemoryForge(),
+    )
+
+    monkeypatch.setattr(runtime, "ensure_agent", lambda agent_id, agent_name="SparkByte": parent)
+    monkeypatch.setattr(runtime, "_choose_delegation", lambda **kwargs: None)
+
+    result = runtime._chat_impl(
+        agent_id="main",
+        message="hello",
+        execution_mode="execute",
+        allow_clone=False,
+        event_sink=events.append,
+    )
+
+    assert result["status"] == "ok"
+    assert any(event.get("type") == "quest_chat_started" for event in events)
+    assert any(event.get("type") == "tool_call_started" for event in events)
+    assert any(event.get("type") == "turn_result" for event in events)
 
 
 def test_quest_switch_api_passes_lane_child_and_instance_flag(monkeypatch):

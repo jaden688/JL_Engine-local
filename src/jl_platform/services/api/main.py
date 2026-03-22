@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import json
 import os
 import subprocess
 import sys
@@ -14,6 +15,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from jl_platform.core.engine import CoreEngine
@@ -181,6 +183,102 @@ def _resolve_agent_profile(
     return selected or default
 
 
+_VALID_EXECUTION_MODES = {"auto", "chat", "execute"}
+_VALID_DELEGATED_EXECUTION_MODES = {"auto", "chat", "execute"}
+_VALID_TOOLING_MODES = {"forge_first", "forge_only", "external_first", "external_only"}
+
+
+def _as_bool(value: Any, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    lowered = str(value).strip().lower()
+    if lowered in {"1", "true", "on", "yes", "y"}:
+        return True
+    if lowered in {"0", "false", "off", "no", "n"}:
+        return False
+    return default
+
+
+def _parse_bool_setting(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    lowered = str(value).strip().lower()
+    if lowered in {"1", "true", "on", "yes", "y"}:
+        return True
+    if lowered in {"0", "false", "off", "no", "n"}:
+        return False
+    raise ValueError(f"invalid_boolean_value:{value}")
+
+
+def _resolve_quest_execution_mode(requested: str | None) -> str:
+    normalized = str(requested or "").strip().lower()
+    if normalized in {"chat", "execute"}:
+        return normalized
+    if normalized == "auto":
+        auto_mode = str(os.getenv("JL_API_AUTO_EXECUTION_MODE", "execute") or "execute").strip().lower()
+        if auto_mode in _VALID_EXECUTION_MODES:
+            return auto_mode
+        return "execute"
+    default_mode = str(os.getenv("JL_API_DEFAULT_QUEST_EXECUTION_MODE", "execute") or "execute").strip().lower()
+    if default_mode in _VALID_EXECUTION_MODES:
+        return default_mode
+    return "execute"
+
+
+def _with_agentic_defaults(context: dict[str, Any] | None, *, channel: str) -> dict[str, Any]:
+    merged = dict(context or {})
+    merged.setdefault("channel", channel)
+
+    delegated_default = str(
+        os.getenv("JL_API_DEFAULT_DELEGATED_EXECUTION_MODE", "execute") or "execute"
+    ).strip().lower()
+    if delegated_default not in _VALID_DELEGATED_EXECUTION_MODES:
+        delegated_default = "execute"
+    requested_delegated = merged.get("delegated_execution_mode")
+    delegated_mode = str(requested_delegated or delegated_default).strip().lower()
+    if delegated_mode not in _VALID_DELEGATED_EXECUTION_MODES:
+        if requested_delegated is None:
+            delegated_mode = delegated_default
+        else:
+            raise ValueError(f"invalid_delegated_execution_mode:{requested_delegated}")
+    merged["delegated_execution_mode"] = delegated_mode
+
+    tooling_default = str(os.getenv("JL_API_DEFAULT_TOOLING_MODE", "forge_first") or "forge_first").strip().lower()
+    if tooling_default not in _VALID_TOOLING_MODES:
+        tooling_default = "forge_first"
+    requested_tooling = merged.get("tooling_mode")
+    tooling_mode = str(requested_tooling or tooling_default).strip().lower()
+    if tooling_mode not in _VALID_TOOLING_MODES:
+        if requested_tooling is None:
+            tooling_mode = tooling_default
+        else:
+            raise ValueError(f"invalid_tooling_mode:{requested_tooling}")
+    merged["tooling_mode"] = tooling_mode
+
+    fallback_value = merged.get("external_tool_fallback")
+    if fallback_value is None:
+        fallback_value = merged.get("external_fallback")
+    if fallback_value is None:
+        fallback_bool = True
+    else:
+        fallback_bool = _parse_bool_setting(fallback_value)
+    merged["external_tool_fallback"] = fallback_bool
+    merged["external_fallback"] = fallback_bool
+
+    if tooling_mode in {"forge_first", "forge_only"}:
+        merged.setdefault("interpreter_hint", "forge_first")
+
+    return merged
+
+
+def _sse_frame(event: Dict[str, Any]) -> str:
+    event_type = str((event or {}).get("type") or "message")
+    payload = json.dumps(event or {}, ensure_ascii=False, default=str)
+    return f"event: {event_type}\ndata: {payload}\n\n"
+
+
 def _chat_loop_status_snapshot(agent_id: str) -> dict[str, Any]:
     resolved = str(agent_id or JL_FAT_AGENT_ID).strip() or JL_FAT_AGENT_ID
     with _CHAT_LOOP_LOCK:
@@ -318,11 +416,12 @@ def _start_chat_loop(payload: ChatLoopStartRequest) -> dict[str, Any]:
     max_iterations = int(payload.max_iterations if payload.max_iterations is not None else 0)
     if max_iterations < 0:
         max_iterations = 0
-    execution_mode = str(payload.execution_mode or "chat").strip().lower()
-    if execution_mode not in {"auto", "chat", "execute"}:
-        execution_mode = "chat"
+    execution_mode = _resolve_quest_execution_mode(payload.execution_mode)
     message = str(payload.message or "").strip() or "Continue the conversation and keep momentum."
-    context = dict(payload.context or {})
+    try:
+        context = _with_agentic_defaults(payload.context, channel="api_chat_loop")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     context.setdefault("synthetic_turn", True)
     context.setdefault("suppress_memory_write", True)
     context.setdefault("suppress_feedback_log", True)
@@ -865,6 +964,10 @@ def quest_switch(payload: QuestSwitchRequest):
 
 @app.post("/quest/chat")
 def quest_chat(payload: QuestChatRequest):
+    try:
+        context = _with_agentic_defaults(payload.context, channel="api_quest_chat")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _QUEST_RUNTIME.chat(
         agent_id=payload.agent_id or JL_FAT_AGENT_ID,
         message=payload.message,
@@ -872,9 +975,74 @@ def quest_chat(payload: QuestChatRequest):
         lane=str(payload.lane or "").strip() or None,
         child=str(payload.child or "").strip() or None,
         new_instance=bool(payload.new_instance if payload.new_instance is not None else False),
-        context=payload.context or {},
-        execution_mode=str(payload.execution_mode or "auto"),
+        context=context,
+        execution_mode=_resolve_quest_execution_mode(payload.execution_mode),
         return_trace=bool(payload.return_trace if payload.return_trace is not None else True),
+    )
+
+
+@app.post("/quest/chat/stream")
+def quest_chat_stream(payload: QuestChatRequest):
+    try:
+        context = _with_agentic_defaults(payload.context, channel="api_quest_chat_stream")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    execution_mode = _resolve_quest_execution_mode(payload.execution_mode)
+
+    def _event_iterator():
+        stream_runner = getattr(_QUEST_RUNTIME, "stream_chat", None)
+        if callable(stream_runner):
+            for event in stream_runner(
+                agent_id=payload.agent_id or JL_FAT_AGENT_ID,
+                message=payload.message,
+                agent=_resolve_agent_profile(agent_name=payload.agent, agent_alias=payload.agent, default=""),
+                lane=str(payload.lane or "").strip() or None,
+                child=str(payload.child or "").strip() or None,
+                new_instance=bool(payload.new_instance if payload.new_instance is not None else False),
+                context=context,
+                execution_mode=execution_mode,
+                return_trace=bool(payload.return_trace if payload.return_trace is not None else True),
+            ):
+                frame_event = dict(event) if isinstance(event, dict) else {"type": "event", "payload": event}
+                frame_event["agent_id"] = payload.agent_id or JL_FAT_AGENT_ID
+                yield _sse_frame(frame_event)
+            return
+
+        try:
+            result = _QUEST_RUNTIME.chat(
+                agent_id=payload.agent_id or JL_FAT_AGENT_ID,
+                message=payload.message,
+                agent=_resolve_agent_profile(agent_name=payload.agent, agent_alias=payload.agent, default=""),
+                lane=str(payload.lane or "").strip() or None,
+                child=str(payload.child or "").strip() or None,
+                new_instance=bool(payload.new_instance if payload.new_instance is not None else False),
+                context=context,
+                execution_mode=execution_mode,
+                return_trace=bool(payload.return_trace if payload.return_trace is not None else True),
+            )
+        except Exception as exc:
+            yield _sse_frame({"type": "error", "agent_id": payload.agent_id or JL_FAT_AGENT_ID, "error": str(exc)})
+            return
+
+        result = dict(result or {})
+        result["agent_id"] = payload.agent_id or JL_FAT_AGENT_ID
+        yield _sse_frame(
+            {
+                "type": "turn_result",
+                "agent_id": payload.agent_id or JL_FAT_AGENT_ID,
+                "result": result,
+                "status": result.get("status"),
+                "final": result.get("reply") or result.get("final") or "",
+            }
+        )
+
+    return StreamingResponse(
+        _event_iterator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
@@ -971,8 +1139,8 @@ def interpreter_run(payload: InterpreterRequest):
     sid = payload.session_id or "default"
     session = _INTERPRETER_SESSIONS.get(sid)
     if session is None:
-        # Keep the interpreter's tool surface aligned with the local engine defaults,
-        # but do not silently execute direct file actions unless explicitly enabled.
+        # Keep the interpreter aligned with local engine defaults and let
+        # the local runtime execute direct actions by default.
         session = InterpreterSession(
             allow_unsafe_tools=None,
             allow_direct_action_fallback=_env_bool(
@@ -984,6 +1152,57 @@ def interpreter_run(payload: InterpreterRequest):
     result = session.run(payload.message)
     result["session_id"] = sid
     return result
+
+
+@app.post("/interpreter/stream")
+def interpreter_stream(payload: InterpreterRequest):
+    sid = payload.session_id or "default"
+    session = _INTERPRETER_SESSIONS.get(sid)
+    if session is None:
+        session = InterpreterSession(
+            allow_unsafe_tools=None,
+            allow_direct_action_fallback=_env_bool(
+                "JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK",
+                False,
+            ),
+        )
+        _INTERPRETER_SESSIONS[sid] = session
+
+    def _event_iterator():
+        stream_runner = getattr(session, "stream_run", None)
+        if callable(stream_runner):
+            for event in stream_runner(payload.message):
+                frame_event = dict(event) if isinstance(event, dict) else {"type": "event", "payload": event}
+                frame_event["session_id"] = sid
+                yield _sse_frame(frame_event)
+            return
+
+        try:
+            result = session.run(payload.message)
+        except Exception as exc:
+            yield _sse_frame({"type": "error", "session_id": sid, "error": str(exc)})
+            return
+
+        result = dict(result or {})
+        result["session_id"] = sid
+        yield _sse_frame(
+            {
+                "type": "turn_result",
+                "session_id": sid,
+                "result": result,
+                "status": result.get("status"),
+                "final": result.get("final") or result.get("reply") or "",
+            }
+        )
+
+    return StreamingResponse(
+        _event_iterator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 def _safe_workspace_path(raw_path: str | None) -> Path:
