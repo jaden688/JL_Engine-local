@@ -287,3 +287,41 @@ def test_runtime_mode_hybrid_without_provider_falls_back_to_local(tmp_path, monk
     assert result["fallback_reason"] == "missing_external_provider_config"
     assert recorded == {"brain_backend_id": "ollama-local", "tool_backend_id": "ollama-local"}
     assert saved["jl_engine"]["runtime_mode"] == "hybrid"
+
+
+def test_ollama_model_allowed_filters_large_models():
+    assert core_backends.ollama_model_allowed("gemma3:4b") is True
+    assert core_backends.ollama_model_allowed("llama3.1:70b") is False
+    assert core_backends.ollama_model_allowed("") is False
+
+
+def test_ensure_ollama_server_autostarts_and_recovers(monkeypatch):
+    attempts = {"get": 0, "start": 0}
+
+    class _DummyResponse:
+        status_code = 200
+
+    def fake_get(_url, timeout=None):
+        attempts["get"] += 1
+        if attempts["get"] < 3:
+            raise core_backends.RequestException("down")
+        return _DummyResponse()
+
+    def fake_start():
+        attempts["start"] += 1
+        return True
+
+    monkeypatch.setattr(core_backends.requests, "get", fake_get)
+    monkeypatch.setattr(core_backends, "_start_ollama_server_process", fake_start)
+    monkeypatch.setattr(core_backends.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(core_backends, "_OLLAMA_AUTOSTART_ATTEMPTS", set())
+
+    ready = core_backends.ensure_ollama_server(
+        "http://127.0.0.1:11434",
+        autostart=True,
+        wait_timeout=1.0,
+        poll_interval=0.1,
+    )
+
+    assert ready is True
+    assert attempts["start"] == 1
