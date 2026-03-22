@@ -41,5 +41,5 @@ def test_quest_runtime_uses_safe_interpreter_defaults(monkeypatch):
     agent = runtime.ensure_agent("agent-1", agent_name="SparkByte")
 
     assert agent.agent == "SparkByte"
-    assert captured["allow_unsafe_tools"] is None
+    assert captured["allow_unsafe_tools"] is True
     assert captured["allow_direct_action_fallback"] is False

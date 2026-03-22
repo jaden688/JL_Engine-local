@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import hashlib
 import os
@@ -10,7 +11,7 @@ from difflib import SequenceMatcher
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Event, RLock, Thread, current_thread
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from jl_engine_core.engine_core import JLEngineCore
 from jl_engine_core.modular_agents import get_modular_agent_summary, is_modular_agent_payload, resolve_modular_agent_payload
@@ -69,6 +70,7 @@ class QuestAgent:
     last_generated_instance_id: Optional[str] = None
     last_delegated_to: Optional[str] = None
     last_delegated_class: Optional[str] = None
+    agentic_profile: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -111,7 +113,7 @@ class FatQuestRuntime:
             "default_lane": "fat_agent",
             "lanes": {
                 "fat_agent": {
-                    "label": "Mothership Personas",
+                    "label": "Mothership Agents",
                     "default_child": "SparkByte",
                     "children": {
                         "SparkByte": {
@@ -294,6 +296,38 @@ class FatQuestRuntime:
         text = re.sub(r"_+", "_", text).strip("_")
         return text or "agent"
 
+    def _emit_stream_event(
+        self,
+        event_sink: Callable[[Dict[str, Any]], None] | None,
+        event_type: str,
+        **payload: Any,
+    ) -> None:
+        if event_sink is None:
+            return
+        try:
+            event_sink({"type": event_type, **payload})
+        except Exception:
+            pass
+
+    def _call_with_optional_event_sink(
+        self,
+        callable_obj: Any,
+        *args: Any,
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        if event_sink is not None:
+            try:
+                signature = inspect.signature(callable_obj)
+                params = signature.parameters
+                if "event_sink" in params or any(
+                    param.kind == inspect.Parameter.VAR_KEYWORD for param in params.values()
+                ):
+                    return callable_obj(*args, event_sink=event_sink, **kwargs)
+            except (TypeError, ValueError):
+                pass
+        return callable_obj(*args, **kwargs)
+
     def _apply_runtime_backend_mode(self) -> dict[str, Any]:
         try:
             return backend_controller.apply_runtime_mode()
@@ -332,6 +366,101 @@ class FatQuestRuntime:
             except Exception:
                 return payload
         return payload
+
+    def _resolve_agentic_profile(self, agent_name: str) -> dict[str, Any]:
+        payload = self._load_agent_payload_by_name(agent_name)
+        if not isinstance(payload, dict):
+            payload = {}
+        meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+        behavior = payload.get("behavior") if isinstance(payload.get("behavior"), dict) else {}
+        capabilities = payload.get("capabilities") if isinstance(payload.get("capabilities"), dict) else {}
+        runtime = payload.get("runtime") if isinstance(payload.get("runtime"), dict) else {}
+
+        agentic_source: dict[str, Any] = {}
+        for candidate in (
+            payload.get("agentic"),
+            meta.get("agentic") if isinstance(meta, dict) else None,
+            behavior.get("agentic") if isinstance(behavior, dict) else None,
+            capabilities.get("agentic") if isinstance(capabilities, dict) else None,
+            runtime.get("agentic") if isinstance(runtime, dict) else None,
+        ):
+            if isinstance(candidate, dict):
+                agentic_source = candidate
+                break
+
+        def _as_bool(value: Any, default: bool) -> bool:
+            if value is None:
+                return default
+            if isinstance(value, bool):
+                return value
+            text = str(value).strip().lower()
+            if text in {"1", "true", "on", "yes", "y"}:
+                return True
+            if text in {"0", "false", "off", "no", "n"}:
+                return False
+            return default
+
+        def _as_int(value: Any, default: int) -> int:
+            try:
+                return int(value) if value is not None else default
+            except (TypeError, ValueError):
+                return default
+
+        raw_tool_mode = str(
+            agentic_source.get("tool_mode")
+            or agentic_source.get("tooling_mode")
+            or agentic_source.get("tool_policy")
+            or "forge_first"
+        ).strip().lower()
+        if raw_tool_mode in {"forge-only", "forge_only"}:
+            raw_tool_mode = "forge_only"
+        if raw_tool_mode not in {"forge_first", "forge_only", "external_first", "external_only"}:
+            raw_tool_mode = "forge_first"
+
+        raw_external_fallback = agentic_source.get("external_fallback")
+        if raw_external_fallback is None:
+            raw_external_fallback = agentic_source.get("external_tool_fallback")
+
+        profile = {
+            "enabled": _as_bool(agentic_source.get("enabled"), True),
+            "tool_mode": raw_tool_mode,
+            "external_fallback": _as_bool(
+                raw_external_fallback,
+                raw_tool_mode in {"forge_first", "external_first"},
+            ),
+            "allow_unsafe_tools": _as_bool(agentic_source.get("allow_unsafe_tools"), True),
+            "allow_direct_action_fallback": _as_bool(
+                agentic_source.get("allow_direct_action_fallback"),
+                _env_bool("JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK", False),
+            ),
+            "delegation_mode": str(agentic_source.get("delegation_mode") or "").strip().lower() or None,
+            "delegate_max_workers": max(
+                1,
+                min(_as_int(agentic_source.get("delegate_max_workers"), 6), 24),
+            ),
+            "delegated_execution_mode": str(
+                agentic_source.get("delegated_execution_mode") or "execute"
+            ).strip().lower(),
+            "execution_mode": str(agentic_source.get("execution_mode") or "auto").strip().lower(),
+        }
+        if profile["delegated_execution_mode"] not in {"auto", "chat", "execute"}:
+            profile["delegated_execution_mode"] = "execute"
+        if profile["execution_mode"] not in {"auto", "chat", "execute"}:
+            profile["execution_mode"] = "execute"
+        return profile
+
+    def _apply_session_agentic_profile(self, agent_obj: QuestAgent) -> None:
+        profile = self._resolve_agentic_profile(agent_obj.agent)
+        agent_obj.agentic_profile = dict(profile)
+        session = agent_obj.session
+        try:
+            session.allow_direct_action_fallback = bool(profile.get("allow_direct_action_fallback", False))
+        except Exception:
+            pass
+        try:
+            session.allow_unsafe_tools = bool(profile.get("allow_unsafe_tools", True))
+        except Exception:
+            pass
 
     def _resolve_agent_selection_from_name(self, agent_name: str) -> dict[str, Any]:
         name = str(agent_name or "").strip()
@@ -459,6 +588,14 @@ class FatQuestRuntime:
                         "Do the sub-task cleanly and return material the parent agent can present."
                     )
                 }
+            },
+            "agentic": {
+                "enabled": True,
+                "tool_mode": "forge_first",
+                "external_fallback": True,
+                "execution_mode": "execute",
+                "delegated_execution_mode": "execute",
+                "allow_direct_action_fallback": False,
             },
             "meta": {
                 "source": "switchboard_generated_template",
@@ -656,6 +793,9 @@ class FatQuestRuntime:
             existing = self._agents.get(agent_id)
             if existing:
                 agent_obj = existing
+                if str(agent_name or "").strip():
+                    self._sync_agent_agent(agent_obj, agent_name)
+                self._apply_session_agentic_profile(agent_obj)
             else:
                 self._apply_runtime_backend_mode()
                 forge = PrivilegedMemoryForge()
@@ -665,16 +805,15 @@ class FatQuestRuntime:
                     engine.set_agent(agent_name)
                 except Exception:
                     pass
+                profile = self._resolve_agentic_profile(agent_name)
                 session = InterpreterSession(
                     engine=engine,
                     memory_forge=forge,
-                    allow_unsafe_tools=None,
-                    allow_direct_action_fallback=_env_bool(
-                        "JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK",
-                        False,
-                    ),
+                    allow_unsafe_tools=bool(profile.get("allow_unsafe_tools", True)),
+                    allow_direct_action_fallback=bool(profile.get("allow_direct_action_fallback", False)),
                 )
                 agent_obj = QuestAgent(agent_id=agent_id, agent=agent_name, session=session, forge=forge)
+                agent_obj.agentic_profile = dict(profile)
                 selection = self._resolve_agent_selection_from_name(agent_name)
                 self._set_agent_selection_state(
                     agent_obj,
@@ -684,6 +823,7 @@ class FatQuestRuntime:
                     generated_instance_id=str(selection.get("generated_instance_id") or "") or None,
                 )
                 self._agents[agent_id] = agent_obj
+            self._apply_session_agentic_profile(agent_obj)
         return agent_obj
 
     def _sync_agent_agent(self, agent_obj: QuestAgent, agent_name: str | None = None) -> None:
@@ -693,12 +833,14 @@ class FatQuestRuntime:
         engine = agent_obj.session.engine
         current_agent = str(getattr(engine, "current_agent_name", "") or "").strip()
         if current_agent == desired_agent:
+            self._apply_session_agentic_profile(agent_obj)
             return
         try:
             self._activate_engine(engine)
             engine.set_agent(desired_agent)
         except Exception:
             pass
+        self._apply_session_agentic_profile(agent_obj)
 
     def register_agent(
         self, agent_id: str, agent_name: str = "SparkByte", parent_agent_id: str | None = None
@@ -980,6 +1122,246 @@ class FatQuestRuntime:
             }
         return None
 
+    def _switchboard_children(self, lane: str) -> list[str]:
+        lane_entry = self._switchboard_lane_entry(lane)
+        children = lane_entry.get("children") if isinstance(lane_entry, dict) else {}
+        if not isinstance(children, dict):
+            return []
+        names: list[str] = []
+        for child_name, child_entry in children.items():
+            if not isinstance(child_entry, dict):
+                continue
+            names.append(str(child_name))
+        return names
+
+    def _switchboard_children_with_entries(self, lane: str) -> list[tuple[str, dict[str, Any]]]:
+        lane_entry = self._switchboard_lane_entry(lane)
+        children = lane_entry.get("children") if isinstance(lane_entry, dict) else {}
+        if not isinstance(children, dict):
+            return []
+        entries: list[tuple[str, dict[str, Any]]] = []
+        for child_name, child_entry in children.items():
+            if not isinstance(child_entry, dict):
+                continue
+            entries.append((str(child_name), child_entry))
+        return entries
+
+    def _score_delegation_candidate(
+        self,
+        *,
+        message: str,
+        lane: str,
+        child: str,
+        entry: dict[str, Any] | None,
+    ) -> int:
+        task = str(message or "").strip().lower()
+        if not task:
+            return 0
+        score = 0
+        child_low = str(child or "").strip().lower()
+        safe_entry = entry if isinstance(entry, dict) else {}
+
+        if lane == "jl_agent":
+            agent_name = str(safe_entry.get("agent_name") or child or "").strip()
+            score += self._score_task_against_agent(message, agent_name)
+            if child_low == "forgebinder":
+                if any(
+                    term in task
+                    for term in (
+                        "code",
+                        "build",
+                        "implement",
+                        "debug",
+                        "fix",
+                        "tool",
+                        "automation",
+                        "script",
+                        "run",
+                        "execute",
+                        "python",
+                        "repo",
+                        "file",
+                        "api",
+                    )
+                ):
+                    score += 6
+            elif "copywriter" in child_low:
+                if any(
+                    term in task
+                    for term in (
+                        "copy",
+                        "headline",
+                        "cta",
+                        "landing",
+                        "conversion",
+                        "ad",
+                        "email",
+                        "marketing",
+                        "brand",
+                        "positioning",
+                        "pitch",
+                        "offer",
+                    )
+                ):
+                    score += 6
+            elif "youtube" in child_low or "scriptwriter" in child_low:
+                if any(
+                    term in task
+                    for term in (
+                        "youtube",
+                        "video",
+                        "script",
+                        "hook",
+                        "thumbnail",
+                        "shorts",
+                        "retention",
+                        "channel",
+                        "title",
+                        "description",
+                    )
+                ):
+                    score += 6
+            return score
+
+        if lane == "generated":
+            if child_low == "support wing":
+                if any(term in task for term in ("debug", "fix", "error", "traceback", "broken", "stuck", "triage")):
+                    score += 7
+            elif child_low == "specialist builder":
+                if any(term in task for term in ("build", "implement", "design", "architect", "create", "develop")):
+                    score += 7
+            elif child_low == "task helper":
+                score += 2
+                if any(term in task for term in ("plan", "organize", "steps", "compare", "analyze", "coordinate", "multi")):
+                    score += 3
+            return score
+
+        return score
+
+    def _resolve_delegation_mode(self, context: dict[str, Any] | None) -> str:
+        payload = context if isinstance(context, dict) else {}
+        raw = str(
+            payload.get("delegation_mode")
+            or payload.get("delegate_mode")
+            or payload.get("worker_mode")
+            or ""
+        ).strip().lower()
+        if raw in {"off", "none", "disabled", "false", "0"}:
+            return "off"
+        if raw in {"all", "all_workers", "all_agents", "full"}:
+            return "all"
+        if raw in {"multi", "crew", "swarm", "parallel"}:
+            return "multi"
+        return "single"
+
+    def _resolve_delegation_worker_limit(self, context: dict[str, Any] | None, mode: str) -> int:
+        payload = context if isinstance(context, dict) else {}
+        default_limit = 1 if mode == "single" else 3 if mode == "multi" else 6
+        raw = payload.get("delegate_max_workers", payload.get("max_workers", payload.get("worker_count")))
+        try:
+            parsed = int(raw) if raw is not None else default_limit
+        except (TypeError, ValueError):
+            parsed = default_limit
+        return max(1, min(parsed, 24))
+
+    def _choose_delegation_plan(
+        self,
+        *,
+        agent_obj: QuestAgent,
+        message: str,
+        current_selection: dict[str, Any],
+        explicit_selection: bool,
+        context: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        mode = self._resolve_delegation_mode(context)
+        if mode == "off":
+            return []
+        if mode == "single":
+            single = self._choose_delegation(
+                agent_obj=agent_obj,
+                message=message,
+                current_selection=current_selection,
+                explicit_selection=explicit_selection,
+            )
+            return [single] if single else []
+
+        if explicit_selection:
+            return []
+        if str(current_selection.get("lane") or "") != "fat_agent":
+            return []
+
+        scored_candidates: list[tuple[int, dict[str, Any]]] = []
+        seen: set[str] = set()
+
+        def _add_scored(lane: str, child: str, reason: str, entry: dict[str, Any] | None = None) -> None:
+            key = f"{lane}::{child}".lower()
+            if key in seen:
+                return
+            seen.add(key)
+            score = self._score_delegation_candidate(message=message, lane=lane, child=child, entry=entry)
+            if score <= 0:
+                return
+            scored_candidates.append(
+                (
+                    score,
+                    {
+                        "lane": lane,
+                        "child": child,
+                        "reason": reason,
+                    },
+                )
+            )
+
+        specialist_child = self._select_jl_specialist_child(message)
+        jl_children = dict(self._switchboard_children_with_entries("jl_agent"))
+        generated_children = dict(self._switchboard_children_with_entries("generated"))
+
+        if specialist_child:
+            _add_scored(
+                "jl_agent",
+                specialist_child,
+                "specialist_match",
+                entry=jl_children.get(specialist_child) or {},
+            )
+
+        if mode == "all":
+            for child, entry in jl_children.items():
+                _add_scored("jl_agent", child, "all_jl_agents", entry=entry)
+            for child, entry in generated_children.items():
+                _add_scored("generated", child, "all_generated_templates", entry=entry)
+        else:
+            if not specialist_child:
+                default_jl_child, default_jl_entry = self._switchboard_child_entry("jl_agent", None)
+                _add_scored("jl_agent", default_jl_child, "default_specialist", entry=default_jl_entry)
+            generated_child = self._select_generated_child_template(message)
+            _add_scored(
+                "generated",
+                generated_child,
+                "generated_branch",
+                entry=generated_children.get(generated_child) or {},
+            )
+            if self._should_delegate_to_generated(message, specialist_child=specialist_child):
+                _add_scored(
+                    "generated",
+                    "Task Helper",
+                    "task_decomposition",
+                    entry=generated_children.get("Task Helper") or {},
+                )
+
+        scored_candidates.sort(key=lambda item: item[0], reverse=True)
+        plan = [item[1] for item in scored_candidates]
+        if not plan:
+            fallback = self._choose_delegation(
+                agent_obj=agent_obj,
+                message=message,
+                current_selection=current_selection,
+                explicit_selection=explicit_selection,
+            )
+            if fallback:
+                plan = [fallback]
+        limit = self._resolve_delegation_worker_limit(context, mode)
+        return plan[:limit]
+
     def _telemetry_summary(self, telemetry: dict[str, Any] | None, engine: Any) -> dict[str, Any]:
         payload = telemetry if isinstance(telemetry, dict) else {}
         aperture = payload.get("aperture_state") if isinstance(payload.get("aperture_state"), dict) else {}
@@ -1029,6 +1411,68 @@ class FatQuestRuntime:
             context=merge_context,
         )
 
+    def _merge_delegated_bundle_reply(
+        self,
+        *,
+        parent_agent: QuestAgent,
+        parent_message: str,
+        delegated_runs: list[dict[str, Any]],
+        context: dict[str, Any],
+    ) -> tuple[str, dict[str, Any], dict[str, Any]]:
+        if len(delegated_runs) == 1:
+            run = delegated_runs[0]
+            selection = run.get("selection") if isinstance(run.get("selection"), dict) else {}
+            return self._merge_delegated_reply(
+                parent_agent=parent_agent,
+                parent_message=parent_message,
+                delegated_reply=str(run.get("reply") or ""),
+                delegated_selection=dict(selection),
+                context=context,
+            )
+
+        delegated_bundle: list[dict[str, Any]] = []
+        bundle_blocks: list[str] = []
+        for idx, run in enumerate(delegated_runs, start=1):
+            selection = run.get("selection") if isinstance(run.get("selection"), dict) else {}
+            lane = str(selection.get("lane") or "unknown")
+            child = str(selection.get("child") or selection.get("agent_name") or "worker")
+            agent_name = str(selection.get("agent_name") or child)
+            reply = str(run.get("reply") or "")
+            delegated_bundle.append(
+                {
+                    "index": idx,
+                    "lane": lane,
+                    "child": child,
+                    "agent_name": agent_name,
+                    "classification": str(selection.get("classification") or lane),
+                    "generated_instance_id": selection.get("generated_instance_id"),
+                    "reply": reply,
+                }
+            )
+            bundle_blocks.append(
+                f"[Worker {idx}] lane={lane} child={child} agent={agent_name}\n{reply}"
+            )
+
+        merge_context = self._sharp_context(
+            {
+                **dict(context or {}),
+                "delegated_bundle": delegated_bundle,
+            },
+            mode="main_chat",
+        )
+        merge_prompt = (
+            f"User request:\n{parent_message}\n\n"
+            "Delegated worker outputs:\n"
+            + "\n\n".join(bundle_blocks)
+            + "\n\n"
+            "Reply to the user in the active parent agent voice while integrating the delegated results into one coherent answer."
+        )
+        return parent_agent.session.engine.generate_response(
+            merge_prompt,
+            agent_name=parent_agent.agent,
+            context=merge_context,
+        )
+
     def chat(
         self,
         agent_id: str,
@@ -1041,6 +1485,7 @@ class FatQuestRuntime:
         execution_mode: str = "auto",
         return_trace: bool = True,
         allow_clone: bool = True,
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> dict[str, Any]:
         resolved_agent_id = str(agent_id or JL_FAT_AGENT_ID)
         self.ensure_agent(resolved_agent_id, agent_name=agent or "SparkByte")
@@ -1058,6 +1503,7 @@ class FatQuestRuntime:
                 "execution_mode": execution_mode,
                 "return_trace": return_trace,
                 "allow_clone": allow_clone,
+                "event_sink": event_sink,
             },
         )
 
@@ -1073,6 +1519,7 @@ class FatQuestRuntime:
         execution_mode: str = "auto",
         return_trace: bool = True,
         allow_clone: bool = True,
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> dict[str, Any]:
         context = dict(context or {})
         visible_agent = self.ensure_agent(agent_id, agent_name=agent or "SparkByte")
@@ -1086,6 +1533,48 @@ class FatQuestRuntime:
             source_task=message,
         )
         self._sync_agent_agent(visible_agent, str(selection.get("agent_name") or visible_agent.agent))
+        agentic_profile = (
+            visible_agent.agentic_profile
+            if isinstance(visible_agent.agentic_profile, dict) and visible_agent.agentic_profile
+            else self._resolve_agentic_profile(visible_agent.agent)
+        )
+        if not context.get("delegation_mode") and agentic_profile.get("delegation_mode"):
+            context["delegation_mode"] = str(agentic_profile.get("delegation_mode"))
+        if not context.get("delegate_max_workers") and agentic_profile.get("delegate_max_workers"):
+            context["delegate_max_workers"] = int(agentic_profile.get("delegate_max_workers") or 1)
+        if not context.get("delegated_execution_mode") and agentic_profile.get("delegated_execution_mode"):
+            context["delegated_execution_mode"] = str(agentic_profile.get("delegated_execution_mode"))
+        context.setdefault("tooling_mode", str(agentic_profile.get("tool_mode") or "forge_first"))
+        profile_external_fallback = bool(agentic_profile.get("external_fallback", True))
+
+        def _context_bool(value: Any, default: bool) -> bool:
+            if value is None:
+                return default
+            if isinstance(value, bool):
+                return value
+            lowered = str(value).strip().lower()
+            if lowered in {"1", "true", "on", "yes", "y"}:
+                return True
+            if lowered in {"0", "false", "off", "no", "n"}:
+                return False
+            return default
+
+        external_fallback_value = context.get("external_tool_fallback")
+        if external_fallback_value is None:
+            external_fallback_value = context.get("external_fallback")
+        normalized_external_fallback = _context_bool(external_fallback_value, profile_external_fallback)
+        context["external_tool_fallback"] = normalized_external_fallback
+        context["external_fallback"] = normalized_external_fallback
+        if str(context.get("tooling_mode") or "").strip().lower() in {"forge_first", "forge_only"}:
+            context.setdefault("interpreter_hint", "forge_first")
+
+        requested_mode = str(execution_mode or "auto").strip().lower()
+        if requested_mode not in {"auto", "chat", "execute"}:
+            requested_mode = "auto"
+        preferred_mode = str(agentic_profile.get("execution_mode") or "").strip().lower()
+        if requested_mode == "auto" and preferred_mode in {"auto", "chat", "execute"}:
+            requested_mode = preferred_mode
+
         with self._lock:
             self._set_agent_selection_state(
                 visible_agent,
@@ -1096,89 +1585,227 @@ class FatQuestRuntime:
             )
             visible_agent.last_delegated_to = None
             visible_agent.last_delegated_class = None
+            visible_agent.agentic_profile = dict(agentic_profile)
         current_selection = self._current_selection(visible_agent)
-        delegation = self._choose_delegation(
+        self._emit_stream_event(
+            event_sink,
+            "quest_chat_started",
+            agent_id=agent_id,
+            agent=visible_agent.agent,
+            lane=current_selection.get("lane"),
+            child=current_selection.get("child"),
+            execution_mode=requested_mode,
+            explicit_selection=explicit_selection,
+            tooling_mode=context.get("tooling_mode"),
+        )
+
+        def _finish(result: dict[str, Any]) -> dict[str, Any]:
+            self._emit_stream_event(
+                event_sink,
+                "turn_result",
+                result=dict(result),
+                status=str(result.get("status") or "ok"),
+                final=str(result.get("reply") or result.get("final") or ""),
+                reply=str(result.get("reply") or result.get("final") or ""),
+                lane=current_selection.get("lane"),
+                child=current_selection.get("child"),
+                delegated_to=result.get("delegated_to"),
+                delegated_class=result.get("delegated_class"),
+                generated_instance_id=result.get("generated_instance_id"),
+            )
+            return result
+
+        delegation_plan = self._choose_delegation_plan(
             agent_obj=visible_agent,
             message=message,
             current_selection=current_selection,
             explicit_selection=explicit_selection,
+            context=context,
         )
-
-        requested_mode = str(execution_mode or "auto").strip().lower()
-        if requested_mode not in {"auto", "chat", "execute"}:
-            requested_mode = "auto"
         mode_used = requested_mode
 
         try:
-            if delegation:
-                helper_agent_id = (
-                    f"{agent_id}__delegate__{self._sanitize_name_fragment(str(delegation.get('lane') or 'delegate'))}"
-                    f"__{self._sanitize_name_fragment(str(delegation.get('child') or 'agent'))}"
-                )
-                helper_agent = self.ensure_agent(helper_agent_id)
-                delegated_selection = self._resolve_switch_selection(
-                    agent_obj=helper_agent,
-                    lane=str(delegation.get("lane") or ""),
-                    child=str(delegation.get("child") or ""),
-                    source_task=message,
-                    parent_agent_id=visible_agent.agent_id,
-                    parent_lane=str(current_selection.get("lane") or "fat_agent"),
-                    parent_agent_name=visible_agent.agent,
-                )
-                self._sync_agent_agent(helper_agent, str(delegated_selection.get("agent_name") or helper_agent.agent))
-                with self._lock:
-                    helper_agent.parent_agent_id = agent_id
-                    self._set_agent_selection_state(
-                        helper_agent,
-                        lane=str(delegated_selection.get("lane") or "jl_agent"),
-                        child=str(delegated_selection.get("child") or delegated_selection.get("agent_name") or helper_agent.agent),
-                        agent_name=str(delegated_selection.get("agent_name") or helper_agent.agent),
-                        generated_instance_id=str(delegated_selection.get("generated_instance_id") or "") or None,
+            if delegation_plan:
+                delegated_runs: list[dict[str, Any]] = []
+                for delegation in delegation_plan:
+                    helper_agent_id = (
+                        f"{agent_id}__delegate__{self._sanitize_name_fragment(str(delegation.get('lane') or 'delegate'))}"
+                        f"__{self._sanitize_name_fragment(str(delegation.get('child') or 'agent'))}"
                     )
-                    visible_agent.last_delegated_to = str(delegated_selection.get("agent_name") or helper_agent.agent)
-                    visible_agent.last_delegated_class = str(delegated_selection.get("classification") or delegated_selection.get("lane") or "")
+                    helper_agent = self.ensure_agent(helper_agent_id)
+                    self._emit_stream_event(
+                        event_sink,
+                        "quest_delegation_started",
+                        agent_id=agent_id,
+                        delegated_agent_id=helper_agent_id,
+                        lane=str(delegation.get("lane") or ""),
+                        child=str(delegation.get("child") or ""),
+                        source_task=message,
+                    )
+                    delegated_selection = self._resolve_switch_selection(
+                        agent_obj=helper_agent,
+                        lane=str(delegation.get("lane") or ""),
+                        child=str(delegation.get("child") or ""),
+                        source_task=message,
+                        parent_agent_id=visible_agent.agent_id,
+                        parent_lane=str(current_selection.get("lane") or "fat_agent"),
+                        parent_agent_name=visible_agent.agent,
+                    )
+                    self._sync_agent_agent(helper_agent, str(delegated_selection.get("agent_name") or helper_agent.agent))
+                    with self._lock:
+                        helper_agent.parent_agent_id = agent_id
+                        self._set_agent_selection_state(
+                            helper_agent,
+                            lane=str(delegated_selection.get("lane") or "jl_agent"),
+                            child=str(delegated_selection.get("child") or delegated_selection.get("agent_name") or helper_agent.agent),
+                            agent_name=str(delegated_selection.get("agent_name") or helper_agent.agent),
+                            generated_instance_id=str(delegated_selection.get("generated_instance_id") or "") or None,
+                        )
 
-                delegated_context = self._sharp_context(
-                    {
-                        **context,
-                        "delegated_from": agent_id,
-                        "switchboard_selection": delegated_selection,
-                    },
-                    mode="main_chat",
-                )
-                delegated_reply, _, _ = helper_agent.session.engine.generate_response(
-                    message,
-                    agent_name=helper_agent.agent,
-                    context=delegated_context,
-                )
-                reply, telemetry, feedback = self._merge_delegated_reply(
+                    delegated_context = self._sharp_context(
+                        {
+                            **context,
+                            "delegated_from": agent_id,
+                            "switchboard_selection": delegated_selection,
+                        },
+                        mode="main_chat",
+                    )
+                    delegated_mode = str(
+                        (context or {}).get("delegated_execution_mode")
+                        or ("execute" if requested_mode in {"auto", "execute"} else "chat")
+                    ).strip().lower()
+                    if delegated_mode not in {"auto", "chat", "execute"}:
+                        delegated_mode = "execute"
+                    delegated_reply = ""
+                    delegated_status = "ok"
+                    delegated_executed = False
+                    delegated_tool_trace_count = 0
+                    session_run = getattr(helper_agent.session, "run", None)
+                    if callable(session_run) and delegated_mode in {"auto", "execute"}:
+                        delegated_context_mode = "main_chat_auto" if delegated_mode == "auto" else "main_chat_execute"
+                        delegated_result = self._call_with_optional_event_sink(
+                            session_run,
+                            message,
+                            context=self._sharp_context(
+                                {
+                                    **delegated_context,
+                                    "switchboard_selection": delegated_selection,
+                                },
+                                mode=delegated_context_mode,
+                            ),
+                            event_sink=event_sink,
+                        )
+                        delegated_status = str((delegated_result or {}).get("status") or "ok")
+                        delegated_reply = str(
+                            (delegated_result or {}).get("final")
+                            or (delegated_result or {}).get("reply")
+                            or ""
+                        )
+                        delegated_tool_trace = (
+                            (delegated_result or {}).get("tool_trace")
+                            if isinstance((delegated_result or {}).get("tool_trace"), list)
+                            else []
+                        )
+                        delegated_tool_trace_count = len(delegated_tool_trace)
+                        delegated_executed = delegated_tool_trace_count > 0
+                    else:
+                        delegated_reply, _, _ = helper_agent.session.engine.generate_response(
+                            message,
+                            agent_name=helper_agent.agent,
+                            context=delegated_context,
+                        )
+                    self._emit_stream_event(
+                        event_sink,
+                        "quest_delegation_result",
+                        agent_id=agent_id,
+                        delegated_agent_id=helper_agent_id,
+                        delegated_selection=delegated_selection,
+                        status=delegated_status,
+                        executed=delegated_executed,
+                        tool_trace_count=delegated_tool_trace_count,
+                        reply=str(delegated_reply or ""),
+                    )
+                    delegated_runs.append(
+                        {
+                            "delegated_agent_id": helper_agent_id,
+                            "selection": delegated_selection,
+                            "status": delegated_status,
+                            "executed": delegated_executed,
+                            "tool_trace_count": delegated_tool_trace_count,
+                            "reply": str(delegated_reply or ""),
+                        }
+                    )
+
+                reply, telemetry, feedback = self._merge_delegated_bundle_reply(
                     parent_agent=visible_agent,
                     parent_message=message,
-                    delegated_reply=str(delegated_reply or ""),
-                    delegated_selection=delegated_selection,
+                    delegated_runs=delegated_runs,
                     context=context,
                 )
-                return {
+
+                delegated_workers: list[dict[str, Any]] = []
+                delegated_names: list[str] = []
+                delegated_classes: list[str] = []
+                for run in delegated_runs:
+                    selection = run.get("selection") if isinstance(run.get("selection"), dict) else {}
+                    worker_name = str(selection.get("agent_name") or selection.get("child") or "")
+                    worker_class = str(selection.get("classification") or selection.get("lane") or "")
+                    if worker_name:
+                        delegated_names.append(worker_name)
+                    if worker_class:
+                        delegated_classes.append(worker_class)
+                    delegated_workers.append(
+                        {
+                            "delegated_agent_id": run.get("delegated_agent_id"),
+                            "lane": selection.get("lane"),
+                            "child": selection.get("child"),
+                            "agent_name": selection.get("agent_name"),
+                            "classification": selection.get("classification") or selection.get("lane"),
+                            "generated_instance_id": selection.get("generated_instance_id"),
+                            "status": run.get("status"),
+                            "executed": bool(run.get("executed")),
+                            "tool_trace_count": int(run.get("tool_trace_count") or 0),
+                        }
+                    )
+
+                primary_selection = (
+                    delegated_runs[0].get("selection")
+                    if delegated_runs and isinstance(delegated_runs[0].get("selection"), dict)
+                    else {}
+                )
+                with self._lock:
+                    if delegated_names:
+                        visible_agent.last_delegated_to = delegated_names[0]
+                    if delegated_classes:
+                        visible_agent.last_delegated_class = (
+                            delegated_classes[0] if len(set(delegated_classes)) == 1 and len(delegated_classes) == 1 else "multi"
+                        )
+
+                response = {
                     "status": "ok",
                     "agent_id": agent_id,
                     "agent": visible_agent.agent,
                     "mode_used": "chat",
-                    "executed": False,
+                    "executed": any(bool(item.get("executed")) for item in delegated_runs),
                     "reply": reply,
                     "telemetry": telemetry,
                     "feedback": feedback,
                     "lane": current_selection.get("lane"),
                     "child": current_selection.get("child"),
-                    "delegated_to": delegated_selection.get("agent_name"),
-                    "delegated_class": delegated_selection.get("classification") or delegated_selection.get("lane"),
-                    "generated_instance_id": delegated_selection.get("generated_instance_id"),
+                    "delegated_to": delegated_names[0] if len(delegated_names) == 1 else ", ".join(delegated_names),
+                    "delegated_class": delegated_classes[0] if len(delegated_classes) == 1 else "multi",
+                    "generated_instance_id": primary_selection.get("generated_instance_id"),
+                    "delegated_workers": delegated_workers,
+                    "delegation_count": len(delegated_workers),
                     "backend_mode": self._backend_status(),
                     "telemetry_summary": self._telemetry_summary(telemetry, visible_agent.session.engine),
                 }
+                return _finish(response)
 
             if mode_used in {"auto", "execute"}:
                 context_mode = "main_chat_auto" if mode_used == "auto" else "main_chat_execute"
-                result = visible_agent.session.run(
+                result = self._call_with_optional_event_sink(
+                    visible_agent.session.run,
                     message,
                     context=self._sharp_context(
                         {
@@ -1187,6 +1814,7 @@ class FatQuestRuntime:
                         },
                         mode=context_mode,
                     ),
+                    event_sink=event_sink,
                 )
                 response = self._session_result_response(
                     agent=visible_agent,
@@ -1194,6 +1822,35 @@ class FatQuestRuntime:
                     mode_used=mode_used,
                     return_trace=return_trace,
                 )
+                auto_approve_actions = _context_bool(context.get("auto_approve_actions"), False)
+                if response.get("status") == "confirmation_required" and auto_approve_actions:
+                    auto_note = str(
+                        context.get("auto_approve_note")
+                        or "Auto-approved by ui_main_chat runtime policy."
+                    ).strip()
+                    try:
+                        max_auto_raw = int(context.get("auto_approve_max", 3) or 3)
+                    except (TypeError, ValueError):
+                        max_auto_raw = 3
+                    max_auto = max(1, min(max_auto_raw, 8))
+                    attempts = 0
+                    while response.get("status") == "confirmation_required" and attempts < max_auto:
+                        pending = response.get("pending_action") if isinstance(response.get("pending_action"), dict) else {}
+                        pending_id = str((pending or {}).get("id") or "").strip()
+                        if not pending_id:
+                            break
+                        response = self.confirm_pending_action(
+                            agent_id=agent_id,
+                            pending_action_id=pending_id,
+                            approved=True,
+                            note=auto_note,
+                            return_trace=return_trace,
+                            event_sink=event_sink,
+                        )
+                        attempts += 1
+                    if response.get("status") == "ok":
+                        response["auto_approved"] = True
+                        response["auto_approve_count"] = attempts
                 if response.get("status") != "ok":
                     response["lane"] = current_selection.get("lane")
                     response["child"] = current_selection.get("child")
@@ -1202,7 +1859,7 @@ class FatQuestRuntime:
                     response["generated_instance_id"] = current_selection.get("generated_instance_id")
                     response["backend_mode"] = self._backend_status()
                     response["telemetry_summary"] = self._telemetry_summary({}, visible_agent.session.engine)
-                    return response
+                    return _finish(response)
 
                 final = str(response.get("reply") or "")
                 looped = self._record_and_check_loop(visible_agent, final)
@@ -1222,6 +1879,7 @@ class FatQuestRuntime:
                                 execution_mode=requested_mode,
                                 return_trace=return_trace,
                                 allow_clone=False,
+                                event_sink=event_sink,
                             )
                 response["lane"] = current_selection.get("lane")
                 response["child"] = current_selection.get("child")
@@ -1230,7 +1888,7 @@ class FatQuestRuntime:
                 response["generated_instance_id"] = current_selection.get("generated_instance_id")
                 response["backend_mode"] = self._backend_status()
                 response["telemetry_summary"] = self._telemetry_summary({}, visible_agent.session.engine)
-                return response
+                return _finish(response)
 
             rich_context = self._sharp_context({**context, "switchboard_selection": current_selection}, mode="main_chat")
             reply, telemetry, feedback = visible_agent.session.engine.generate_response(
@@ -1255,8 +1913,9 @@ class FatQuestRuntime:
                             execution_mode=requested_mode,
                             return_trace=return_trace,
                             allow_clone=False,
+                            event_sink=event_sink,
                         )
-            return {
+            return _finish({
                 "status": "ok",
                 "agent_id": agent_id,
                 "agent": visible_agent.agent,
@@ -1272,7 +1931,7 @@ class FatQuestRuntime:
                 "generated_instance_id": current_selection.get("generated_instance_id"),
                 "backend_mode": self._backend_status(),
                 "telemetry_summary": self._telemetry_summary(telemetry, visible_agent.session.engine),
-            }
+            })
         except Exception as exc:
             visible_agent.failures += 1
             if allow_clone:
@@ -1291,8 +1950,9 @@ class FatQuestRuntime:
                             execution_mode=requested_mode,
                             return_trace=return_trace,
                             allow_clone=False,
+                            event_sink=event_sink,
                         )
-            return {
+            return _finish({
                 "status": "error",
                 "agent_id": agent_id,
                 "mode_used": mode_used,
@@ -1303,7 +1963,7 @@ class FatQuestRuntime:
                 "delegated_class": None,
                 "generated_instance_id": current_selection.get("generated_instance_id"),
                 "backend_mode": self._backend_status(),
-            }
+            })
 
     def confirm_pending_action(
         self,
@@ -1313,14 +1973,17 @@ class FatQuestRuntime:
         approved: bool,
         note: str = "",
         return_trace: bool = True,
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> dict[str, Any]:
         resolved_agent_id = str(agent_id or JL_FAT_AGENT_ID).strip() or JL_FAT_AGENT_ID
         agent = self.ensure_agent(resolved_agent_id)
         self._sync_agent_agent(agent, agent.agent)
-        result = agent.session.confirm_pending_action(
+        result = self._call_with_optional_event_sink(
+            agent.session.confirm_pending_action,
             pending_action_id,
             approved=approved,
             note=note,
+            event_sink=event_sink,
         )
         response = self._session_result_response(
             agent=agent,
@@ -1333,6 +1996,61 @@ class FatQuestRuntime:
             if reply:
                 self._record_and_check_loop(agent, reply)
         return response
+
+    def stream_chat(
+        self,
+        agent_id: str,
+        message: str,
+        agent: str | None = None,
+        lane: str | None = None,
+        child: str | None = None,
+        new_instance: bool = False,
+        context: dict[str, Any] | None = None,
+        execution_mode: str = "auto",
+        return_trace: bool = True,
+        allow_clone: bool = True,
+    ) -> Iterable[Dict[str, Any]]:
+        queue: Queue[Dict[str, Any] | object] = Queue()
+        sentinel = object()
+        resolved_agent_id = str(agent_id or JL_FAT_AGENT_ID).strip() or JL_FAT_AGENT_ID
+        resolved_agent = str(agent or "SparkByte").strip() or "SparkByte"
+
+        def _sink(event: Dict[str, Any]) -> None:
+            payload = dict(event) if isinstance(event, dict) else {"type": "event", "payload": event}
+            payload.setdefault("agent_id", resolved_agent_id)
+            payload.setdefault("agent", resolved_agent)
+            queue.put(payload)
+
+        def _worker() -> None:
+            try:
+                self.chat(
+                    agent_id=resolved_agent_id,
+                    message=message,
+                    agent=resolved_agent,
+                    lane=lane,
+                    child=child,
+                    new_instance=new_instance,
+                    context=context,
+                    execution_mode=execution_mode,
+                    return_trace=return_trace,
+                    allow_clone=allow_clone,
+                    event_sink=_sink,
+                )
+            except Exception as exc:
+                queue.put({"type": "error", "agent_id": resolved_agent_id, "error": str(exc)})
+            finally:
+                queue.put(sentinel)
+
+        Thread(
+            target=_worker,
+            daemon=True,
+            name=f"quest-stream-{self._sanitize_name_fragment(resolved_agent_id)[:24]}",
+        ).start()
+        while True:
+            item = queue.get()
+            if item is sentinel:
+                break
+            yield item
 
     def _session_result_response(
         self,
@@ -1596,7 +2314,7 @@ class FatQuestRuntime:
                 allow_unsafe_tools=None,
                 allow_direct_action_fallback=_env_bool(
                     "JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK",
-                    False,
+                    True,
                 ),
             )
             # Start cloned sessions with clean short-term interpreter history.
@@ -1616,7 +2334,9 @@ class FatQuestRuntime:
                 last_generated_instance_id=source.last_generated_instance_id,
                 last_delegated_to=source.last_delegated_to,
                 last_delegated_class=source.last_delegated_class,
+                agentic_profile=dict(source.agentic_profile),
             )
+            self._apply_session_agentic_profile(clone_agent)
             self._agents[clone_id] = clone_agent
             clone_snapshot = self._agent_snapshot(clone_agent)
         if clone_agent.loop_persistent:
@@ -1934,6 +2654,7 @@ class FatQuestRuntime:
             "pending_action": agent.session.get_pending_action() if hasattr(agent.session, "get_pending_action") else None,
             "loop": self._loop_snapshot(agent.agent_id),
             "profile": self._agent_profile_summary(agent),
+            "agentic_profile": dict(agent.agentic_profile),
         }
 
     def _activate_engine(self, engine: JLEngineCore) -> None:
