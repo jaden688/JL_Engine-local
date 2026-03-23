@@ -2,12 +2,12 @@
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-blue)
+![License](https://img.shields.io/badge/license-MPL--2.0-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)
 
 JL Engine Local is the local-first JL Engine runtime and UI stack. The engine is the product surface, and `SparkByte` is the default active fat-agent voice loaded on top of it.
 
-This repository is open source under the MIT License (see `LICENSE.md`).
+This repository is open source under the Mozilla Public License 2.0 (see `LICENSE.md`).
 
 > **New here?** Start with [`ONBOARDING.md`](ONBOARDING.md) for a step-by-step first-run guide, then return here for a reference overview.
 

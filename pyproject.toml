@@ -7,6 +7,7 @@ name = "j_engine"
 version = "1.0.0"
 description = "Headless J_engine core package with a menu-driven CLI and optional FastAPI API."
 readme = "README.md"
+license = {text = "MPL-2.0"}
 requires-python = ">=3.10"
 dependencies = [
   "pydantic>=1.10",
