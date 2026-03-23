@@ -113,13 +113,8 @@ class InterpreterSession:
     ) -> None:
         if event_sink is None:
             return
-        event = {"type": event_type, **payload}
-        try:
-            event_sink(event)
-        except Exception:
-            pass
-
-    def _build_conversational_fallback_prompt(self, user_message: str) -> str:
+    @staticmethod
+    def _build_conversational_fallback_prompt(user_message: str) -> str:
         return (
             "The user is having a normal conversation with you, not asking for a local action.\n"
             "Reply in normal prose as the currently selected agent.\n"
@@ -146,23 +141,48 @@ class InterpreterSession:
         telemetry: Dict[str, Any] | None = None,
         event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> Dict[str, Any]:
+        # Prepare fallback context
         fallback_context = dict(run_context)
         fallback_context["memory_user_message"] = request_text
         fallback_context["chat_fallback"] = True
         fallback_context.pop("synthetic_turn", None)
 
-        reply_text = ""
+        # Initialize telemetry
         fallback_telemetry = telemetry or {}
-        try:
-            reply, fallback_telemetry, _feedback = self.engine.generate_response(
-                user_message=self._build_conversational_fallback_prompt(request_text),
-                context=fallback_context,
-            )
-            parsed = self._parse_json(reply)
-            if isinstance(parsed, dict) and (parsed.get("tool") or parsed.get("input")):
-                reply_text = self._conversational_local_scope_hint()
-            elif isinstance(parsed, dict) and ("final" in parsed or "reply" in parsed):
-                reply_text = self._unwrap_nested_final_text(
+
+        # Nested helper to generate and parse response
+        def _generate_and_parse():
+            try:
+                reply, new_telemetry, _feedback = self.engine.generate_response(
+                    user_message=self._build_conversational_fallback_prompt(request_text),
+                    context=fallback_context,
+                )
+                return self._parse_json(reply), new_telemetry
+            except Exception:
+                return None, fallback_telemetry
+
+        # Nested helper to determine reply text
+        def _determine_reply_text(parsed):
+            if isinstance(parsed, dict):
+                if parsed.get("tool") or parsed.get("input"):
+                    return self._conversational_local_scope_hint()
+                if "final" in parsed or "reply" in parsed:
+                    return self._unwrap_nested_final_text(parsed.get("final") or parsed.get("reply"))
+            return request_text
+
+        # Generate response and compute reply
+        parsed_result, fallback_telemetry = _generate_and_parse()
+        reply_text = _determine_reply_text(parsed_result)
+
+        # Emit event if sink provided
+        if event_sink:
+            event = {"type": "chat_fallback", "request_text": request_text, "tool_trace": tool_trace}
+            try:
+                event_sink(event)
+            except Exception:
+                pass
+
+        return {"reply": reply_text, "telemetry": fallback_telemetry}
                     str(parsed.get("final") or parsed.get("reply") or "")
                 )
             else:
@@ -223,7 +243,8 @@ class InterpreterSession:
         )
         return any(t in low for t in action_terms) and any(t in low for t in scope_terms)
 
-    def _action_detection_text(self, user_message: str) -> str:
+    @staticmethod
+    def _action_detection_text(user_message: str) -> str:
         text = str(user_message or "").strip()
         if not text:
             return ""
@@ -233,7 +254,7 @@ class InterpreterSession:
             last_user = match
         if last_user is None:
             return normalized
-        segment = normalized[last_user.end() :]
+        segment = normalized[last_user.end():]
         cutoff = re.search(r"(?i)\b(?:engine|assistant|system)\s*:\s*", segment)
         if cutoff:
             segment = segment[: cutoff.start()]
@@ -816,8 +837,8 @@ class InterpreterSession:
         # Long echoed histories can recursively amplify repetitive phrasing.
         return f"{preamble}\nUSER:\n{user_message}"
 
+    @staticmethod
     def _build_step_input(
-        self,
         *,
         current_input: str,
         initial_request: str,
@@ -839,7 +860,8 @@ class InterpreterSession:
             "Return `{\"final\": ...}` only when the full original request is done."
         )
 
-    def _parse_json(self, text: str) -> Dict[str, Any]:
+    @staticmethod
+    def _parse_json(text: str) -> Dict[str, Any]:
         text = text.strip()
         if not text:
             return {"error": "empty_response"}
@@ -873,7 +895,7 @@ class InterpreterSession:
             except (TypeError, ValueError):
                 supports_event_sink = False
             if supports_event_sink:
-                return run_tool(name, payload, event_sink=event_sink)
+                return run_tool(name, payload, event_sink)
             return run_tool(name, payload)
 
         call = self.registry.call
@@ -886,7 +908,7 @@ class InterpreterSession:
         except (TypeError, ValueError):
             supports_event_sink = False
         if supports_event_sink:
-            return call(name, payload, event_sink=event_sink)
+            return call(name, payload, event_sink)
         return call(name, payload)
 
     def _call_tool_with_optional_event_sink(
@@ -1137,57 +1159,51 @@ class InterpreterSession:
         elif mode in {"browser_info", "browser_snapshot"}:
             mode = "browser_inspect"
         elif mode in {"browser_open", "browser_nav", "browser_navigate", "browser_go"}:
-            mode = "browser_action"
-            normalized_data.setdefault("action", "open")
-        elif mode in {"fs_mkdir", "mkdir", "folder_create", "directory_create"}:
-            mode = "fs_mkdir"
-        elif mode == "fs_create":
-            path_text = str(normalized_data.get("path") or "").strip()
-            content_present = normalized_data.get("content") is not None
-            looks_like_file = bool(content_present or (path_text and Path(path_text).suffix))
-            mode = "fs_write" if looks_like_file else "fs_mkdir"
-
-        if mode == "browser_action" and not str(normalized_data.get("action") or "").strip():
-            if str(normalized_data.get("url") or "").strip():
-                normalized_data["action"] = "open"
-            elif any(str(normalized_data.get(key) or "").strip() for key in ("value", "text")) and (
-                any(str(normalized_data.get(key) or "").strip() for key in ("selector", "id", "name", "label", "role"))
-                or isinstance(normalized_data.get("target"), dict)
-            ):
-                normalized_data["action"] = "fill"
-            elif any(str(normalized_data.get(key) or "").strip() for key in ("selector", "id", "name", "label", "role")) or isinstance(
-                normalized_data.get("target"), dict
-            ):
-                normalized_data["action"] = "click"
-
-        return mode, normalized_data
-
     def _summarize_tool_action(self, name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         tool_name = str(name or "").strip()
         safe_payload = payload if isinstance(payload, dict) else {}
         lowered = tool_name.lower()
-        summary = f"run tool `{tool_name or 'unknown'}`"
-        requires_confirmation = False
-        risk_level = "medium"
+        default_summary = f"run tool `{tool_name or 'unknown'}`"
+        default_requires_confirmation = False
+        default_risk_level = "medium"
 
-        if lowered == "audit_crosscheck":
-            return {
+        tool_summaries: Dict[str, Dict[str, Any]] = {
+            "audit_crosscheck": {
                 "summary": "audit generated output",
                 "requires_confirmation": False,
                 "risk_level": "low",
-            }
-
-        if lowered == "forge_list":
-            return {
+            },
+            "forge_list": {
                 "summary": "inspect available RAM tools",
                 "requires_confirmation": False,
                 "risk_level": "low",
-            }
+            },
+        }
+
+        if lowered in tool_summaries:
+            return tool_summaries[lowered]
 
         if lowered == "bridge_local":
-            mode, data = self._normalize_bridge_payload(safe_payload)
-            if mode == "fs_list":
-                path = str(data.get("path", ".") or ".")
+            return self._summarize_bridge_local(safe_payload)
+
+        return {
+            "summary": default_summary,
+            "requires_confirmation": default_requires_confirmation,
+            "risk_level": default_risk_level,
+        }
+
+    def _summarize_bridge_local(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        mode, data = self._normalize_bridge_payload(payload)
+        if mode == "fs_list":
+            path = str(data.get("path", ".") or ".")
+            summary = f"list files in {path}"
+        else:
+            summary = f"run bridge_local with mode `{mode}`"
+        return {
+            "summary": summary,
+            "requires_confirmation": False,
+            "risk_level": "medium",
+        }
                 return {
                     "summary": f"inspect files in `{path}`",
                     "requires_confirmation": False,
@@ -1397,6 +1413,19 @@ class InterpreterSession:
             "risk_level": risk_level,
         }
 
+    def _prepare_continue_run(
+        self,
+        initial_request: str | None,
+        next_input: str,
+        steps_remaining: int,
+    ) -> tuple[str, bool, bool, int]:
+        request_text = str(initial_request or next_input or "")
+        action_request_text = self._action_detection_text(request_text)
+        action_request = self._looks_like_action_request(action_request_text)
+        explicit_local_action = self._looks_like_explicit_local_action_request(action_request_text)
+        remaining = max(0, int(steps_remaining))
+        return request_text, action_request, explicit_local_action, remaining
+
     def _continue_run(
         self,
         *,
@@ -1407,11 +1436,9 @@ class InterpreterSession:
         initial_request: str | None = None,
         event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> Dict[str, Any]:
-        request_text = str(initial_request or next_input or "")
-        action_request_text = self._action_detection_text(request_text)
-        action_request = self._looks_like_action_request(action_request_text)
-        explicit_local_action = self._looks_like_explicit_local_action_request(action_request_text)
-        remaining = max(0, int(steps_remaining))
+        request_text, action_request, explicit_local_action, remaining = self._prepare_continue_run(
+            initial_request, next_input, steps_remaining
+        )
 
         self._emit_stream_event(
             event_sink,
@@ -1819,23 +1846,30 @@ class InterpreterSession:
         note: str = "",
         event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> Dict[str, Any]:
-        pending = self._pending_action
-        if pending is None:
+        def _no_pending() -> Dict[str, Any]:
             result = {"status": "error", "error": "no_pending_action"}
             self._emit_stream_event(event_sink, "error", result=dict(result), error="no_pending_action")
             self._emit_stream_event(event_sink, "turn_result", result=dict(result), status="error")
             return result
-        if str(pending_action_id or "").strip() != pending.id:
-            result = {"status": "error", "error": "pending_action_mismatch", "pending_action": pending.snapshot()}
+
+        def _mismatch() -> Dict[str, Any]:
+            snapshot = pending.snapshot()
+            result = {"status": "error", "error": "pending_action_mismatch", "pending_action": snapshot}
             self._emit_stream_event(
                 event_sink,
                 "error",
                 result=dict(result),
                 error="pending_action_mismatch",
-                pending_action=pending.snapshot(),
+                pending_action=snapshot,
             )
             self._emit_stream_event(event_sink, "turn_result", result=dict(result), status="error")
             return result
+
+        pending = self._pending_action
+        if pending is None:
+            return _no_pending()
+        if str(pending_action_id or "").strip() != pending.id:
+            return _mismatch()
 
         self._pending_action = None
         note_text = str(note or "").strip()

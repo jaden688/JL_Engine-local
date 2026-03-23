@@ -839,7 +839,8 @@ def test_chat_impl_auto_approves_confirmation_required_when_enabled(monkeypatch)
                 "tool_trace": [{"tool": "run_shell", "input": {"command": "echo hello"}}],
             }
 
-        def get_pending_action(self):
+        @staticmethod
+        def get_pending_action():
             return None
 
     agent = QuestAgent(
@@ -1190,7 +1191,8 @@ def test_delegated_workers_use_session_run_in_execute_mode(monkeypatch):
         def __init__(self) -> None:
             self.engine = DummyQuestEngine(["helper chat fallback"])
 
-        def run(self, message: str, context: dict | None = None):
+        @staticmethod
+        def run(message: str, context: dict | None = None):
             delegated_calls.append({"message": message, "context": dict(context or {})})
             return {
                 "status": "ok",
@@ -1198,7 +1200,8 @@ def test_delegated_workers_use_session_run_in_execute_mode(monkeypatch):
                 "tool_trace": [{"tool": "run_shell"}],
             }
 
-        def get_pending_action(self):
+        @staticmethod
+        def get_pending_action():
             return None
 
     helper = QuestAgent(
@@ -1343,8 +1346,8 @@ def test_quest_chat_execute_mode_streams_events_from_session(monkeypatch):
                 set_agent=lambda _agent: None,
             )
 
+        @staticmethod
         def run(
-            self,
             message: str,
             context: dict | None = None,
             event_sink=None,

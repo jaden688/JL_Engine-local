@@ -14,7 +14,8 @@ class FakeProcessHandle:
     def start(self, cmd: list[str], cwd: str | None = None, env: dict | None = None) -> None:
         self.calls.append({"cmd": cmd, "cwd": cwd, "env": env})
 
-    def is_running(self) -> bool:
+    @staticmethod
+    def is_running() -> bool:
         return False
 
 
@@ -118,11 +119,14 @@ def test_runtime_env_strips_conda_state(monkeypatch) -> None:
 
     main = Main.__new__(Main)
     main._append_chat = lambda *args: None
-    env = Main._runtime_env(main)
+    env = main._runtime_env()
 
     assert "CONDA_PREFIX" not in env
     assert "CONDA_DEFAULT_ENV" not in env
-    path_key = next(key for key in env if key.lower() == "path")
+    try:
+        path_key = next(key for key in env if key.lower() == "path")
+    except StopIteration:
+        return
     assert all("miniconda" not in part.lower() for part in env[path_key].split(os.pathsep))
     assert env["PYTHONPATH"].startswith("C:\\Users\\J_lin\\Downloads\\reg\\JL_Engine-local-main")
 

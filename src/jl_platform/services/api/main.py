@@ -989,24 +989,32 @@ def quest_chat_stream(payload: QuestChatRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     execution_mode = _resolve_quest_execution_mode(payload.execution_mode)
 
+    def _build_args():
+        return {
+            "agent_id": payload.agent_id or JL_FAT_AGENT_ID,
+            "message": payload.message,
+            "agent": _resolve_agent_profile(
+                agent_name=payload.agent, agent_alias=payload.agent, default=""
+            ),
+            "lane": str(payload.lane or "").strip() or None,
+            "child": str(payload.child or "").strip() or None,
+            "new_instance": bool(payload.new_instance if payload.new_instance is not None else False),
+            "context": context,
+            "execution_mode": execution_mode,
+            "return_trace": bool(payload.return_trace if payload.return_trace is not None else True),
+        }
+
+    args = _build_args()
+
     def _event_iterator():
         stream_runner = getattr(_QUEST_RUNTIME, "stream_chat", None)
-        if callable(stream_runner):
-            for event in stream_runner(
-                agent_id=payload.agent_id or JL_FAT_AGENT_ID,
-                message=payload.message,
-                agent=_resolve_agent_profile(agent_name=payload.agent, agent_alias=payload.agent, default=""),
-                lane=str(payload.lane or "").strip() or None,
-                child=str(payload.child or "").strip() or None,
-                new_instance=bool(payload.new_instance if payload.new_instance is not None else False),
-                context=context,
-                execution_mode=execution_mode,
-                return_trace=bool(payload.return_trace if payload.return_trace is not None else True),
-            ):
-                frame_event = dict(event) if isinstance(event, dict) else {"type": "event", "payload": event}
-                frame_event["agent_id"] = payload.agent_id or JL_FAT_AGENT_ID
-                yield _sse_frame(frame_event)
+        if not callable(stream_runner):
             return
+        for event in stream_runner(**args):
+            frame_event = dict(event) if isinstance(event, dict) else {"type": "event", "payload": event}
+            frame_event["agent_id"] = args["agent_id"]
+            yield _sse_frame(frame_event)
+        return
 
         try:
             result = _QUEST_RUNTIME.chat(

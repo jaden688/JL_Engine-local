@@ -568,19 +568,6 @@ class ThoughtStreamHandler(logging.Handler, QObject):
 class TerminalLogHandler(logging.Handler, QObject):
     new_entry = Signal(str)
 
-    def __init__(self):
-        logging.Handler.__init__(self)
-        QObject.__init__(self)
-        self.setFormatter(logging.Formatter("%(levelname)s | %(name)s | %(message)s"))
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            self.new_entry.emit(msg)
-        except Exception:
-            self.handleError(record)
-
-
 class Main(QMainWindow):
     stt_result_signal = Signal(str)
     stt_status_signal = Signal(str)
@@ -595,18 +582,9 @@ class Main(QMainWindow):
 
     def __init__(self, chat_only_mode: bool | None = None):
         super().__init__()
-        if chat_only_mode is None:
-            chat_only_mode = self._env_flag("JL_UI_CHAT_ONLY", False)
-        self.chat_only_mode = bool(chat_only_mode)
-        self.preferred_chat_agent = DEFAULT_CHAT_AGENT
-        self.preferred_ollama_model = DEFAULT_CHAT_OLLAMA_MODEL
-        self.setWindowTitle("JL Engine Chat")
-        if self.chat_only_mode:
-            self.resize(980, 760)
-            self.setMinimumSize(640, 480)
-        else:
-            self.resize(1360, 820)
-            self.setMinimumSize(760, 560)
+        self.chat_only_mode = self._determine_chat_only_mode(chat_only_mode)
+        self._initialize_preferences()
+        self._setup_window()
 
         self.service_config = load_service_config()
         self._configure_local_chat_defaults()
@@ -614,9 +592,7 @@ class Main(QMainWindow):
         self.agents_dir = self._resolve_agents_dir()
         self._ensure_mpf_registry()
         self.engine = self._init_engine()
-        self.quest_runtime = FatQuestRuntime()
-        self.quest_agent_id = "ui_main_agent"
-        self._bind_ui_fat_agent()
+        self._initialize_quest_components()
 
         # If the UI comes up on a "Custom HTTP" backend with no URL, it will feel like
         # we're "stuck" on cloud/custom. Force a sane default back to local Ollama.
@@ -633,7 +609,7 @@ class Main(QMainWindow):
         self.proc_platform_api = ProcessHandle()
         self.chat_history: List[Dict[str, str]] = []
         self.safety_enabled = False
-        self.tools_enabled = True if self.chat_only_mode else False
+        self.tools_enabled = bool(self.chat_only_mode)
         self.engine_backoff_enabled = False
         self.supervisor_disabled = False
         self.supervisor_gain = getattr(self.engine, "supervisor_gain", 0.35)
@@ -851,7 +827,7 @@ class Main(QMainWindow):
             self.service_config = {}
 
         self.service_config["ollama_model"] = self.preferred_ollama_model
-        normalized = backends._enforce_ollama_base_url(
+        normalized = backends.enforce_ollama_base_url(
             str(self.service_config.get("ollama_base_url") or ""),
             self.service_config,
         )
@@ -3344,28 +3320,31 @@ class Main(QMainWindow):
         start = time.perf_counter()
         core_url = self.service_config.get("core_api_url", "").strip()
 
-        # 1. CLOUD ENGINE PATH (If URL is configured)
         if core_url and requests:
-            if not core_url.startswith("http"):
-                core_url = f"http://{core_url}"
+            reply, telemetry = self._generate_with_cloud(core_url, prompt, agent_name)
+        else:
+            reply, telemetry = self._generate_locally(prompt, agent_name)
 
-            try:
-                # Use the 'chat' endpoint for open cloud access
-                endpoint = f"{core_url}/chat"
-                payload = {"message": prompt, "agent_name": agent_name}
+        # continue original processing of reply and telemetry...
 
-                # Assume we might have an API key stored
-                headers = {"Content-Type": "application/json"}
-                api_key = self.service_config.get("api_key")
-                if api_key:
-                    headers["x-api-key"] = api_key
+    def _generate_with_cloud(self, core_url: str, prompt: str, agent_name: str):
+        if not core_url.startswith("http"):
+            core_url = f"http://{core_url}"
+        endpoint = f"{core_url}/chat"
+        payload = {"message": prompt, "agent_name": agent_name}
+        headers = self._build_headers()
 
-                resp = requests.post(endpoint, json=payload, headers=headers, timeout=60)
-                resp.raise_for_status()
-                data = resp.json()
+        resp = requests.post(endpoint, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("reply", ""), data.get("telemetry", {})
 
-                reply = data.get("reply", "")
-                telemetry = data.get("telemetry", {})
+    def _build_headers(self) -> dict:
+        headers = {"Content-Type": "application/json"}
+        api_key = self.service_config.get("api_key")
+        if api_key:
+            headers["x-api-key"] = api_key
+        return headers
 
                 latency_ms = max(0.0, (time.perf_counter() - start) * 1000.0)
                 self.response_ready_signal.emit(reply, telemetry, latency_ms)
@@ -4947,7 +4926,8 @@ class Main(QMainWindow):
                         models.append(model)
         return models
 
-    def _populate_model_combo(self, combo: QComboBox | None, models: List[str], preferred: str | None = None) -> None:
+    @staticmethod
+    def _populate_model_combo(combo: QComboBox | None, models: List[str], preferred: str | None = None) -> None:
         if combo is None:
             return
         current = str(combo.currentText() or "").strip()
@@ -4968,7 +4948,8 @@ class Main(QMainWindow):
             combo.setCurrentText(chosen)
         combo.blockSignals(False)
 
-    def _apply_ollama_model_selection(self, model: str) -> None:
+    @staticmethod
+    def _apply_ollama_model_selection(model: str) -> None:
         model = str(model or "").strip()
         if not model:
             raise ValueError("model_name_required")

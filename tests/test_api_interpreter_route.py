@@ -62,9 +62,11 @@ def test_interpreter_run_respects_direct_action_fallback_env(monkeypatch):
 def test_interpreter_stream_route_emits_sse_events(monkeypatch):
     class FakeSession:
         def __init__(self, **kwargs):
+            """No initialization needed for FakeSession."""
             pass
 
-        def stream_run(self, message: str, context: dict | None = None):
+        @staticmethod
+        def stream_run(message: str, context: dict | None = None):
             yield {"type": "run_started", "message": message}
             yield {"type": "tool_call_started", "tool": "py_exec_stream"}
             yield {

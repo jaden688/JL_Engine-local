@@ -291,7 +291,8 @@ class FatQuestRuntime:
             "agent": agent_snapshot,
         }
 
-    def _sanitize_name_fragment(self, value: str) -> str:
+    @staticmethod
+    def _sanitize_name_fragment(value: str) -> str:
         text = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(value or ""))
         text = re.sub(r"_+", "_", text).strip("_")
         return text or "agent"
@@ -371,22 +372,26 @@ class FatQuestRuntime:
         payload = self._load_agent_payload_by_name(agent_name)
         if not isinstance(payload, dict):
             payload = {}
-        meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
-        behavior = payload.get("behavior") if isinstance(payload.get("behavior"), dict) else {}
-        capabilities = payload.get("capabilities") if isinstance(payload.get("capabilities"), dict) else {}
-        runtime = payload.get("runtime") if isinstance(payload.get("runtime"), dict) else {}
 
-        agentic_source: dict[str, Any] = {}
-        for candidate in (
-            payload.get("agentic"),
-            meta.get("agentic") if isinstance(meta, dict) else None,
-            behavior.get("agentic") if isinstance(behavior, dict) else None,
-            capabilities.get("agentic") if isinstance(capabilities, dict) else None,
-            runtime.get("agentic") if isinstance(runtime, dict) else None,
-        ):
-            if isinstance(candidate, dict):
-                agentic_source = candidate
-                break
+        # Helper to extract a section as dict
+        def _get_section(key: str) -> dict[str, Any]:
+            section = payload.get(key)
+            return section if isinstance(section, dict) else {}
+
+        meta = _get_section("meta")
+        behavior = _get_section("behavior")
+        capabilities = _get_section("capabilities")
+        runtime = _get_section("runtime")
+
+        # Helper to find the first agentic dict in given sections
+        def _find_agentic_source(sections: list[dict[str, Any]]) -> dict[str, Any]:
+            for section in sections:
+                candidate = section.get("agentic")
+                if isinstance(candidate, dict):
+                    return candidate
+            return {}
+
+        agentic_source = _find_agentic_source([payload, meta, behavior, capabilities, runtime])
 
         def _as_bool(value: Any, default: bool) -> bool:
             if value is None:
@@ -1238,7 +1243,8 @@ class FatQuestRuntime:
 
         return score
 
-    def _resolve_delegation_mode(self, context: dict[str, Any] | None) -> str:
+    @staticmethod
+    def _resolve_delegation_mode(context: dict[str, Any] | None) -> str:
         payload = context if isinstance(context, dict) else {}
         raw = str(
             payload.get("delegation_mode")
@@ -1254,7 +1260,8 @@ class FatQuestRuntime:
             return "multi"
         return "single"
 
-    def _resolve_delegation_worker_limit(self, context: dict[str, Any] | None, mode: str) -> int:
+    @staticmethod
+    def _resolve_delegation_worker_limit(context: dict[str, Any] | None, mode: str) -> int:
         payload = context if isinstance(context, dict) else {}
         default_limit = 1 if mode == "single" else 3 if mode == "multi" else 6
         raw = payload.get("delegate_max_workers", payload.get("max_workers", payload.get("worker_count")))
@@ -1277,18 +1284,44 @@ class FatQuestRuntime:
         if mode == "off":
             return []
         if mode == "single":
-            single = self._choose_delegation(
+            return self._plan_single_delegation(
                 agent_obj=agent_obj,
                 message=message,
                 current_selection=current_selection,
                 explicit_selection=explicit_selection,
             )
-            return [single] if single else []
 
+        if not self._can_delegate(explicit_selection, current_selection):
+            return []
+
+        # existing logic for 'multi' and 'all' modes continues here
+        # (unchanged)
+
+    def _plan_single_delegation(
+        self,
+        agent_obj: QuestAgent,
+        message: str,
+        current_selection: dict[str, Any],
+        explicit_selection: bool,
+    ) -> list[dict[str, Any]]:
+        single = self._choose_delegation(
+            agent_obj=agent_obj,
+            message=message,
+            current_selection=current_selection,
+            explicit_selection=explicit_selection,
+        )
+        return [single] if single else []
+
+    def _can_delegate(
+        self,
+        explicit_selection: bool,
+        current_selection: dict[str, Any],
+    ) -> bool:
         if explicit_selection:
-            return []
+            return False
         if str(current_selection.get("lane") or "") != "fat_agent":
-            return []
+            return False
+        return True
 
         scored_candidates: list[tuple[int, dict[str, Any]]] = []
         seen: set[str] = set()

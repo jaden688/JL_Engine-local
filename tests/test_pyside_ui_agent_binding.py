@@ -150,7 +150,7 @@ def test_chat_attachment_context_reads_file(tmp_path):
     main = Main.__new__(Main)
     main.chat_attachment_input = SimpleNamespace(text=lambda: str(sample))
 
-    context = Main._chat_attachment_context(main)
+    context = Main._chat_attachment_context(Main, main)
 
     assert "hello from file" in context
     assert "Attached File:" in context
@@ -178,7 +178,7 @@ def test_apply_ollama_model_selection_updates_chat_controls(monkeypatch):
     main._chat_model_options = lambda: ["gemma3:4b", "llama3.1:8b"]
     main._sync_badges = lambda: calls.append(("sync",))
 
-    Main._apply_ollama_model_selection(main, "gemma3:4b")
+    Main._apply_ollama_model_selection(Main, main, "gemma3:4b")
 
     assert ("model", "gemma3:4b", True) in calls
     assert main.service_config["ollama_model"] == "gemma3:4b"
@@ -201,7 +201,8 @@ def test_on_send_includes_attached_file_context(monkeypatch, tmp_path):
             captured["args"] = args
             captured["daemon"] = daemon
 
-        def start(self) -> None:
+        @staticmethod
+        def start() -> None:
             captured["started"] = True
 
     monkeypatch.setattr(pyside_ui.threading, "Thread", FakeThread)
@@ -217,7 +218,7 @@ def test_on_send_includes_attached_file_context(monkeypatch, tmp_path):
     main._get_active_code_context = lambda: "\n\n[Active Context]\nprint('x')"
     main._set_request_busy = lambda busy: captured.setdefault("busy", []).append(busy)
 
-    Main._on_send(main)
+    Main._on_send(Main, main)
 
     prompt, agent_name = captured["args"]
     assert agent_name == "SparkByte"
@@ -231,7 +232,7 @@ def test_chat_runtime_context_enables_all_workers_mode():
     main = Main.__new__(Main)
     main.chat_all_workers_toggle = SimpleNamespace(isChecked=lambda: True)
 
-    context = Main._chat_runtime_context(main)
+    context = Main._chat_runtime_context(Main, main)
 
     assert context["channel"] == "ui_main_chat"
     assert context["delegated_execution_mode"] == "execute"
@@ -247,7 +248,7 @@ def test_chat_runtime_context_defaults_to_single_front_agent():
     main = Main.__new__(Main)
     main.chat_all_workers_toggle = SimpleNamespace(isChecked=lambda: False)
 
-    context = Main._chat_runtime_context(main)
+    context = Main._chat_runtime_context(Main, main)
 
     assert context == {
         "channel": "ui_main_chat",
@@ -283,7 +284,7 @@ def test_run_generate_response_renders_confirmation_required_as_reply():
     )
     main.response_error_signal = SimpleNamespace(emit=lambda msg: errors.append(str(msg)))
 
-    Main._run_generate_response(main, "hello", "SparkByte")
+    Main._run_generate_response(Main, main, "hello", "SparkByte")
 
     assert not errors
     assert emitted["reply"] == "Awaiting confirmation: run shell task."
@@ -308,7 +309,7 @@ def test_run_generate_response_includes_status_when_runtime_errors():
     main.response_ready_signal = SimpleNamespace(emit=lambda *args: emitted.append(args))
     main.response_error_signal = SimpleNamespace(emit=lambda msg: errors.append(str(msg)))
 
-    Main._run_generate_response(main, "hello", "SparkByte")
+    Main._run_generate_response(Main, main, "hello", "SparkByte")
 
     assert not emitted
     assert errors
