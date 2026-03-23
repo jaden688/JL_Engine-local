@@ -8,7 +8,7 @@ Be respectful and constructive in all interactions. Issues and pull requests are
 
 ## Licensing
 
-This repository is source-available under a MIT License. See `LICENSE.md` before contributing. By submitting a pull request you agree that your contribution will be released under the same license.
+This repository is open source under the Mozilla Public License 2.0. See `LICENSE.md` before contributing. By submitting a pull request you agree that your contribution will be released under the same license.
 
 ## Development setup
 
