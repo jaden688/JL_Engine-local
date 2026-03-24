@@ -36,6 +36,17 @@ data/*.sqlite3
 human_guidance/
 docs/human_guidance/
 
+# Memory and conversation stores
+**/memory/memory_store.json
+**/memory/*.json
+**/*.jsonl
+**/memory_store*
+*.pkl
+*.pickle
+*.db
+*.sqlite
+*.sqlite3
+
 index.html
 !ui_web/index.html
 !ui_easy/index.html
