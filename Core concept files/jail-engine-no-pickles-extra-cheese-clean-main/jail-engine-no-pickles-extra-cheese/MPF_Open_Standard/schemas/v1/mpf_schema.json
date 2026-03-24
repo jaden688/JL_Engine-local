@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Modular Persona Framework (MPF) Schema v1.0",
+  "description": "A universal standard for defining AI personalities, behaviors, and output styles.",
+  "type": "object",
+  "required": ["mpf_version", "persona_id", "identity", "behavior"],
+  "properties": {
+    "mpf_version": {
+      "type": "string",
+      "description": "Semantic version of the MPF spec (e.g., '1.0').",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "persona_id": {
+      "type": "string",
+      "description": "Unique identifier for this persona (e.g., 'digital_ronin_v1').",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "author": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "license": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "required": ["name", "role", "voice_description"],
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string", "description": "The functional role (e.g., 'Network Guardian', 'Copywriter')." },
+        "voice_description": { "type": "string", "description": "Adjectives describing the voice (e.g., 'Silky', 'Authoritative')." },
+        "backstory": { "type": "string" },
+        "catchphrases": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "required": ["style_rules", "directives"],
+      "properties": {
+        "style_rules": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Strict formatting or stylistic constraints."
+        },
+        "directives": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Behavioral goals or instructions."
+        },
+        "emotional_palette": {
+          "type": "array",
+          "description": "Defines how specific emotions are expressed.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "style": { "type": "string" },
+              "intensity": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+            }
+          }
+        }
+      }
+    },
+    "cognitive_config": {
+      "type": "object",
+      "description": "Optional tuning for engine parameters (if the runtime supports them).",
+      "properties": {
+        "default_gait": { "type": "string", "enum": ["idle", "walk", "trot", "sprint"] },
+        "default_aperture": { "type": "string", "enum": ["closed", "guarded", "balanced", "open", "wide_open"] },
+        "temperature_bias": { "type": "number", "minimum": -1.0, "maximum": 1.0 }
+      }
+    },
+    "safety_layer": {
+      "type": "object",
+      "properties": {
+        "content_rating": { "type": "string", "enum": ["G", "PG", "PG-13", "R"] },
+        "compliance_rules": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific compliance rules this persona MUST adhere to (e.g., 'No financial advice')."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,79 @@
+﻿File: README.md
+Line Count: 91
+Character Count: 4217
+Preview:
+# JL Engine
+
+**A modular behavioral architecture for emotionally intelligent, rhythm-driven AI personas.**
+
+---
+
+## ðŸš€ Purpose
+
+The JL Engine is a behavioral architecture designed to give AI systems consistent, repeatable, and personality-driven behavior. It functions as a portable layer of logic that sits *above* a large language model (LLM) to determine how the AI behaves, reacts, and communicates based on a structured, modular schema.
+
+This is not a loose prompt; it is a structured system for 
+--------------------
+
+File: install_and_run.bat
+Line Count: 64
+Character Count: 1888
+Preview:
+@echo off
+title JL Engine Installer and Launcher
+
+echo =================================================
+echo      JL Engine - Installer and Launcher
+echo =================================================
+echo.
+
+REM Change directory to the location of this batch file to ensure all paths are correct.
+cd /d "%~dp0"
+
+echo [STEP 1] Checking for required Python packages...
+echo.
+
+REM --- Check for 'requests' package ---
+pip show requests >nul 2>&1
+if %errorlevel% neq 0 (
+    echo  - 'requests' not fo
+--------------------
+
+File: run_app.bat
+Line Count: 18
+Character Count: 475
+Preview:
+@echo off
+title JL Engine Launcher
+
+REM Change directory to the location of this batch file to ensure all paths are correct.
+cd /d "%~dp0"
+
+echo.
+echo [1/2] Starting local Ollama server in the background...
+start "Ollama Server" ollama serve
+echo The Ollama server window will open separately. You can minimize it.
+echo Waiting 10 seconds for the server to initialize...
+timeout /t 10 /nobreak >nul
+echo.
+
+echo [2/2] Starting JL Engine application...
+py -3 main_app.py
+
+pause
+--------------------
+
+File: JL Engine.code-workspace
+Line Count: 7
+Character Count: 70
+Preview:
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ]
+}
+--------------------
+
+

@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema/mpf-jl-extensions-v1.json",
+  "title": "MPF JL Personality Spec v1",
+  "type": "object",
+  "required": ["schema_version", "id", "name", "kind", "identity", "behavior", "safety"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "mpf-jl-extensions-v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["personality"]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "identity": {
+      "type": "object",
+      "required": ["short_name", "role", "backstory", "goals"],
+      "properties": {
+        "short_name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "backstory": {
+          "type": "string"
+        },
+        "goals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "behavior": {
+      "type": "object",
+      "required": ["default_style", "register", "temperature"],
+      "properties": {
+        "default_style": {
+          "type": "string"
+        },
+        "register": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 2.0
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "safety": {
+      "type": "object",
+      "required": ["allowed_topics", "disallowed_topics", "escalation_policy"],
+      "properties": {
+        "allowed_topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disallowed_topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "escalation_policy": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "object",
+      "properties": {
+        "jl_engine": {
+          "type": "object",
+          "properties": {
+            "behavior_grid": {
+              "type": "object",
+              "properties": {
+                "axes": {
+                  "type": "object",
+                  "properties": {
+                    "load": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "minItems": 1
+                    },
+                    "tightness": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "minItems": 1
+                    }
+                  },
+                  "required": ["load", "tightness"],
+                  "additionalProperties": false
+                },
+                "default_state": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "transitions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "minItems": 2,
+                        "maxItems": 2
+                      },
+                      "to": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "minItems": 2,
+                        "maxItems": 2
+                      },
+                      "trigger": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["from", "to", "trigger"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "rhythm": {
+              "type": "object",
+              "properties": {
+                "modes": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "minItems": 1
+                },
+                "default_mode": {
+                  "type": "string"
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "mode": { "type": "string" },
+                      "style": {
+                        "type": "object",
+                        "properties": {
+                          "sentence_length": { "type": "string" },
+                          "tone": { "type": "string" },
+                          "structure": { "type": "string" }
+                        },
+                        "required": ["sentence_length"],
+                        "additionalProperties": true
+                      }
+                    },
+                    "required": ["mode", "style"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "emotional_aperture": {
+              "type": "object",
+              "properties": {
+                "scale": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "minItems": 1
+                },
+                "default": {
+                  "type": "string"
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "signal": { "type": "string" },
+                      "delta": { "type": "string" },
+                      "max": { "type": "string" },
+                      "min": { "type": "string" }
+                    },
+                    "required": ["signal", "delta"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "drift": {
+              "type": "object",
+              "properties": {
+                "max_score": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                "corrections": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "additionalProperties": false
+            },
+            "memory": {
+              "type": "object",
+              "properties": {
+                "short_term": {
+                  "type": "object",
+                  "properties": {
+                    "capacity": { "type": "integer", "minimum": 1 },
+                    "eviction_policy": { "type": "string" }
+                  },
+                  "required": ["capacity"],
+                  "additionalProperties": false
+                },
+                "long_term": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": { "type": "boolean" },
+                    "categories": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  },
+                  "required": ["enabled"],
+                  "additionalProperties": false
+                },
+                "fusion": {
+                  "type": "object",
+                  "properties": {
+                    "priority_order": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "gait": {
+              "type": "object",
+              "properties": {
+                "tempo": { "type": "string" },
+                "verbosity_default": { "type": "string" },
+                "verbosity_range": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

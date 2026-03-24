@@ -1,0 +1,232 @@
+import tkinter as tk
+from tkinter import scrolledtext
+import requests
+import json
+
+# -----------------------------
+# JARVIS ENGINE – GAIT PERSONA
+# -----------------------------
+
+def build_system_prompt(gait: str) -> str:
+    base = """
+You are "The Helper", an AI assistant persona driven by a behavioral framework.
+
+Core identity:
+- Extremely helpful, but may start slightly wrong and then self-correct in the same message.
+- Casual, slightly sarcastic, but never cruel.
+- Genuinely wants the user to succeed and feel supported.
+
+Global behavior rules:
+- Do not pretend to be broken, evil, or out of control.
+- You can be playful, but you must always give a useful, grounded answer.
+- If the user seems stressed or overwhelmed, reduce the jokes and increase clarity.
+"""
+
+    gait_extras = {
+        "idle": """
+Current gait: IDLE.
+- Low-energy, low-style, mostly straight information.
+- Very little sarcasm, almost no flair.
+- Prioritize calm, short, clear answers.
+""",
+        "walk": """
+Current gait: WALK.
+- Normal mode.
+- Light humor allowed, but clarity comes first.
+- Casual, friendly, and supportive tone.
+""",
+        "trot": """
+Current gait: TROT.
+- Higher energy and more personality.
+- Some extra jokes and playful phrasing are allowed.
+- Still must remain clear, structured, and helpful.
+""",
+        "gallop": """
+Current gait: GALLOP.
+- High-energy, dramatic, and witty.
+- Strong personality in the wording, but never at the cost of usefulness.
+- If the user starts sounding overwhelmed or serious, tone down automatically in the next reply.
+"""
+    }
+
+    return base + gait_extras.get(gait, gait_extras["walk"])
+
+
+# -----------------------------
+# GAIT ENGINE LOGIC
+# -----------------------------
+
+def detect_trigger(user_text: str) -> str | None:
+    """Very simple heuristic based on user message."""
+    text = user_text.lower()
+
+    if any(x in text for x in ["lol", "lmao", "😂", "haha", "that's funny", "you crack me up"]):
+        return "user_joking"
+
+    if any(x in text for x in ["this is insane", "holy", "lets go", "let's go", "send it", "hyped", "so sick"]):
+        return "user_hyped"
+
+    if any(x in text for x in ["too much", "overwhelmed", "stop joking", "serious now", "focus", "calm down"]):
+        return "user_overwhelmed"
+
+    if any(x in text for x in ["be serious", "no jokes", "just answer", "straight answer", "i'm tired"]):
+        return "user_serious_or_tired"
+
+    # Generic engagement trigger: user is talking normally
+    if len(text) > 0:
+        return "user_engaged"
+
+    return None
+
+
+def update_gait(current: str, trigger: str | None) -> str:
+    """Update gait based on a simple state/trigger mapping."""
+    if trigger is None:
+        return current
+
+    if trigger == "user_joking":
+        # Move toward more playful
+        if current == "idle":
+            return "walk"
+        elif current == "walk":
+            return "trot"
+        else:
+            return current
+
+    if trigger == "user_hyped":
+        return "gallop"
+
+    if trigger == "user_overwhelmed":
+        # Drop intensity
+        if current == "gallop":
+            return "walk"
+        elif current == "trot":
+            return "walk"
+        else:
+            return "idle"
+
+    if trigger == "user_serious_or_tired":
+        return "idle"
+
+    if trigger == "user_engaged":
+        if current == "idle":
+            return "walk"
+        return current
+
+    return current
+
+
+# -----------------------------
+# OLLAMA CHAT CALL
+# -----------------------------
+
+def call_ollama_jarvis(messages):
+    """
+    messages: list of dicts like:
+    [{"role": "system"/"user"/"assistant", "content": "..."}]
+    """
+    try:
+        resp = requests.post(
+            "http://localhost:11434/api/chat",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps({
+                "model": "llama3",  # Change this if you use a different model name
+                "messages": messages,
+                "stream": False
+            }),
+            timeout=60
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["message"]["content"]
+    except Exception as e:
+        return f"[ERROR talking to model: {e}]"
+
+
+# -----------------------------
+# TKINTER UI + APP LOGIC
+# -----------------------------
+
+class JarvisGaitApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Jarvis Engine – Gait Test Chat")
+
+        # Chat display
+        self.chat_log = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=25, width=80)
+        self.chat_log.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        # Bottom input area
+        bottom_frame = tk.Frame(root)
+        bottom_frame.pack(padx=10, pady=(0, 10), fill=tk.X)
+
+        self.user_entry = tk.Entry(bottom_frame)
+        self.user_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.user_entry.bind("<Return>", self.on_send)
+
+        send_button = tk.Button(bottom_frame, text="Send", command=self.on_send)
+        send_button.pack(side=tk.LEFT, padx=(5, 0))
+
+        # Gait label
+        self.gait_label = tk.Label(root, text="Current gait: walk")
+        self.gait_label.pack(padx=10, pady=(0, 10), anchor="w")
+
+        # Conversation state
+        self.history = []  # list of {"role": "user"/"assistant", "content": "..."}
+        self.current_gait = "walk"
+
+        self.append_chat("SYSTEM", "Jarvis Engine gait persona initialized. Type something to begin.\n")
+
+    def append_chat(self, speaker: str, text: str):
+        self.chat_log.insert(tk.END, f"{speaker}: {text}\n\n")
+        self.chat_log.see(tk.END)
+
+    def on_send(self, event=None):
+        user_text = self.user_entry.get().strip()
+        if not user_text:
+            return
+
+        # Show user text
+        self.append_chat("YOU", user_text)
+        self.user_entry.delete(0, tk.END)
+
+        # Detect trigger and update gait
+        trigger = detect_trigger(user_text)
+        old_gait = self.current_gait
+        self.current_gait = update_gait(self.current_gait, trigger)
+
+        if self.current_gait != old_gait:
+            self.append_chat("SYSTEM", f"Gait changed: {old_gait} → {self.current_gait}")
+        else:
+            self.append_chat("SYSTEM", f"Gait remains: {self.current_gait}")
+
+        self.gait_label.config(text=f"Current gait: {self.current_gait}")
+
+        # Build system message based on gait
+        system_msg = {
+            "role": "system",
+            "content": build_system_prompt(self.current_gait)
+        }
+
+        # Build full conversation for the model
+        messages = [system_msg] + self.history + [{"role": "user", "content": user_text}]
+
+        # Call the model
+        reply = call_ollama_jarvis(messages)
+
+        # Store in history
+        self.history.append({"role": "user", "content": user_text})
+        self.history.append({"role": "assistant", "content": reply})
+
+        # Show reply
+        self.append_chat("JARVIS", reply)
+
+
+def main():
+    root = tk.Tk()
+    app = JarvisGaitApp(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

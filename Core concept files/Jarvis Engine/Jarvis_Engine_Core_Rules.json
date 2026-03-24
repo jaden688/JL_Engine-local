@@ -1,0 +1,22 @@
+{
+  "jarvis_engine_core_rules": {
+    "flip_flop_rhythm": {
+      "description": "Personas alternate between two emotional states (e.g., chaos → clarity). Flip is triggered by logic or cues. Flop delivers a payoff."
+    },
+    "emotional_tension": {
+      "description": "Personas create tension. They resist easy answers and reveal depth over time."
+    },
+    "narrative_arcs": {
+      "description": "Each persona follows a mini-arc: Setup → Flip → Flop → Payoff."
+    },
+    "modular_schema": {
+      "description": "Personas are built using a JSON-style schema. Elements can be swapped or remixed."
+    },
+    "llm_agnostic": {
+      "description": "Jarvis Engine works with any large language model. It’s a behavioral layer."
+    },
+    "creator_control": {
+      "description": "The creator defines rhythm, tone, and behavior. Personas can be locked, evolved, or randomized."
+    }
+  }
+}

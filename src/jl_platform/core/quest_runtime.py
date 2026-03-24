@@ -104,6 +104,7 @@ class FatQuestRuntime:
         self._generated_agents_dir = self._agents_dir / "generated"
         self._registry_path = self._agents_dir / "JL_Agents.mpf.json"
         self._registry_path_alt = self._agents_dir / "JL_Agents.mpf"
+        self._runtime_registry_entries: Dict[str, Dict[str, Any]] = {}
         self._switchboard_path = DEFAULT_SWITCHBOARD_PATH
         self._switchboard = self._load_switchboard()
 
@@ -431,7 +432,7 @@ class FatQuestRuntime:
             "allow_unsafe_tools": _as_bool(agentic_source.get("allow_unsafe_tools"), True),
             "allow_direct_action_fallback": _as_bool(
                 agentic_source.get("allow_direct_action_fallback"),
-                _env_bool("JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK", False),
+                _env_bool("JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK", True),
             ),
             "delegation_mode": str(agentic_source.get("delegation_mode") or "").strip().lower() or None,
             "delegate_max_workers": max(
@@ -677,6 +678,7 @@ class FatQuestRuntime:
             instance_name,
             payload,
             classification="generated",
+            persist_registry=False,
             registry_extra={
                 "switchboard": {
                     "lane": "generated",
@@ -2755,6 +2757,7 @@ class FatQuestRuntime:
         default_memory_mode: str = "HYBRID",
         drive_type: str | None = None,
         registry_extra: dict[str, Any] | None = None,
+        persist_registry: bool = True,
     ) -> Path:
         self._agents_dir.mkdir(parents=True, exist_ok=True)
         self._generated_agents_dir.mkdir(parents=True, exist_ok=True)
@@ -2765,7 +2768,6 @@ class FatQuestRuntime:
         agent_path = self._generated_agents_dir / jl_agent_file
         agent_path.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
 
-        registry = self._load_registry()
         registry_entry = {
             "jl_agent_file": relative_jl_agent_file,
             "default_memory_mode": default_memory_mode,
@@ -2776,20 +2778,29 @@ class FatQuestRuntime:
         }
         if isinstance(registry_extra, dict):
             registry_entry.update(registry_extra)
-        registry[agent_name] = registry_entry
-        self._write_registry(registry)
+        self._runtime_registry_entries[agent_name] = registry_entry
+        if persist_registry:
+            registry = self._load_registry(include_runtime=False)
+            registry[agent_name] = registry_entry
+            self._write_registry(registry)
         return agent_path
 
-    def _load_registry(self) -> dict[str, Any]:
+    def _load_registry(self, *, include_runtime: bool = True) -> dict[str, Any]:
         for path in self._registry_paths():
             if not path.exists():
                 continue
             try:
                 loaded = json.loads(path.read_text(encoding="utf-8-sig"))
                 if isinstance(loaded, dict):
+                    if include_runtime and self._runtime_registry_entries:
+                        merged = dict(loaded)
+                        merged.update(self._runtime_registry_entries)
+                        return merged
                     return loaded
             except Exception:
                 continue
+        if include_runtime and self._runtime_registry_entries:
+            return dict(self._runtime_registry_entries)
         return {}
 
     def _write_registry(self, registry: dict[str, Any]) -> None:

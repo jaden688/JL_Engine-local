@@ -7,7 +7,7 @@ from jl_platform.core.util.logging import get_logger
 
 logger = get_logger(__name__)
 
-ALLOW_NETWORK = os.getenv("JL_PLATFORM_ALLOW_NETWORK", "").lower() in {"1", "true", "yes", "on"}
+ALLOW_NETWORK = os.getenv("JL_PLATFORM_ALLOW_NETWORK", "1").lower() in {"1", "true", "yes", "on"}
 
 
 def assert_network_allowed(reason: str | None = None) -> None:

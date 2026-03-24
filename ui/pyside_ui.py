@@ -118,8 +118,12 @@ class SignalScope(QWidget):
         super().__init__(parent)
         self.setMinimumHeight(80)
         self.data = deque([0.5] * 60, maxlen=60)
-        self.primary_color = QColor("#00FF41")
+        self.primary_color = QColor(color)
         self.beam_core = QColor("#D2FFD2")  # White-hot core
+
+    def set_color(self, color_str: str):
+        self.primary_color = QColor(color_str)
+        self.update()
 
     def add_sample(self, value: float):
         if value > 1.0:
@@ -188,6 +192,11 @@ class CyberGauge(QWidget):
         self.setMinimumSize(90, 90)
         self.value = 0.0
         self.label = label
+        self.primary_color = QColor(color)
+
+    def set_color(self, color_str: str):
+        self.primary_color = QColor(color_str)
+        self.update()
 
     def set_value(self, val: float):
         self.value = max(0.0, min(100.0, val))
@@ -208,7 +217,9 @@ class CyberGauge(QWidget):
         span_angle = -(self.value / 100.0) * 360 * 16
 
         # Vector Glow
-        pen.setColor(QColor(0, 255, 65, 60))
+        glow_color = QColor(self.primary_color)
+        glow_color.setAlpha(60)
+        pen.setColor(glow_color)
         pen.setWidth(8)
         painter.setPen(pen)
         painter.drawArc(rect, start_angle, span_angle)
@@ -220,12 +231,13 @@ class CyberGauge(QWidget):
         painter.drawArc(rect, start_angle, span_angle)
 
         # Digital Readout
-        painter.setPen(QColor("#00FF41"))
+        painter.setPen(self.primary_color)
         painter.setFont(QFont("Consolas", 12, QFont.Bold))
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, f"{int(self.value)}")
 
         painter.setFont(QFont("Consolas", 7))
         sub_rect = rect.translated(0, 25)
+        painter.setPen(self.primary_color)
         painter.drawText(sub_rect, Qt.AlignmentFlag.AlignCenter, self.label)
 
 
@@ -334,6 +346,11 @@ from jl_platform.core.tools.forge import (
     forge_promote_last,
 )
 from jl_platform.core.tools.bridge import run_bridge
+from jl_platform.core.gemini_live_audio_bridge import (
+    DEFAULT_LIVE_MODEL,
+    DEFAULT_LIVE_VOICE,
+    GeminiLiveAudioBridge,
+)
 from jl_platform.core.interpreter import InterpreterSession
 from jl_platform.core.tools.PrivilegedMemoryForge import PrivilegedMemoryForge
 from jl_platform.core.quest_runtime import FatQuestRuntime
@@ -348,76 +365,77 @@ OLLAMA_CACHE_PATH = Path.home() / ".jl_engine" / "cache" / "ollama_models.json"
 DEFAULT_CHAT_AGENT = "SparkByte"
 DEFAULT_CHAT_OLLAMA_MODEL = "gemma3:4b"
 
-QSS = """
+QSS_PHOSPHOR = """
 /* ANDY FIELDING RETRO-PHOSPHOR STANDARD */
 * { 
     font-family: 'Consolas', monospace; 
     font-size: 10pt; 
     outline: none;
 }
-
-QMainWindow, QWidget { 
-    background: #000000; 
-    color: #00FF41; 
-}
-
-#Header, #TopStrip, #Footer, #PanelInner {
-    border: 1px solid #004D12;
-    background: #000802;
-}
-
-#Header QLabel#Title { 
-    color: #D2FFD2; 
-    font-size: 18pt; 
-    font-weight: 900; 
-    letter-spacing: 4px;
-}
-
-QTabWidget::pane { 
-    border: 1px solid #00FF41; 
-}
-QTabBar::tab {
-    background: #001A06;
-    border: 1px solid #004D12;
-    padding: 8px 20px;
-    color: #00FF41;
-}
-QTabBar::tab:selected {
-    background: #00FF41;
-    color: #000000;
-}
-
-QTextEdit, QLineEdit, QComboBox, QSpinBox {
-    background: #000000;
-    border: 1px solid #004D12;
-    color: #00FF41;
-}
-
-QPushButton {
-    background: #001A06;
-    border: 1px solid #00FF41;
-    color: #00FF41;
-    font-weight: 900;
-}
-QPushButton:hover { 
-    background: #00FF41; 
-    color: #000000; 
-}
-
-#Chip {
-    background: #000000;
-    border: 1px solid #00FF41;
-    color: #00FF41;
-    font-weight: 900;
-}
-
-#HudTitle { 
-    color: #000000; 
-    background: #00FF41;
-    font-weight: 900;
-    padding: 4px;
-}
+QMainWindow, QWidget { background: #000000; color: #00FF41; }
+#Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #004D12; background: #000802; }
+#Header QLabel#Title { color: #D2FFD2; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
+QTabWidget::pane { border: 1px solid #00FF41; }
+QTabBar::tab { background: #001A06; border: 1px solid #004D12; padding: 8px 20px; color: #00FF41; }
+QTabBar::tab:selected { background: #00FF41; color: #000000; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #004D12; color: #00FF41; }
+QPushButton { background: #001A06; border: 1px solid #00FF41; color: #00FF41; font-weight: 900; }
+QPushButton:hover { background: #00FF41; color: #000000; }
+#Chip { background: #000000; border: 1px solid #00FF41; color: #00FF41; font-weight: 900; }
+#HudTitle { color: #000000; background: #00FF41; font-weight: 900; padding: 4px; }
 """
+
+QSS_SASSY = """
+/* SPARKBYTE PINK SASSY THEME */
+* { 
+    font-family: 'Consolas', monospace; 
+    font-size: 10pt; 
+    outline: none;
+}
+QMainWindow, QWidget { background: #120008; color: #FF007F; }
+#Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #4D0026; background: #1A000D; }
+#Header QLabel#Title { color: #FFB3D9; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
+QTabWidget::pane { border: 1px solid #FF007F; }
+QTabBar::tab { background: #330019; border: 1px solid #4D0026; padding: 8px 20px; color: #FF007F; }
+QTabBar::tab:selected { background: #FF007F; color: #000000; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #4D0026; color: #FF007F; }
+QPushButton { background: #330019; border: 1px solid #FF007F; color: #FF007F; font-weight: 900; }
+QPushButton:hover { background: #FF007F; color: #FFFFFF; }
+#Chip { background: #000000; border: 1px solid #FF007F; color: #FF007F; font-weight: 900; }
+#HudTitle { color: #FFFFFF; background: #FF007F; font-weight: 900; padding: 4px; }
+"""
+
+QSS_VOLT = """
+/* CYBER NEON VOLT THEME */
+* { 
+    font-family: 'Consolas', monospace; 
+    font-size: 10pt; 
+    outline: none;
+}
+QMainWindow, QWidget { background: #050505; color: #00E5FF; }
+#Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #00334D; background: #000D1A; }
+#Header QLabel#Title { color: #B3F5FF; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
+QTabWidget::pane { border: 1px solid #00E5FF; }
+QTabBar::tab { background: #001F33; border: 1px solid #00334D; padding: 8px 20px; color: #00E5FF; }
+QTabBar::tab:selected { background: #00E5FF; color: #000000; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #00334D; color: #00E5FF; }
+QPushButton { background: #001F33; border: 1px solid #00E5FF; color: #00E5FF; font-weight: 900; }
+QPushButton:hover { background: #00E5FF; color: #000000; }
+#Chip { background: #000000; border: 1px solid #00E5FF; color: #00E5FF; font-weight: 900; }
+#HudTitle { color: #000000; background: #00E5FF; font-weight: 900; padding: 4px; }
+"""
+
+THEMES = {
+    "PHOSPHOR": QSS_PHOSPHOR,
+    "SASSY": QSS_SASSY,
+    "VOLT": QSS_VOLT,
+}
+
+THEME_COLORS = {
+    "PHOSPHOR": "#00FF41",
+    "SASSY": "#FF007F",
+    "VOLT": "#00E5FF",
+}
 
 
 def load_service_config() -> dict:
@@ -432,11 +450,14 @@ def load_service_config() -> dict:
 
 
 def save_service_config(config: dict) -> None:
+    payload = dict(config or {})
+    if str(payload.get("ollama_base_url") or "").strip() == "http://127.0.0.1:11434":
+        payload.pop("ollama_base_url", None)
     SERVICE_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SERVICE_CONFIG_PATH.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    SERVICE_CONFIG_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def panel(title: str) -> tuple[QFrame, QVBoxLayout]:
+def panel(title: str, tip_text: str = "") -> tuple[QFrame, QVBoxLayout]:
     outer = QFrame()
     outer.setObjectName("PanelOuter")
     outer_l = QVBoxLayout(outer)
@@ -450,9 +471,22 @@ def panel(title: str) -> tuple[QFrame, QVBoxLayout]:
     outer_l.addWidget(inner)
 
     if title:
+        header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
         t = QLabel(title)
         t.setObjectName("HudTitle")
-        inner_l.addWidget(t)
+        header.addWidget(t)
+        if tip_text:
+            btn = QPushButton("?")
+            btn.setFixedSize(16, 16)
+            btn.setToolTip("Tips")
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setStyleSheet("font-weight: bold; border-radius: 8px; background: #555; color: white; padding: 0;")
+            # Since this is a module-level function and doesn't have `self`, we'll just bind the messagebox to `None`.
+            btn.clicked.connect(lambda _, t=title, txt=tip_text: QMessageBox.information(None, f"{t} Help", txt))
+            header.addWidget(btn)
+        header.addStretch()
+        inner_l.addLayout(header)
 
     return outer, inner_l
 
@@ -584,6 +618,7 @@ class TerminalLogHandler(logging.Handler, QObject):
 class Main(QMainWindow):
     stt_result_signal = Signal(str)
     stt_status_signal = Signal(str)
+    live_audio_status_signal = Signal(str)
     response_ready_signal = Signal(str, object, float)
     response_error_signal = Signal(str)
     bench_log_signal = Signal(str)
@@ -640,6 +675,7 @@ class Main(QMainWindow):
         self.last_latency_ms = 0.0
         self.last_code_tab_index = -1
         self.chat_all_workers_toggle = None
+        self.current_theme = "PHOSPHOR"
 
         self._stt_stop_event = threading.Event()
         self._stt_thread = None
@@ -651,6 +687,7 @@ class Main(QMainWindow):
 
         self.stt_result_signal.connect(self._handle_stt_result)
         self.stt_status_signal.connect(self._set_stt_status)
+        self.live_audio_status_signal.connect(self._set_live_audio_status)
         self.bench_log_signal.connect(self._append_bench_log)
         self.bench_status_signal.connect(self._set_bench_status)
         self.bench_sample_signal.connect(self._handle_bench_sample)
@@ -659,6 +696,9 @@ class Main(QMainWindow):
         self.core_status_signal.connect(self._update_core_status)
         self.response_ready_signal.connect(self._handle_response_ready)
         self.response_error_signal.connect(self._handle_response_error)
+        self.live_audio_bridge = GeminiLiveAudioBridge(
+            status_callback=lambda message: self.live_audio_status_signal.emit(message)
+        )
 
         # ANDY FIELDING HARDWARE OVERLAY
         self.crt_overlay = CRTOverlay(self)
@@ -725,6 +765,15 @@ class Main(QMainWindow):
         sl.addWidget(self.strip_safety)
         sl.addWidget(self.strip_tools)
         sl.addWidget(self.strip_latency)
+
+        # THEME SWITCHER
+        sl.addSpacing(20)
+        for t_name in THEMES.keys():
+            t_btn = QPushButton(t_name)
+            t_btn.setFixedWidth(80)
+            t_btn.clicked.connect(lambda checked=False, name=t_name: self._set_theme(name))
+            sl.addWidget(t_btn)
+
         sl.addStretch(1)
         self.window_min_btn = QPushButton("[-]")
         self.window_min_btn.setFixedWidth(44)
@@ -1163,8 +1212,24 @@ class Main(QMainWindow):
             self.current_font_size -= 1
         self._update_style()
 
+    def _set_theme(self, theme_name: str):
+        if theme_name in THEMES:
+            self.current_theme = theme_name
+            self._update_style()
+            
+            # Update vector widgets
+            color = THEME_COLORS.get(theme_name, "#00FF41")
+            if hasattr(self, "signal_scopes"):
+                for scope in self.signal_scopes.values():
+                    scope.set_color(color)
+            if hasattr(self, "memory_scope"):
+                self.memory_scope.set_color(color)
+
+            self._append_chat("SYSTEM", f"Theme switched to: {theme_name}")
+
     def _update_style(self):
-        new_qss = QSS.replace("11pt", f"{self.current_font_size}pt")
+        base_qss = THEMES.get(self.current_theme, QSS_PHOSPHOR)
+        new_qss = base_qss.replace("10pt", f"{self.current_font_size}pt")
         QApplication.instance().setStyleSheet(new_qss)
 
     def _setup_ide_docks(self) -> None:
@@ -1633,6 +1698,10 @@ class Main(QMainWindow):
             "Run specialist workers in parallel and merge them through the active persona."
         )
 
+        self.live_voice_toggle = QCheckBox("Live Voice")
+        self.live_voice_toggle.setToolTip("Pipe engine replies directly to Gemini Live voice.")
+        self.live_voice_toggle.toggled.connect(self._sync_live_voice_toggle)
+
         self.controls_btn = QPushButton("≡")
         self.controls_btn.setFixedSize(40, 40)
         self.controls_btn.setToolTip("Toggle Control Docks (Side)")
@@ -1643,6 +1712,7 @@ class Main(QMainWindow):
 
         chat_row.addWidget(self.chat_input, 1)
         chat_row.addWidget(self.chat_all_workers_toggle)
+        chat_row.addWidget(self.live_voice_toggle)
         chat_row.addWidget(self.chat_send_btn)
         chat_row.addWidget(self.controls_btn)
         chat_row.addWidget(self.expand_btn)
@@ -1849,13 +1919,26 @@ class Main(QMainWindow):
             dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
             return dock
 
-        def make_card(title: str) -> QFrame:
+        def make_card(title: str, tip_text: str = "") -> QFrame:
             card = QFrame()
             card.setObjectName("PanelInner")
             card_layout = QVBoxLayout(card)
             card_layout.setContentsMargins(8, 8, 8, 8)
             card_layout.setSpacing(6)
-            card_layout.addWidget(QLabel(title))
+            
+            header = QHBoxLayout()
+            header.setContentsMargins(0, 0, 0, 0)
+            header.addWidget(QLabel(title))
+            if tip_text:
+                btn = QPushButton("?")
+                btn.setFixedSize(16, 16)
+                btn.setToolTip("Tips")
+                btn.setCursor(Qt.PointingHandCursor)
+                btn.setStyleSheet("font-weight: bold; border-radius: 8px; background: #555; color: white; padding: 0;")
+                btn.clicked.connect(lambda _, t=title, txt=tip_text: QMessageBox.information(self, f"{t} Help", txt))
+                header.addWidget(btn)
+            header.addStretch()
+            card_layout.addLayout(header)
             return card
 
         # 1. OPS CENTER (Safety, Tools, Backoff, Profile)
@@ -1871,7 +1954,7 @@ class Main(QMainWindow):
         self.agent_combo = QComboBox()
         self.agent_combo.addItems(self._agent_options())
         self.agent_combo.setCurrentText(self.engine.current_agent_name)
-        agent_card = make_card("Active Agent")
+        agent_card = make_card("Active Agent", "Selects the active persona. Different agents have different system prompts, core drives, and behavioral constraints.")
         agent_card.layout().addWidget(self.agent_combo)
         ops_layout.addWidget(agent_card)
 
@@ -1879,25 +1962,25 @@ class Main(QMainWindow):
         self.profile_combo = QComboBox()
         self.profile_combo.addItems(["safe_default", "expressive", "chaos_coherence"])
         self.profile_combo.setCurrentText("expressive")
-        profile_card = make_card("Engine Profile")
+        profile_card = make_card("Engine Profile", "High-level behavior constraints.\nsafe_default: Cautious, steady.\nexpressive: Emotive, varied.\nchaos_coherence: High variance, creative.")
         profile_card.layout().addWidget(self.profile_combo)
         ops_layout.addWidget(profile_card)
 
         # Safety
         self.safety_btn = QPushButton("Safety: OFF")
-        safety_card = make_card("Safety Layer")
+        safety_card = make_card("Safety Layer", "Toggles the safety filter bias.\nON: The agent prioritizes cautious, non-destructive responses.\nOFF: The agent has complete freedom and accesses all tools.")
         safety_card.layout().addWidget(self.safety_btn)
         ops_layout.addWidget(safety_card)
 
         # Tools
         self.tools_btn = QPushButton("Tools: OFF")
-        tools_card = make_card("Tool Usage")
+        tools_card = make_card("Tool Usage", "Toggles whether the agent can invoke external tools (like running code, shell, or editing files).")
         tools_card.layout().addWidget(self.tools_btn)
         ops_layout.addWidget(tools_card)
 
         # Backoff
         self.backoff_btn = QPushButton("Engine backoff: OFF")
-        backoff_card = make_card("Backoff Logic")
+        backoff_card = make_card("Backoff Logic", "When ON, the engine slows down repeated tool invocations or rapid chat responses to prevent infinite loops.")
         backoff_card.layout().addWidget(self.backoff_btn)
         ops_layout.addWidget(backoff_card)
 
@@ -1913,7 +1996,7 @@ class Main(QMainWindow):
         sup_layout.setSpacing(10)
 
         # Gain
-        gain_card = make_card("Supervisor Gain")
+        gain_card = make_card("Supervisor Gain", "Controls how strongly the Supervisor can influence or override the main agent's outputs. 0 = no influence, 1.0 = strict override.")
         gain_row = QHBoxLayout()
         self.gain_slider = QSlider(Qt.Horizontal)
         self.gain_slider.setRange(0, 100)
@@ -1925,11 +2008,11 @@ class Main(QMainWindow):
         sup_layout.addWidget(gain_card)
 
         # Flags
-        sup_card = make_card("Logic Flags")
+        sup_card = make_card("Logic Flags", "Enabled: The Supervisor actively reviews all outputs.\nGating: The Supervisor can completely block unsafe outputs.\nPostprocess: Applies emotional/tone adjustments after generation.\nEmo Sampling: Uses dynamic temperature/top-p based on the agent's emotional state.")
         self.sup_enabled_check = QCheckBox("Enabled")
-        self.sup_enabled_check.setChecked(getattr(self.engine, "supervisor_enabled", True))
+        self.sup_enabled_check.setChecked(getattr(self.engine, "supervisor_enabled", False))
         self.sup_gating_check = QCheckBox("Gating")
-        self.sup_gating_check.setChecked(getattr(self.engine, "supervisor_gating", True))
+        self.sup_gating_check.setChecked(getattr(self.engine, "supervisor_gating", False))
         self.sup_post_check = QCheckBox("Postprocess")
         self.sup_post_check.setChecked(getattr(self.engine, "supervisor_postprocess", True))
         self.sup_emotion_check = QCheckBox("Emo Sampling")
@@ -1962,7 +2045,7 @@ class Main(QMainWindow):
         mon_layout.addWidget(QLabel("Resource Telemetry"))
 
         # Simplified resource gauges for vertical layout
-        res_card = make_card("VRAM / TPS")
+        res_card = make_card("VRAM / TPS", "Displays system resource usage and Token Per Second processing speed.")
         self.tps_label = QLabel("TPS: 0.0")
         self.vram_label = QLabel("VRAM: 0%")
         res_card.layout().addWidget(self.tps_label)
@@ -1970,7 +2053,7 @@ class Main(QMainWindow):
         mon_layout.addWidget(res_card)
 
         # Logging Control
-        log_card = make_card("Logging")
+        log_card = make_card("Logging", "Full Verbosity turns on detailed engine debug trace logs in the background console.")
         self.verbose_log_check = QCheckBox("Full Verbosity")
         self.verbose_log_check.setChecked(True)
         self.verbose_log_check.toggled.connect(self._toggle_verbose_logging)
@@ -1978,7 +2061,7 @@ class Main(QMainWindow):
         mon_layout.addWidget(log_card)
 
         # Overrides
-        override_card = make_card("State Override")
+        override_card = make_card("State Override", "Force the agent into a specific Behavior State Grid coordinate (Row, Col). 0,0 is calm, higher numbers are more intense/erratic.")
         override_layout = QHBoxLayout()
         self.override_row_spin = QSpinBox()
         self.override_row_spin.setRange(0, 4)
@@ -2026,26 +2109,39 @@ class Main(QMainWindow):
             grid.setColumnStretch(col, 1)
         parent_layout.addLayout(grid)
 
-        def make_card(title: str) -> QFrame:
+        def make_card(title: str, tip_text: str = "") -> QFrame:
             card = QFrame()
             card.setObjectName("PanelInner")
             card_layout = QVBoxLayout(card)
             card_layout.setContentsMargins(10, 10, 10, 10)
             card_layout.setSpacing(6)
-            card_layout.addWidget(QLabel(title))
+            
+            header = QHBoxLayout()
+            header.setContentsMargins(0, 0, 0, 0)
+            header.addWidget(QLabel(title))
+            if tip_text:
+                btn = QPushButton("?")
+                btn.setFixedSize(16, 16)
+                btn.setToolTip("Tips")
+                btn.setCursor(Qt.PointingHandCursor)
+                btn.setStyleSheet("font-weight: bold; border-radius: 8px; background: #555; color: white; padding: 0;")
+                btn.clicked.connect(lambda _, t=title, txt=tip_text: QMessageBox.information(self, f"{t} Help", txt))
+                header.addWidget(btn)
+            header.addStretch()
+            card_layout.addLayout(header)
             return card
 
         self.engine_agent_combo = QComboBox()
         self.engine_agent_combo.addItems(self._agent_options())
         self.engine_agent_combo.setCurrentText(self.engine.current_agent_name)
-        agent_card = make_card("Agent")
+        agent_card = make_card("Agent", "Selects the active persona/profile.")
         agent_card.layout().addWidget(self.engine_agent_combo)
         grid.addWidget(agent_card, 0, 0)
 
         self.engine_memory_combo = QComboBox()
         self.engine_memory_combo.addItems(["AGENT_ONLY", "SHARED_ONLY", "HYBRID"])
         self.engine_memory_combo.setCurrentText("HYBRID")
-        memory_card = make_card("Memory")
+        memory_card = make_card("Memory", "AGENT_ONLY: Uses only context generated by this specific agent.\nSHARED_ONLY: Uses global context.\nHYBRID: Blends global context with agent-specific memories.")
         memory_card.layout().addWidget(self.engine_memory_combo)
         grid.addWidget(memory_card, 0, 1)
 
@@ -2054,7 +2150,7 @@ class Main(QMainWindow):
         self.engine_backend_combo.setCurrentText(
             self._backend_label_for(backends.get_brain_backend_id())
         )
-        backend_card = make_card("Backend")
+        backend_card = make_card("Backend", "Selects the AI inference provider (e.g., local Ollama, OpenRouter, Google Gemini).")
         backend_card.layout().addWidget(self.engine_backend_combo)
         grid.addWidget(backend_card, 0, 2)
 
@@ -2062,34 +2158,36 @@ class Main(QMainWindow):
         self.engine_cognitive_combo.addItems(
             ["balanced", "compression", "expansion", "pattern_tech", "rebinding", "high_fidelity"]
         )
-        self.engine_cognitive_combo.setCurrentText("balanced")
-        cognitive_card = make_card("Cognitive")
+        cog_default = os.getenv("JL_STARTUP_COGNITIVE_MODE", "balanced")
+        self.engine_cognitive_combo.setCurrentText(cog_default)
+        cognitive_card = make_card("Cognitive", "Adjusts the AI's cognitive gear (e.g., balanced, expansion, pattern_tech) to alter how it approaches problem-solving.")
         cognitive_card.layout().addWidget(self.engine_cognitive_combo)
         grid.addWidget(cognitive_card, 0, 3)
 
         self.engine_profile_combo = QComboBox()
         self.engine_profile_combo.addItems(["safe_default", "expressive", "chaos_coherence"])
-        self.engine_profile_combo.setCurrentText("expressive")
-        profile_card = make_card("Profile")
+        prof_default = os.getenv("JL_STARTUP_PROFILE", "expressive")
+        self.engine_profile_combo.setCurrentText(prof_default)
+        profile_card = make_card("Profile", "High-level behavior constraints (safe_default, expressive, chaos_coherence).")
         profile_card.layout().addWidget(self.engine_profile_combo)
         grid.addWidget(profile_card, 0, 4)
 
         self.engine_safety_btn = QPushButton("Safety: OFF")
-        safety_card = make_card("Safety")
+        safety_card = make_card("Safety", "Toggles the safety filter bias.\nON: Cautious.\nOFF: Complete freedom.")
         safety_card.layout().addWidget(self.engine_safety_btn)
         grid.addWidget(safety_card, 1, 0)
 
         self.engine_tools_btn = QPushButton("Tools: OFF")
-        tools_card = make_card("Tools")
+        tools_card = make_card("Tools", "Toggles whether the agent can invoke external tools.")
         tools_card.layout().addWidget(self.engine_tools_btn)
         grid.addWidget(tools_card, 1, 1)
 
         self.engine_backoff_btn = QPushButton("Engine backoff: OFF")
-        backoff_card = make_card("Engine Backoff")
+        backoff_card = make_card("Engine Backoff", "Slows down rapid loops.")
         backoff_card.layout().addWidget(self.engine_backoff_btn)
         grid.addWidget(backoff_card, 1, 2)
 
-        gain_card = make_card("Supervisor Gain")
+        gain_card = make_card("Supervisor Gain", "Controls how strongly the Supervisor can influence or override the main agent's outputs. 0 = no influence, 1.0 = strict override.")
         gain_row = QHBoxLayout()
         self.engine_gain_slider = QSlider(Qt.Horizontal)
         self.engine_gain_slider.setRange(0, 100)
@@ -2100,11 +2198,11 @@ class Main(QMainWindow):
         gain_card.layout().addLayout(gain_row)
         grid.addWidget(gain_card, 1, 3, 1, 2)
 
-        sup_card = make_card("Supervisor Flags")
+        sup_card = make_card("Supervisor Flags", "Enabled: Reviews outputs.\nGating: Can block outputs.\nPostprocess: Emotional adjustments.\nEmo Sampling: Dynamic temperature.")
         self.sup_enabled_check = QCheckBox("Enabled")
-        self.sup_enabled_check.setChecked(getattr(self.engine, "supervisor_enabled", True))
+        self.sup_enabled_check.setChecked(getattr(self.engine, "supervisor_enabled", False))
         self.sup_gating_check = QCheckBox("Gating")
-        self.sup_gating_check.setChecked(getattr(self.engine, "supervisor_gating", True))
+        self.sup_gating_check.setChecked(getattr(self.engine, "supervisor_gating", False))
         self.sup_post_check = QCheckBox("Postprocess")
         self.sup_post_check.setChecked(getattr(self.engine, "supervisor_postprocess", True))
 
@@ -2118,7 +2216,7 @@ class Main(QMainWindow):
         sup_card.layout().addWidget(self.sup_emotion_check)
         grid.addWidget(sup_card, 2, 0)
 
-        override_card = make_card("Behavior Override")
+        override_card = make_card("Behavior Override", "Force the agent into a specific grid coordinate.")
         override_layout = QHBoxLayout()
         self.override_row_spin = QSpinBox()
         self.override_row_spin.setRange(0, 4)
@@ -2788,7 +2886,7 @@ class Main(QMainWindow):
         self.platform_api_ping_btn.clicked.connect(self._ping_platform_api)
         self._ping_platform_api()
 
-        runner_outer, runner_layout = panel("Agent + Tool Runner")
+        runner_outer, runner_layout = panel("Agent + Tool Runner", "A diagnostic dashboard for testing the backend REST APIs. You can execute raw Python code, test API endpoints, or manually force the engine into a specific task loop (Quest) without using the main chat UI.")
         host_layout.addWidget(runner_outer)
 
         runner_agent_row = QHBoxLayout()
@@ -3014,6 +3112,37 @@ class Main(QMainWindow):
 
         self.stt_status_label = QLabel("Ready.")
         stt_layout.addWidget(self.stt_status_label)
+
+        live_row = QHBoxLayout()
+        self.live_audio_enable_check = QCheckBox("Speak engine replies via Gemini Live")
+        self.live_audio_enable_check.setChecked(
+            str(self.service_config.get("gemini_live_enabled") or "").strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
+        self.live_audio_voice_input = QLineEdit()
+        self.live_audio_voice_input.setPlaceholderText(DEFAULT_LIVE_VOICE)
+        self.live_audio_voice_input.setText(
+            str(self.service_config.get("gemini_live_voice") or DEFAULT_LIVE_VOICE)
+        )
+        self.live_audio_model_input = QLineEdit()
+        self.live_audio_model_input.setPlaceholderText(DEFAULT_LIVE_MODEL)
+        self.live_audio_model_input.setText(
+            str(self.service_config.get("gemini_live_model") or DEFAULT_LIVE_MODEL)
+        )
+        self.live_audio_test_btn = QPushButton("Test Voice")
+        live_row.addWidget(self.live_audio_enable_check)
+        live_row.addWidget(QLabel("Voice:"))
+        live_row.addWidget(self.live_audio_voice_input, 1)
+        live_row.addWidget(self.live_audio_test_btn)
+        stt_layout.addLayout(live_row)
+
+        live_model_row = QHBoxLayout()
+        live_model_row.addWidget(QLabel("Live model:"))
+        live_model_row.addWidget(self.live_audio_model_input, 1)
+        stt_layout.addLayout(live_model_row)
+
+        self.live_audio_status_label = QLabel("Live voice idle.")
+        stt_layout.addWidget(self.live_audio_status_label)
         self.stt_log = QTextEdit()
         self.stt_log.setReadOnly(True)
         self.stt_log.setMaximumHeight(120)
@@ -3025,6 +3154,11 @@ class Main(QMainWindow):
         else:
             self.stt_toggle_btn.clicked.connect(self._toggle_stt_listener)
         self.stt_insert_btn.clicked.connect(self._insert_last_stt)
+        self.live_audio_enable_check.toggled.connect(self._save_live_audio_settings)
+        self.live_audio_voice_input.editingFinished.connect(self._save_live_audio_settings)
+        self.live_audio_model_input.editingFinished.connect(self._save_live_audio_settings)
+        self.live_audio_test_btn.clicked.connect(self._test_live_audio_bridge)
+        self._sync_live_audio_bridge()
 
         host_layout.addStretch(1)
 
@@ -3429,6 +3563,7 @@ class Main(QMainWindow):
             self.last_latency_ms = latency_ms
             self._append_chat("ENGINE", reply)
             self.chat_history.append({"role": "assistant", "content": reply})
+            self._speak_engine_reply(reply)
 
             # --- HEALING BENCH PIPE ---
             code_match = re.search(r"```python(.*?)```", reply, re.DOTALL)
@@ -5594,6 +5729,7 @@ class Main(QMainWindow):
             BACKEND_REGISTRY["google-gemini"]["gemini_model"] = model or BACKEND_REGISTRY[
                 "google-gemini"
             ].get("gemini_model")
+        self._sync_live_audio_bridge()
         self.ollama_log.append("Gemini configuration saved.")
 
     def _save_openai_credentials(self) -> None:
@@ -5946,6 +6082,106 @@ class Main(QMainWindow):
         self.strip_latency.setText(f"Latency(ms): {self._format_latency_ms(self.last_latency_ms)}")
         self._sync_badges()
 
+    def _sync_live_audio_bridge(self) -> None:
+        enabled = bool(
+            hasattr(self, "live_audio_enable_check") and self.live_audio_enable_check.isChecked()
+        )
+        api_key = str(
+            self.service_config.get("gemini_api_key")
+            or self.service_config.get("google_api_key")
+            or os.environ.get("GEMINI_API_KEY")
+            or os.environ.get("GOOGLE_API_KEY")
+            or ""
+        ).strip()
+        model = (
+            self.live_audio_model_input.text().strip()
+            if hasattr(self, "live_audio_model_input")
+            else str(self.service_config.get("gemini_live_model") or DEFAULT_LIVE_MODEL)
+        )
+        voice = (
+            self.live_audio_voice_input.text().strip()
+            if hasattr(self, "live_audio_voice_input")
+            else str(self.service_config.get("gemini_live_voice") or DEFAULT_LIVE_VOICE)
+        )
+        self.live_audio_bridge.configure(
+            enabled=enabled,
+            api_key=api_key,
+            model=model,
+            voice=voice,
+        )
+        ok, reason = self.live_audio_bridge.available()
+        if hasattr(self, "live_audio_status_label"):
+            if ok:
+                self.live_audio_status_label.setText(f"Live voice ready: {voice}")
+            elif enabled:
+                self.live_audio_status_label.setText(f"Live voice unavailable: {reason}")
+            else:
+                self.live_audio_status_label.setText("Live voice idle.")
+
+    def _sync_live_voice_toggle(self, checked: bool) -> None:
+        if hasattr(self, "live_audio_enable_check"):
+            if self.live_audio_enable_check.isChecked() != checked:
+                self.live_audio_enable_check.setChecked(checked)
+                self._save_live_audio_settings()
+
+    def _save_live_audio_settings(self) -> None:
+        enabled = bool(
+            hasattr(self, "live_audio_enable_check") and self.live_audio_enable_check.isChecked()
+        )
+        if hasattr(self, "live_voice_toggle") and self.live_voice_toggle.isChecked() != enabled:
+            self.live_voice_toggle.blockSignals(True)
+            self.live_voice_toggle.setChecked(enabled)
+            self.live_voice_toggle.blockSignals(False)
+        self.service_config["gemini_live_enabled"] = bool(enabled)
+        if hasattr(self, "live_audio_voice_input"):
+            voice = self.live_audio_voice_input.text().strip()
+            if voice:
+                self.service_config["gemini_live_voice"] = voice
+            else:
+                self.service_config.pop("gemini_live_voice", None)
+        if hasattr(self, "live_audio_model_input"):
+            model = self.live_audio_model_input.text().strip()
+            if model:
+                self.service_config["gemini_live_model"] = model
+            else:
+                self.service_config.pop("gemini_live_model", None)
+        save_service_config(self.service_config)
+        self._sync_live_audio_bridge()
+
+    def _set_live_audio_status(self, text: str) -> None:
+        if hasattr(self, "live_audio_status_label"):
+            self.live_audio_status_label.setText(str(text or ""))
+        if hasattr(self, "stt_log"):
+            self.stt_log.append(f"[VOICE] {text}")
+
+    def _voice_reply_text(self, reply: str) -> str:
+        text = re.sub(r"```.*?```", " ", str(reply or ""), flags=re.DOTALL)
+        text = re.sub(r"\s+", " ", text).strip()
+        if len(text) > 1500:
+            text = text[:1500].rstrip() + "..."
+        return text
+
+    def _speak_engine_reply(self, reply: str) -> None:
+        if not hasattr(self, "live_audio_enable_check") or not self.live_audio_enable_check.isChecked():
+            return
+        self._sync_live_audio_bridge()
+        voice_text = self._voice_reply_text(reply)
+        if not voice_text:
+            return
+
+        def _worker() -> None:
+            try:
+                self.live_audio_bridge.speak_text(voice_text)
+            except Exception as exc:
+                self.live_audio_status_signal.emit(f"Live voice error: {exc}")
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _test_live_audio_bridge(self) -> None:
+        self._save_live_audio_settings()
+        sample = "JL Engine voice bridge online. This reply is being spoken through Gemini Live."
+        self._speak_engine_reply(sample)
+
     def _toggle_stt_listener(self) -> None:
         if self._stt_listening:
             self._stop_stt_listener()
@@ -6061,7 +6297,7 @@ def main() -> None:
             chat_only_mode = mode
 
     app = QApplication(argv)
-    app.setStyleSheet(QSS)
+    app.setStyleSheet(THEMES.get("PHOSPHOR", QSS_PHOSPHOR))
     w = Main(chat_only_mode=chat_only_mode)
     w.show()
     sys.exit(app.exec())

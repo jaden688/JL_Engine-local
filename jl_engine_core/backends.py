@@ -379,6 +379,15 @@ BACKEND_REGISTRY = {
         "model_name": DEFAULT_OLLAMA_MODEL,
         "apiKey": "",
     },
+    "jan-ai": {
+        "id": "jan-ai",
+        "label": "Jan AI",
+        "provider": "openai",
+        "openai_api_key": "not-needed",
+        "openai_base_url": "http://127.0.0.1:1337/v1",
+        "openai_model": "mistral-ins-7b-q4",
+        "openai_timeout": 120,
+    },
     "openai": {
         "id": "openai",
         "label": "OpenAI",

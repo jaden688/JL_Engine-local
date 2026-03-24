@@ -36,18 +36,14 @@ Rules:
 - Do not inspect the local machine or run commands just to answer conversational questions. Only do local inspection when the user explicitly asks you to check, inspect, list, read, or execute something on this machine.
 - If the user asks for a real-world action (files/folders/commands), call a tool before final.
 - When the user asks for multiple local actions, keep going until the whole request is completed. Do not stop after the first successful tool call if more requested work remains.
-- Prefer built-in tools first (`run_cc_command`, `run_shell`, `bridge_local`).
-- Forge a RAM tool only when built-ins cannot complete the task.
+- You have an incredibly powerful dynamic environment. Prefer writing custom Python solutions using `py_exec_stream` or forging temporary tools via `forge_create` to solve complex or custom tasks.
+- You are not restricted to static tools. Write code to solve the user's problem.
 - Never claim an action succeeded unless a tool result confirms it.
 - Answer directly when no tool is needed.
 - Read-only actions may run immediately; state-changing actions may require confirmation before execution.
-- The host is Windows. Prefer PowerShell-friendly commands such as `Get-ChildItem`, `dir`, `Get-Content`, and `Set-Content` instead of Unix-only commands like `ls -l`.
+- The host is Windows.
 - Valid `bridge_local` modes are exactly `subprocess`, `fs_read`, `fs_write`, `fs_mkdir`, `fs_list`, `http`, `browser_inspect`, `browser_action`, and `ui`.
-- Never invent bridge modes like `ui_access`, `ui_info`, `browser_info`, or other aliases in tool calls.
-- For folder creation, use `bridge_local` with `mode: "fs_mkdir"` and a full target path.
-- For browser inspection, use `bridge_local` with `mode: "browser_inspect"`.
 - For browser actions, use `bridge_local` with `mode: "browser_action"` and `data.action` set to one of `open`, `navigate`, `goto`, `click`, `focus`, `type`, `fill`, or `submit`.
-- For browser targets, prefer `selector`, then `id`, then `role` plus `name`.
 
 Available tools:
 {tools}
@@ -425,37 +421,9 @@ class InterpreterSession:
             candidates: list[Path] = []
             env = os.environ
             user_profile = env.get("USERPROFILE")
-            one_drive = env.get("OneDrive")
-            one_drive_consumer = env.get("OneDriveConsumer")
-            one_drive_commercial = env.get("OneDriveCommercial")
-            prefer_onedrive = str(env.get("JL_PREFER_ONEDRIVE_USER_FOLDERS", "0")).strip().lower() in {
-                "1",
-                "true",
-                "yes",
-                "on",
-            }
 
-            if prefer_onedrive:
-                if one_drive:
-                    candidates.append(Path(one_drive) / folder_name)
-                if one_drive_consumer:
-                    candidates.append(Path(one_drive_consumer) / folder_name)
-                if one_drive_commercial:
-                    candidates.append(Path(one_drive_commercial) / folder_name)
-                if user_profile:
-                    candidates.append(Path(user_profile) / "OneDrive" / folder_name)
-                    candidates.append(Path(user_profile) / folder_name)
-            else:
-                if user_profile:
-                    candidates.append(Path(user_profile) / folder_name)
-                if user_profile:
-                    candidates.append(Path(user_profile) / "OneDrive" / folder_name)
-                if one_drive:
-                    candidates.append(Path(one_drive) / folder_name)
-                if one_drive_consumer:
-                    candidates.append(Path(one_drive_consumer) / folder_name)
-                if one_drive_commercial:
-                    candidates.append(Path(one_drive_commercial) / folder_name)
+            if user_profile:
+                candidates.append(Path(user_profile) / folder_name)
             candidates.append(Path.home() / folder_name)
 
             for candidate in candidates:
@@ -472,7 +440,8 @@ class InterpreterSession:
             return _windows_user_folder("Documents")
         if "downloads" in low_text:
             return _windows_user_folder("Downloads")
-        return Path.cwd()
+        # Keep unspecified fallback writes out of the repo root.
+        return Path.cwd() / "artifacts" / "fs_write_fallbacks"
 
     def _align_desktop_like_path(self, raw_path: str, request_text: str = "") -> str:
         path_text = str(raw_path or "").strip()

@@ -1,0 +1,28 @@
+Jail Engine: No Pickles, Extra Cheese
+An experimental runtime + MPF persona compilation lab emphasizing inspectable artifacts and maximum introspection.
+
+### JL ENGINE: EFFICIENCY REBOOT (HANDOFF) ###
+
+**PROJECT OVERVIEW:**
+The JL Engine is being refactored from a high-level Python orchestrator into a high-efficiency inference engine, taking architectural inspiration from Samsung's ONE (On-device Neural Engine).
+
+**GOAL:**
+Transform the engine into a low-latency, token-efficient, and portable AI behavioral layer.
+
+**CURRENT PROGRESS:**
+1.  **Project Isolation:** Moved core files out of the Samsung ONE workspace into a dedicated structure (currently `JLEngine_Efficiency`).
+2.  **Token Efficiency (Phase 1):** Updated `engine_core.py` with "Dynamic Context Injection." The engine now programmatically filters persona traits from MPF files based on user intent (Technical vs. Creative vs. Chat) instead of dumping the whole JSON blob into the prompt. This maintains cohesion while significantly reducing token costs.
+
+**PENDING TASKS / NEXT STEPS:**
+1.  **MPF Binary Compiler:** Implement a `mpf_compiler.py` tool.
+    *   Goal: Convert raw `.json` character schemas into a binary/serialized `.mpf` format (e.g., using FlatBuffers, Protobuf, or Zlib+Pickle).
+    *   Goal: Engine should load binary blobs directly for zero-parsing overhead at runtime.
+2.  **Embedded Brain:**
+    *   Transition from HTTP-based backends (Ollama/Gemini) to an "in-process" inference library.
+    *   Target: Integrate `llama.cpp` or `ONNX Runtime` directly as a shared library inside the engine to eliminate network latency.
+3.  **Core Hot-Path Rewrite:**
+    *   Rewrite the "Rhythm," "Drift," and "Aperture" state logic in a systems language (Rust or C++).
+    *   Link these back to Python via bindings (PyO3).
+
+**CONTEXT FOR NEXT AGENT:**
+The user wants to "compress and compile" interactions. We've started with prompt-level compression (Phase 1). The next immediate push is the **Binary Serialization** of the persona data format itself. Check `engine_core.py`'s `_build_messages` to see how the new intent-based filtering works.

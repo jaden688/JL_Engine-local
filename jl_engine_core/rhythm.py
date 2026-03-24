@@ -4,7 +4,7 @@ rhythm.py  -  JL Engine MK-IV
 Rhythm Engine
 
 Defines and updates the JL Engine's rhythm mode each turn:
-- FLIP, FLOP, TROT
+- FLIP, FLOP, TROT, TWITCH, CASCADE, STUTTER, BURST
 
 Rhythm is the "linguistic motion" layer that sits on top of:
 - Gait (emotional velocity)
@@ -33,6 +33,16 @@ except ImportError:
 # -----------------------------
 
 RHYTHM_MODES: Dict[str, Dict[str, Any]] = {
+    "stutter": {
+        "index": 0.15,
+        "modifiers": {
+            "pace_multiplier": 0.75,
+            "punctuation_bias": -0.05,
+            "energy_bias": -0.1,
+            "stutter_likelihood": 0.35,
+            "burst_likelihood": 0.0,
+        },
+    },
     "flip": {
         "index": 0.25,
         "modifiers": {
@@ -44,11 +54,31 @@ RHYTHM_MODES: Dict[str, Dict[str, Any]] = {
         },
     },
     "flop": {
-        "index": 0.45,
+        "index": 0.35,
         "modifiers": {
-            "pace_multiplier": 0.9,
+            "pace_multiplier": 0.85,
             "punctuation_bias": -0.05,
             "energy_bias": -0.05,
+            "stutter_likelihood": 0.0,
+            "burst_likelihood": 0.0,
+        },
+    },
+    "twitch": {
+        "index": 0.50,
+        "modifiers": {
+            "pace_multiplier": 1.1,
+            "punctuation_bias": 0.05,
+            "energy_bias": 0.15,
+            "stutter_likelihood": 0.15,
+            "burst_likelihood": 0.05,
+        },
+    },
+    "cascade": {
+        "index": 0.65,
+        "modifiers": {
+            "pace_multiplier": 1.0,
+            "punctuation_bias": 0.1,
+            "energy_bias": 0.05,
             "stutter_likelihood": 0.0,
             "burst_likelihood": 0.0,
         },
@@ -63,16 +93,26 @@ RHYTHM_MODES: Dict[str, Dict[str, Any]] = {
             "burst_likelihood": 0.0,
         },
     },
+    "burst": {
+        "index": 0.85,
+        "modifiers": {
+            "pace_multiplier": 1.2,
+            "punctuation_bias": 0.1,
+            "energy_bias": 0.25,
+            "stutter_likelihood": 0.05,
+            "burst_likelihood": 0.3,
+        },
+    },
 }
 
 DEFAULT_MODE = "flip"
 
 TRIGGER_TO_RHYTHM: Dict[str, str] = {
-    "user_hyped": "trot",
-    "user_joking": "flip",
+    "user_hyped": "burst",
+    "user_joking": "twitch",
     "user_frustrated": "flop",
-    "user_confused": "flop",
-    "user_anxious": "flop",
+    "user_confused": "stutter",
+    "user_anxious": "stutter",
     "user_distressed": "flop",
     "user_directive": "flip",
     "neutral": "flip",
@@ -192,12 +232,14 @@ class RhythmEngine:
             return "flop"
         if "trot" in m:
             return "trot"
-        if "twitch" in m or "burst" in m:
-            return "trot"
+        if "twitch" in m:
+            return "twitch"
         if "cascade" in m:
-            return "flip"
+            return "cascade"
         if "stutter" in m:
-            return "flop"
+            return "stutter"
+        if "burst" in m:
+            return "burst"
 
         return DEFAULT_MODE
 
@@ -217,9 +259,16 @@ class RhythmEngine:
             )
             attractor_hint = hint.get("attractor")
             if isinstance(attractor_hint, (int, float)):
-                self.attractor = (
-                    "trot" if attractor_hint > 0.6 else "flop" if attractor_hint < 0.3 else "flip"
-                )
+                if attractor_hint > 0.8:
+                    self.attractor = "burst"
+                elif attractor_hint > 0.6:
+                    self.attractor = "trot"
+                elif attractor_hint > 0.4:
+                    self.attractor = "twitch"
+                elif attractor_hint > 0.2:
+                    self.attractor = "flop"
+                else:
+                    self.attractor = "stutter"
         # settle attractor toward calmer modes when momentum is low
         if abs(self.momentum) < 0.12:
             self.attractor = self._normalize_mode(new_mode)
@@ -234,10 +283,14 @@ class RhythmEngine:
         if isinstance(hint, dict) and abs(float(hint.get("gating_bias", 0.0) or 0.0)) > 0.6:
             return self._normalize_mode(self.attractor)
 
-        if self.momentum > 0.25 and mode == "flip":
-            return "trot"
-        if self.momentum < -0.25 and mode == "trot":
-            return "flip"
+        if self.momentum > 0.4 and mode in ("flip", "flop", "stutter"):
+            return "twitch" if mode == "flip" else "trot"
+        if self.momentum > 0.7:
+            return "burst"
+        if self.momentum < -0.4 and mode in ("burst", "trot", "twitch", "cascade"):
+            return "flop"
+        if self.momentum < -0.7:
+            return "stutter"
         return mode
 
     def _base_mode_from_trigger(self, trigger: str) -> str:
@@ -256,11 +309,13 @@ class RhythmEngine:
         name_lower = str(name).lower()
 
         if "unleashed" in name_lower or "hyper" in name_lower or "charged" in name_lower:
+            if current_mode in ("flip", "flop", "stutter"):
+                return "burst"
             return "trot"
 
         if "calm" in name_lower or "stable" in name_lower:
-            if current_mode == "trot":
-                return "flip"
+            if current_mode in ("burst", "trot", "twitch", "cascade"):
+                return "flop"
 
         return current_mode
 
@@ -268,14 +323,17 @@ class RhythmEngine:
         g = gait.lower().strip()
 
         if g == "idle":
-            if current_mode == "trot":
+            if current_mode in ("burst", "trot", "twitch"):
                 return "flop"
         elif g == "walk":
             return current_mode
         elif g == "trot":
+            if current_mode in ("flop", "stutter"):
+                return "flip"
             return "trot"
         elif g == "sprint":
-            return "trot"
+            if current_mode in ("flip", "flop", "stutter"):
+                return "burst"
 
         return current_mode
 
@@ -283,9 +341,9 @@ class RhythmEngine:
         d = max(0.0, min(1.0, drift_pressure))
 
         if d >= 0.75:
-            return "flop"
+            return "stutter"
         if d >= 0.50:
-            return "flip"
+            return "flop"
 
         return current_mode
 
@@ -302,7 +360,7 @@ class RhythmEngine:
         if not safety_on:
             return mode
 
-        if mode == "trot" and t in ("user_anxious", "user_distressed"):
+        if mode in ("burst", "twitch", "trot", "cascade") and t in ("user_anxious", "user_distressed"):
             mode = "flop"
 
         if t == "user_distressed":

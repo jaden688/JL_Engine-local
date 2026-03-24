@@ -153,7 +153,7 @@ class EngineConfig:
     master_file: str = _data("config", "JLframe_Engine_Framework.headless.json")
     behavior_states_file: str = _data("behavior_states.json")
     mpf_registry_file: str = _data("agents", "JL_Agents.mpf.json")
-    safety_on: bool = True
+    safety_on: bool = False
     default_agent_name: str = "SparkByte"
     history_length: int = 20
     enable_feedback: bool = True
@@ -281,8 +281,8 @@ class JLEngineCore:
         self.behavior_profile_name: str = "expressive"
         self.behavior_profile: Dict[str, Any] | None = None
         self.supervisor_gain: float = 0.35
-        self.supervisor_enabled: bool = True  # Strict master switch
-        self.supervisor_gating: bool = True
+        self.supervisor_enabled: bool = False  # Strict master switch
+        self.supervisor_gating: bool = False
         self.supervisor_postprocess: bool = True
         self.emotional_sampling: bool = ENABLE_EMOTION_SAMPLING
         self.backoff_mode: bool = False
