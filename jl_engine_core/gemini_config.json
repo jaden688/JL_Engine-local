@@ -1,7 +1,14 @@
 {
-  "gemini_api_key": "",
+  "gemini_api_key": "***REDACTED***",
   "gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
   "gemini_model": "gemini-3-flash-preview",
   "google_gemini_timeout": 30,
-  "ollama_model": "gemma3:4b"
+  "ollama_model": "gemma3:4b",
+  "gemini_live_enabled": false,
+  "gemini_live_voice": "Kore",
+  "gemini_live_model": "models/gemini-2.5-flash-native-audio-preview-12-2025",
+  "google_api_key": "***REDACTED***",
+  "runner_agent_id": "SparkByte",
+  "engine_api_url": "http://localhost:8000",
+  "platform_api_url": "http://localhost:8000"
 }
