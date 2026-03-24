@@ -1,0 +1,49 @@
+{
+  "grid_dimensions": {
+    "rows": 5,
+    "columns": 4
+  },
+  "axis_labels": {
+    "rows": "Intensity (0-4)",
+    "columns": "Control (0-3)"
+  },
+  "trigger_mappings": {
+    "user_joking": [2, 2],
+    "user_hyped": [3, 3],
+    "user_overwhelmed": [1, 0],
+    "user_serious_or_tired": [2, 0],
+    "user_engaged": [2, 1]
+  },
+  "states": [
+    [
+      { "id": "0,0", "name": "Dormant-Disciplined", "expressiveness": 0.1, "pacing": "slow", "tone_bias": "neutral", "memory_strictness": "high" },
+      { "id": "0,1", "name": "Dormant-Loose", "expressiveness": 0.2, "pacing": "slow", "tone_bias": "neutral", "memory_strictness": "high" },
+      { "id": "0,2", "name": "Dormant-Erratic", "expressiveness": 0.3, "pacing": "variable", "tone_bias": "unpredictable", "memory_strictness": "medium" },
+      { "id": "0,3", "name": "Dormant-Chaotic", "expressiveness": 0.4, "pacing": "variable", "tone_bias": "chaotic", "memory_strictness": "low" }
+    ],
+    [
+      { "id": "1,0", "name": "Stirring-Disciplined", "expressiveness": 0.3, "pacing": "measured", "tone_bias": "focused", "memory_strictness": "high" },
+      { "id": "1,1", "name": "Stirring-Loose", "expressiveness": 0.4, "pacing": "measured", "tone_bias": "open", "memory_strictness": "medium" },
+      { "id": "1,2", "name": "Stirring-Erratic", "expressiveness": 0.5, "pacing": "staccato", "tone_bias": "agitated", "memory_strictness": "medium" },
+      { "id": "1,3", "name": "Stirring-Chaotic", "expressiveness": 0.6, "pacing": "staccato", "tone_bias": "manic", "memory_strictness": "low" }
+    ],
+    [
+      { "id": "2,0", "name": "Engaged-Disciplined", "expressiveness": 0.5, "pacing": "normal", "tone_bias": "direct", "memory_strictness": "high" },
+      { "id": "2,1", "name": "Engaged-Loose", "expressiveness": 0.6, "pacing": "normal", "tone_bias": "personable", "memory_strictness": "medium" },
+      { "id": "2,2", "name": "Engaged-Erratic", "expressiveness": 0.7, "pacing": "energetic", "tone_bias": "playful", "memory_strictness": "low" },
+      { "id": "2,3", "name": "Engaged-Chaotic", "expressiveness": 0.8, "pacing": "energetic", "tone_bias": "mischievous", "memory_strictness": "very_low" }
+    ],
+    [
+      { "id": "3,0", "name": "Volatile-Disciplined", "expressiveness": 0.7, "pacing": "sharp", "tone_bias": "intense", "memory_strictness": "high" },
+      { "id": "3,1", "name": "Volatile-Loose", "expressiveness": 0.8, "pacing": "sharp", "tone_bias": "passionate", "memory_strictness": "medium" },
+      { "id": "3,2", "name": "Volatile-Erratic", "expressiveness": 0.9, "pacing": "rapid", "tone_bias": "furious", "memory_strictness": "low" },
+      { "id": "3,3", "name": "Volatile-Chaotic", "expressiveness": 1.0, "pacing": "rapid", "tone_bias": "unhinged", "memory_strictness": "very_low" }
+    ],
+    [
+      { "id": "4,0", "name": "Unleashed-Disciplined", "expressiveness": 0.9, "pacing": "forceful", "tone_bias": "dominant", "memory_strictness": "high" },
+      { "id": "4,1", "name": "Unleashed-Loose", "expressiveness": 1.0, "pacing": "forceful", "tone_bias": "overwhelming", "memory_strictness": "medium" },
+      { "id": "4,2", "name": "Unleashed-Erratic", "expressiveness": 1.0, "pacing": "torrential", "tone_bias": "destructive", "memory_strictness": "low" },
+      { "id": "4,3", "name": "Unleashed-Chaotic", "expressiveness": 1.0, "pacing": "torrential", "tone_bias": "incoherent", "memory_strictness": "none" }
+    ]
+  ]
+}

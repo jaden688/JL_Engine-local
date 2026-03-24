@@ -1,0 +1,77 @@
+File: backends.py
+Line Count: 207
+Character Count: 7845
+Preview:
+import os
+import json
+import requests
+from abc import ABC, abstractmethod
+
+# --- 1. Backend Registry Configuration ---
+# This dictionary defines all available model backends.
+# To add a new backend, add a new entry here.
+BACKEND_REGISTRY = {
+    "ollama-local": {
+        "id": "ollama-local",
+        "label": "Ollama (Local)",
+        "provider": "ollama",
+        "baseUrl": "http://127.0.0.1:11434",
+        "modelName": "llama3",
+        "apiKey": "" # Not used by Ollama, but included for struc
+--------------------
+
+File: behavior_engine.py
+Line Count: 100
+Character Count: 4452
+Preview:
+import json
+
+class BehaviorState:
+    """A simple data class to hold the properties of a single behavioral state."""
+    def __init__(self, state_data: dict):
+        self.id = state_data.get("id", "0,0")
+        self.name = state_data.get("name", "Unknown")
+        self.expressiveness = state_data.get("expressiveness", 0.5)
+        self.pacing = state_data.get("pacing", "normal")
+        self.tone_bias = state_data.get("tone_bias", "neutral")
+        self.memory_strictness = state_data.get("mem
+--------------------
+
+File: cognitive_gears.py
+Line Count: 54
+Character Count: 2306
+Preview:
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Dict, Literal, TypedDict
+
+GearType = Literal["worm", "spur", "cvt", "planetary"]
+
+@dataclass
+class GearModifiers:
+    reaction_speed: float       # how fast state changes propagate (0..1)
+    noise_sensitivity: float    # how much small fluctuations matter (0..1)
+    mode_inertia: float         # resistance to changing cognitive mode (0..1)
+    multi_mode: bool            # whether multiple modes can be activ
+--------------------
+
+File: cognitive_modes.py
+Line Count: 70
+Character Count: 2631
+Preview:
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Dict, List, Literal, Tuple
+from cognitive_gears import GearType, get_gear_modifiers
+
+CognitiveMode = Literal["balanced", "compression", "expansion", "pattern_tech", "rebinding", "high_fidelity"]
+
+@dataclass
+class CognitiveModeState:
+    active_modes: Dict[CognitiveMode, float]  # mode -> weight
+
+class CognitiveModeSelector:
+    def __init__(self, default_mode: CognitiveMode = "balanced"):
+        self.default
+--------------------
+

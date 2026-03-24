@@ -1,0 +1,9 @@
+[
+  "dolphin3:8b",
+  "dolphin3:latest",
+  "gemma3:4b",
+  "llama2-uncensored:7b",
+  "llama3.1:latest",
+  "llama3:latest",
+  "phi4:latest"
+]

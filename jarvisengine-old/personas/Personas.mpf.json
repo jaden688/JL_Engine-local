@@ -1,0 +1,72 @@
+{
+  "The Gremlin": {
+    "persona_file": "The_Gremlin_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": []
+  },
+  "The Helper": {
+    "persona_file": "The_Helper_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": []
+  },
+  "The Professor": {
+    "persona_file": "The_Professor_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": []
+  },
+  "The Technician": {
+    "persona_file": "The_Technician_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": []
+  },
+  "The Navigator": {
+    "persona_file": "The_Navigator_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": "worm",
+    "tags": ["helper", "safe", "comfort"]
+  },
+  "The Spark": {
+    "persona_file": "The_Spark_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": "cvt",
+    "tags": ["chaotic", "builder"]
+  },
+  "Twitch": {
+    "persona_file": "Twitch_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": []
+  },
+  "The Gremlin CNC": {
+    "persona_file": "The_Gremlin_CNC_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": ["cnc", "tools", "gremlin"]
+  },
+  "Twitch": {
+    "persona_file": "Twitch_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": ["stream", "fast", "co-pilot"]
+  },
+  "SparkByte": {
+    "persona_file": "SparkByte_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "tags": ["quirky", "sassy", "playful", "supportive", "witty", "jl-engine-integrated"]
+  }
+}

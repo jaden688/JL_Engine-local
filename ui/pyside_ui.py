@@ -44,6 +44,7 @@ _alias("business_mpf_generator", "tools.business_mpf_generator")
 _alias("card2mpf", "modules.card2mpf")
 
 import jl_platform.controllers.backend_controller as backends
+import jl_engine_core.backends as core_backends
 
 try:
     import requests
@@ -117,8 +118,12 @@ class SignalScope(QWidget):
         super().__init__(parent)
         self.setMinimumHeight(80)
         self.data = deque([0.5] * 60, maxlen=60)
-        self.primary_color = QColor("#00FF41")
+        self.primary_color = QColor(color)
         self.beam_core = QColor("#D2FFD2")  # White-hot core
+
+    def set_color(self, color_str: str):
+        self.primary_color = QColor(color_str)
+        self.update()
 
     def add_sample(self, value: float):
         if value > 1.0:
@@ -187,6 +192,11 @@ class CyberGauge(QWidget):
         self.setMinimumSize(90, 90)
         self.value = 0.0
         self.label = label
+        self.primary_color = QColor(color)
+
+    def set_color(self, color_str: str):
+        self.primary_color = QColor(color_str)
+        self.update()
 
     def set_value(self, val: float):
         self.value = max(0.0, min(100.0, val))
@@ -207,7 +217,9 @@ class CyberGauge(QWidget):
         span_angle = -(self.value / 100.0) * 360 * 16
 
         # Vector Glow
-        pen.setColor(QColor(0, 255, 65, 60))
+        glow_color = QColor(self.primary_color)
+        glow_color.setAlpha(60)
+        pen.setColor(glow_color)
         pen.setWidth(8)
         painter.setPen(pen)
         painter.drawArc(rect, start_angle, span_angle)
@@ -219,12 +231,13 @@ class CyberGauge(QWidget):
         painter.drawArc(rect, start_angle, span_angle)
 
         # Digital Readout
-        painter.setPen(QColor("#00FF41"))
+        painter.setPen(self.primary_color)
         painter.setFont(QFont("Consolas", 12, QFont.Bold))
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, f"{int(self.value)}")
 
         painter.setFont(QFont("Consolas", 7))
         sub_rect = rect.translated(0, 25)
+        painter.setPen(self.primary_color)
         painter.drawText(sub_rect, Qt.AlignmentFlag.AlignCenter, self.label)
 
 
@@ -333,7 +346,13 @@ from jl_platform.core.tools.forge import (
     forge_promote_last,
 )
 from jl_platform.core.tools.bridge import run_bridge
+from jl_platform.core.gemini_live_audio_bridge import (
+    DEFAULT_LIVE_MODEL,
+    DEFAULT_LIVE_VOICE,
+    GeminiLiveAudioBridge,
+)
 from jl_platform.core.interpreter import InterpreterSession
+from jl_platform.core.tools.PrivilegedMemoryForge import PrivilegedMemoryForge
 from jl_platform.core.quest_runtime import FatQuestRuntime
 
 # from tools.tool_registry import cnc
@@ -343,90 +362,102 @@ REPO_ROOT = BASE_DIR.parent
 SERVICE_CONFIG_PATH = REPO_ROOT / "jl_engine_core" / "gemini_config.json"
 # Keep the Ollama inventory cache on the local machine, outside the repo tree.
 OLLAMA_CACHE_PATH = Path.home() / ".jl_engine" / "cache" / "ollama_models.json"
+DEFAULT_CHAT_AGENT = "SparkByte"
+DEFAULT_CHAT_OLLAMA_MODEL = "gemma3:4b"
 
-QSS = """
+QSS_PHOSPHOR = """
 /* ANDY FIELDING RETRO-PHOSPHOR STANDARD */
 * { 
     font-family: 'Consolas', monospace; 
     font-size: 10pt; 
     outline: none;
 }
-
-QMainWindow, QWidget { 
-    background: #000000; 
-    color: #00FF41; 
-}
-
-#Header, #TopStrip, #Footer, #PanelInner {
-    border: 1px solid #004D12;
-    background: #000802;
-}
-
-#Header QLabel#Title { 
-    color: #D2FFD2; 
-    font-size: 18pt; 
-    font-weight: 900; 
-    letter-spacing: 4px;
-}
-
-QTabWidget::pane { 
-    border: 1px solid #00FF41; 
-}
-QTabBar::tab {
-    background: #001A06;
-    border: 1px solid #004D12;
-    padding: 8px 20px;
-    color: #00FF41;
-}
-QTabBar::tab:selected {
-    background: #00FF41;
-    color: #000000;
-}
-
-QTextEdit, QLineEdit, QComboBox, QSpinBox {
-    background: #000000;
-    border: 1px solid #004D12;
-    color: #00FF41;
-}
-
-QPushButton {
-    background: #001A06;
-    border: 1px solid #00FF41;
-    color: #00FF41;
-    font-weight: 900;
-}
-QPushButton:hover { 
-    background: #00FF41; 
-    color: #000000; 
-}
-
-#Chip {
-    background: #000000;
-    border: 1px solid #00FF41;
-    color: #00FF41;
-    font-weight: 900;
-}
-
-#HudTitle { 
-    color: #000000; 
-    background: #00FF41;
-    font-weight: 900;
-    padding: 4px;
-}
+QMainWindow, QWidget { background: #000000; color: #00FF41; }
+#Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #004D12; background: #000802; }
+#Header QLabel#Title { color: #D2FFD2; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
+QTabWidget::pane { border: 1px solid #00FF41; }
+QTabBar::tab { background: #001A06; border: 1px solid #004D12; padding: 8px 20px; color: #00FF41; }
+QTabBar::tab:selected { background: #00FF41; color: #000000; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #004D12; color: #00FF41; }
+QPushButton { background: #001A06; border: 1px solid #00FF41; color: #00FF41; font-weight: 900; }
+QPushButton:hover { background: #00FF41; color: #000000; }
+#Chip { background: #000000; border: 1px solid #00FF41; color: #00FF41; font-weight: 900; }
+#HudTitle { color: #000000; background: #00FF41; font-weight: 900; padding: 4px; }
 """
+
+QSS_SASSY = """
+/* SPARKBYTE PINK SASSY THEME */
+* { 
+    font-family: 'Consolas', monospace; 
+    font-size: 10pt; 
+    outline: none;
+}
+QMainWindow, QWidget { background: #120008; color: #FF007F; }
+#Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #4D0026; background: #1A000D; }
+#Header QLabel#Title { color: #FFB3D9; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
+QTabWidget::pane { border: 1px solid #FF007F; }
+QTabBar::tab { background: #330019; border: 1px solid #4D0026; padding: 8px 20px; color: #FF007F; }
+QTabBar::tab:selected { background: #FF007F; color: #000000; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #4D0026; color: #FF007F; }
+QPushButton { background: #330019; border: 1px solid #FF007F; color: #FF007F; font-weight: 900; }
+QPushButton:hover { background: #FF007F; color: #FFFFFF; }
+#Chip { background: #000000; border: 1px solid #FF007F; color: #FF007F; font-weight: 900; }
+#HudTitle { color: #FFFFFF; background: #FF007F; font-weight: 900; padding: 4px; }
+"""
+
+QSS_VOLT = """
+/* CYBER NEON VOLT THEME */
+* { 
+    font-family: 'Consolas', monospace; 
+    font-size: 10pt; 
+    outline: none;
+}
+QMainWindow, QWidget { background: #050505; color: #00E5FF; }
+#Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #00334D; background: #000D1A; }
+#Header QLabel#Title { color: #B3F5FF; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
+QTabWidget::pane { border: 1px solid #00E5FF; }
+QTabBar::tab { background: #001F33; border: 1px solid #00334D; padding: 8px 20px; color: #00E5FF; }
+QTabBar::tab:selected { background: #00E5FF; color: #000000; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #00334D; color: #00E5FF; }
+QPushButton { background: #001F33; border: 1px solid #00E5FF; color: #00E5FF; font-weight: 900; }
+QPushButton:hover { background: #00E5FF; color: #000000; }
+#Chip { background: #000000; border: 1px solid #00E5FF; color: #00E5FF; font-weight: 900; }
+#HudTitle { color: #000000; background: #00E5FF; font-weight: 900; padding: 4px; }
+"""
+
+THEMES = {
+    "PHOSPHOR": QSS_PHOSPHOR,
+    "SASSY": QSS_SASSY,
+    "VOLT": QSS_VOLT,
+}
+
+THEME_COLORS = {
+    "PHOSPHOR": "#00FF41",
+    "SASSY": "#FF007F",
+    "VOLT": "#00E5FF",
+}
 
 
 def load_service_config() -> dict:
     data = load_json_safely(SERVICE_CONFIG_PATH)
-    return data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        data = {}
+    if not str(data.get("ollama_model") or "").strip():
+        data["ollama_model"] = DEFAULT_CHAT_OLLAMA_MODEL
+    if not str(data.get("ollama_base_url") or "").strip():
+        data["ollama_base_url"] = "http://127.0.0.1:11434"
+    return data
 
 
 def save_service_config(config: dict) -> None:
+    payload = dict(config or {})
+    if str(payload.get("ollama_base_url") or "").strip() == "http://127.0.0.1:11434":
+        payload.pop("ollama_base_url", None)
     SERVICE_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SERVICE_CONFIG_PATH.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    SERVICE_CONFIG_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def panel(title: str) -> tuple[QFrame, QVBoxLayout]:
+def panel(title: str, tip_text: str = "") -> tuple[QFrame, QVBoxLayout]:
     outer = QFrame()
     outer.setObjectName("PanelOuter")
     outer_l = QVBoxLayout(outer)
@@ -440,9 +471,22 @@ def panel(title: str) -> tuple[QFrame, QVBoxLayout]:
     outer_l.addWidget(inner)
 
     if title:
+        header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
         t = QLabel(title)
         t.setObjectName("HudTitle")
-        inner_l.addWidget(t)
+        header.addWidget(t)
+        if tip_text:
+            btn = QPushButton("?")
+            btn.setFixedSize(16, 16)
+            btn.setToolTip("Tips")
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setStyleSheet("font-weight: bold; border-radius: 8px; background: #555; color: white; padding: 0;")
+            # Since this is a module-level function and doesn't have `self`, we'll just bind the messagebox to `None`.
+            btn.clicked.connect(lambda _, t=title, txt=tip_text: QMessageBox.information(None, f"{t} Help", txt))
+            header.addWidget(btn)
+        header.addStretch()
+        inner_l.addLayout(header)
 
     return outer, inner_l
 
@@ -574,6 +618,7 @@ class TerminalLogHandler(logging.Handler, QObject):
 class Main(QMainWindow):
     stt_result_signal = Signal(str)
     stt_status_signal = Signal(str)
+    live_audio_status_signal = Signal(str)
     response_ready_signal = Signal(str, object, float)
     response_error_signal = Signal(str)
     bench_log_signal = Signal(str)
@@ -583,13 +628,23 @@ class Main(QMainWindow):
     terminal_log_signal = Signal(str)
     core_status_signal = Signal(str, str)
 
-    def __init__(self):
+    def __init__(self, chat_only_mode: bool | None = None):
         super().__init__()
-        self.setWindowTitle("JL Engine - Supervisor (PySide6)")
-        self.resize(1360, 820)
-        self.setMinimumSize(1000, 700)
+        if chat_only_mode is None:
+            chat_only_mode = self._env_flag("JL_UI_CHAT_ONLY", False)
+        self.chat_only_mode = bool(chat_only_mode)
+        self.preferred_chat_agent = DEFAULT_CHAT_AGENT
+        self.preferred_ollama_model = DEFAULT_CHAT_OLLAMA_MODEL
+        self.setWindowTitle("JL Engine Chat")
+        if self.chat_only_mode:
+            self.resize(980, 760)
+            self.setMinimumSize(640, 480)
+        else:
+            self.resize(1360, 820)
+            self.setMinimumSize(760, 560)
 
         self.service_config = load_service_config()
+        self._configure_local_chat_defaults()
         self._apply_service_backend_overrides()
         self.agents_dir = self._resolve_agents_dir()
         self._ensure_mpf_registry()
@@ -613,12 +668,14 @@ class Main(QMainWindow):
         self.proc_platform_api = ProcessHandle()
         self.chat_history: List[Dict[str, str]] = []
         self.safety_enabled = False
-        self.tools_enabled = False
+        self.tools_enabled = True if self.chat_only_mode else False
         self.engine_backoff_enabled = False
         self.supervisor_disabled = False
         self.supervisor_gain = getattr(self.engine, "supervisor_gain", 0.35)
         self.last_latency_ms = 0.0
         self.last_code_tab_index = -1
+        self.chat_all_workers_toggle = None
+        self.current_theme = "PHOSPHOR"
 
         self._stt_stop_event = threading.Event()
         self._stt_thread = None
@@ -630,6 +687,7 @@ class Main(QMainWindow):
 
         self.stt_result_signal.connect(self._handle_stt_result)
         self.stt_status_signal.connect(self._set_stt_status)
+        self.live_audio_status_signal.connect(self._set_live_audio_status)
         self.bench_log_signal.connect(self._append_bench_log)
         self.bench_status_signal.connect(self._set_bench_status)
         self.bench_sample_signal.connect(self._handle_bench_sample)
@@ -638,6 +696,9 @@ class Main(QMainWindow):
         self.core_status_signal.connect(self._update_core_status)
         self.response_ready_signal.connect(self._handle_response_ready)
         self.response_error_signal.connect(self._handle_response_error)
+        self.live_audio_bridge = GeminiLiveAudioBridge(
+            status_callback=lambda message: self.live_audio_status_signal.emit(message)
+        )
 
         # ANDY FIELDING HARDWARE OVERLAY
         self.crt_overlay = CRTOverlay(self)
@@ -655,24 +716,37 @@ class Main(QMainWindow):
         hl.setContentsMargins(14, 12, 14, 12)
         hl.setSpacing(12)
 
-        title = QLabel("JL Engine - Supervisor")
+        title = QLabel("JL Engine Chat" if self.chat_only_mode else "JL Engine - Supervisor")
         title.setObjectName("Title")
         hl.addWidget(title)
 
-        self.header_status = QLabel("Safety: OFF   |   Tools: OFF   |   Latency(ms): 0")
+        if self.chat_only_mode:
+            header_text = "Autonomy: ON   |   Tools: READY   |   Latency(ms): 0"
+        else:
+            header_text = "Safety: OFF   |   Tools: OFF   |   Latency(ms): 0"
+        self.header_status = QLabel(header_text)
         hl.addWidget(self.header_status)
 
         hl.addStretch(1)
 
-        self.badge_agent = QLabel("Agent: Supervisor")
+        badge_agent_label = self.engine.current_agent_name or self.preferred_chat_agent
+        self.badge_agent = QLabel(
+            f"{'Persona' if self.chat_only_mode else 'Agent'}: {badge_agent_label}"
+        )
         self.badge_agent.setObjectName("Chip")
         hl.addWidget(self.badge_agent)
 
-        self.badge_backend = QLabel("Backend: ollama-local")
+        if self.chat_only_mode:
+            backend_badge = f"Backend: {backends.get_brain_backend_id()}"
+            memory_badge = f"Model: {self._current_ollama_model()}"
+        else:
+            backend_badge = "Backend: ollama-local"
+            memory_badge = "Memory: HYBRID"
+        self.badge_backend = QLabel(backend_badge)
         self.badge_backend.setObjectName("Chip")
         hl.addWidget(self.badge_backend)
 
-        self.badge_memory = QLabel("Memory: HYBRID")
+        self.badge_memory = QLabel(memory_badge)
         self.badge_memory.setObjectName("Chip")
         hl.addWidget(self.badge_memory)
 
@@ -684,13 +758,22 @@ class Main(QMainWindow):
         sl.setContentsMargins(12, 8, 12, 8)
         sl.setSpacing(12)
         sl.addWidget(QLabel("[JL]"))
-        sl.addWidget(QLabel("JL Engine~local"))
-        self.strip_safety = QLabel("Safety: OFF")
-        self.strip_tools = QLabel("Tools: OFF")
+        sl.addWidget(QLabel("JL Engine Chat" if self.chat_only_mode else "JL Engine~local"))
+        self.strip_safety = QLabel("Mode: CHAT" if self.chat_only_mode else "Safety: OFF")
+        self.strip_tools = QLabel("Tools: READY" if self.chat_only_mode else "Tools: OFF")
         self.strip_latency = QLabel("Latency(ms): 0")
         sl.addWidget(self.strip_safety)
         sl.addWidget(self.strip_tools)
         sl.addWidget(self.strip_latency)
+
+        # THEME SWITCHER
+        sl.addSpacing(20)
+        for t_name in THEMES.keys():
+            t_btn = QPushButton(t_name)
+            t_btn.setFixedWidth(80)
+            t_btn.clicked.connect(lambda checked=False, name=t_name: self._set_theme(name))
+            sl.addWidget(t_btn)
+
         sl.addStretch(1)
         self.window_min_btn = QPushButton("[-]")
         self.window_min_btn.setFixedWidth(44)
@@ -716,33 +799,41 @@ class Main(QMainWindow):
         self._build_console_tab(self.console_tab)
         layout.addWidget(self.console_tab, 1)
 
-        footer = QFrame()
-        footer.setObjectName("Footer")
-        fl = QHBoxLayout(footer)
-        fl.setContentsMargins(10, 6, 10, 6)
-        fl.setSpacing(12)
-        fl.addWidget(QLabel("CNC Payload: 0"))
-        fl.addWidget(QLabel("C/P Docs: 0"))
-        fl.addStretch(1)
-        fl.addWidget(QLabel("GEN: 0.00"))
-        fl.addWidget(QLabel("CON: 0.00"))
-        fl.addWidget(QLabel("AUD: 0.00"))
-        fl.addWidget(QLabel("ADD: 0.00"))
-        fl.addStretch(1)
-        fl.addWidget(QLabel("[<]"))
-        fl.addWidget(QLabel("[>]|"))
-        fl.addWidget(QLabel("[E]"))
-        layout.addWidget(footer)
+        if not self.chat_only_mode:
+            footer = QFrame()
+            footer.setObjectName("Footer")
+            fl = QHBoxLayout(footer)
+            fl.setContentsMargins(10, 6, 10, 6)
+            fl.setSpacing(12)
+            fl.addWidget(QLabel("CNC Payload: 0"))
+            fl.addWidget(QLabel("C/P Docs: 0"))
+            fl.addStretch(1)
+            fl.addWidget(QLabel("GEN: 0.00"))
+            fl.addWidget(QLabel("CON: 0.00"))
+            fl.addWidget(QLabel("AUD: 0.00"))
+            fl.addWidget(QLabel("ADD: 0.00"))
+            fl.addStretch(1)
+            fl.addWidget(QLabel("[<]"))
+            fl.addWidget(QLabel("[>]|"))
+            fl.addWidget(QLabel("[E]"))
+            layout.addWidget(footer)
 
         self._wire_console_actions()
         self._sync_badges()
         self._setup_zoom()
         self._scan_credentials()  # Auto-load dropped keys
-        self._setup_ide_docks()
-        self._setup_dock_controls()  # New side docks
+        if not self.chat_only_mode:
+            self._setup_ide_docks()
+            self._setup_dock_controls()  # New side docks
         self._setup_terminal_logging()
         self._announce_agent_registry()
-        self._interpreter_session = InterpreterSession()
+        self._interpreter_session = InterpreterSession(
+            engine=self.engine,
+            memory_forge=PrivilegedMemoryForge(),
+            allow_unsafe_tools=True,
+            allow_direct_action_fallback=False,
+        )
+        self._ensure_local_ollama_ready()
         self._autostart_platform_services()
         self._sync_window_mode_button()
 
@@ -780,10 +871,106 @@ class Main(QMainWindow):
 
     def _runtime_env(self) -> dict:
         env = os.environ.copy()
+        for key in (
+            "CONDA_PREFIX",
+            "CONDA_DEFAULT_ENV",
+            "CONDA_SHLVL",
+            "CONDA_PROMPT_MODIFIER",
+            "_CE_M",
+            "_CE_CONDA",
+        ):
+            env.pop(key, None)
+        path_key = next((key for key in env if key.lower() == "path"), None)
+        path_value = str(env.get(path_key) or "") if path_key else ""
+        if path_key and path_value:
+            filtered_parts = []
+            for part in path_value.split(os.pathsep):
+                lowered = part.lower()
+                if any(marker in lowered for marker in ("miniconda", "anaconda", "condabin", ".conda")):
+                    continue
+                filtered_parts.append(part)
+            env[path_key] = os.pathsep.join(filtered_parts)
         existing = (env.get("PYTHONPATH") or "").strip()
         prefixes = [str(REPO_ROOT), str(SRC_DIR)]
         env["PYTHONPATH"] = os.pathsep.join(prefixes + ([existing] if existing else []))
         return env
+
+    def _configure_local_chat_defaults(self) -> None:
+        if not isinstance(self.service_config, dict):
+            self.service_config = {}
+
+        self.service_config["ollama_model"] = self.preferred_ollama_model
+        normalized = backends._enforce_ollama_base_url(
+            str(self.service_config.get("ollama_base_url") or ""),
+            self.service_config,
+        )
+        self.service_config["ollama_base_url"] = normalized
+        save_service_config(self.service_config)
+
+        try:
+            set_brain_backend_id("ollama-local")
+            set_tool_backend_id("ollama-local")
+        except Exception as exc:
+            logger.debug("[UI] Failed to pin local backends: %s", exc, exc_info=True)
+
+    def _choose_startup_ollama_model(self, models: List[str]) -> str:
+        installed = [str(model).strip() for model in models if str(model).strip()]
+        configured = str(self.service_config.get("ollama_model") or "").strip()
+
+        for candidate in (self.preferred_ollama_model, configured):
+            if candidate and candidate in installed:
+                return candidate
+
+        lightweight = [
+            model for model in installed if core_backends.ollama_model_allowed(model)
+        ]
+        return lightweight[0] if lightweight else self.preferred_ollama_model
+
+    def _ensure_local_ollama_ready(self) -> None:
+        base_url = self._ollama_base_url()
+        self._append_chat("SYSTEM", f"[Runtime] Checking Ollama at {base_url}...")
+        QApplication.processEvents()
+
+        ready = core_backends.ensure_ollama_server(
+            base_url,
+            autostart=True,
+            wait_timeout=15.0,
+        )
+        if not ready:
+            self._append_chat(
+                "SYSTEM",
+                f"[Runtime] Ollama is unavailable at {base_url}. Chat will wait for the local runtime.",
+            )
+            return
+
+        available_models = core_backends.list_ollama_model_names(base_url=base_url)
+        selected_model = self._choose_startup_ollama_model(available_models)
+        self.service_config["ollama_model"] = selected_model
+        save_service_config(self.service_config)
+        try:
+            backends.set_ollama_model(selected_model, persist=True)
+        except Exception as exc:
+            logger.debug("[UI] Failed to persist Ollama model '%s': %s", selected_model, exc)
+            os.environ["JL_OLLAMA_MODEL"] = selected_model
+            os.environ["BENCH_OLLAMA_MODEL"] = selected_model
+
+        if selected_model in available_models and selected_model == self.preferred_ollama_model:
+            self._append_chat("SYSTEM", f"[Runtime] Ollama ready. Model pinned to {selected_model}.")
+        elif selected_model in available_models:
+            self._append_chat(
+                "SYSTEM",
+                f"[Runtime] Ollama ready. {self.preferred_ollama_model} is not installed, so the UI stayed on lightweight local model {selected_model}.",
+            )
+        else:
+            self._append_chat(
+                "SYSTEM",
+                f"[Runtime] Ollama is online, but lightweight model {self.preferred_ollama_model} is not installed yet.",
+            )
+
+        self._apply_service_backend_overrides()
+        self._sync_badges()
+        if hasattr(self, "ollama_model_combo") or hasattr(self, "chat_model_combo"):
+            self._refresh_ollama_models()
 
     def _apply_service_backend_overrides(self) -> None:
         if not isinstance(self.service_config, dict):
@@ -1005,7 +1192,7 @@ class Main(QMainWindow):
                 REPO_ROOT / "jl_engine_core" / "data" / "agents" / "JL_Agents.mpf.json"
             ),
             safety_on=False,
-            default_agent_name="Supervisor",
+            default_agent_name=self.preferred_chat_agent,
         )
         self.engine_controller = EngineController(config)
         return self.engine_controller.build_engine()
@@ -1025,8 +1212,24 @@ class Main(QMainWindow):
             self.current_font_size -= 1
         self._update_style()
 
+    def _set_theme(self, theme_name: str):
+        if theme_name in THEMES:
+            self.current_theme = theme_name
+            self._update_style()
+            
+            # Update vector widgets
+            color = THEME_COLORS.get(theme_name, "#00FF41")
+            if hasattr(self, "signal_scopes"):
+                for scope in self.signal_scopes.values():
+                    scope.set_color(color)
+            if hasattr(self, "memory_scope"):
+                self.memory_scope.set_color(color)
+
+            self._append_chat("SYSTEM", f"Theme switched to: {theme_name}")
+
     def _update_style(self):
-        new_qss = QSS.replace("11pt", f"{self.current_font_size}pt")
+        base_qss = THEMES.get(self.current_theme, QSS_PHOSPHOR)
+        new_qss = base_qss.replace("10pt", f"{self.current_font_size}pt")
         QApplication.instance().setStyleSheet(new_qss)
 
     def _setup_ide_docks(self) -> None:
@@ -1071,7 +1274,7 @@ class Main(QMainWindow):
         self.dock_explorer = create_dock(
             "Explorer", lambda w: self._build_explorer_content(w), Qt.LeftDockWidgetArea
         )
-        self.dock_explorer.setMinimumWidth(300)
+        self.dock_explorer.setMinimumWidth(180)
 
         # 2. Command Center (Right - Primary)
         self.dock_hud = create_dock(
@@ -1305,6 +1508,112 @@ class Main(QMainWindow):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(14)
 
+        if self.chat_only_mode:
+            self.console_tabs = QTabWidget()
+            self.console_tabs.currentChanged.connect(self._on_tab_changed)
+            self.console_tabs.tabBar().hide()
+            layout.addWidget(self.console_tabs, 1)
+
+            chat_container = QWidget()
+            chat_layout = QVBoxLayout(chat_container)
+            chat_layout.setContentsMargins(0, 0, 0, 0)
+            chat_layout.setSpacing(12)
+
+            self.chat_log = QTextEdit()
+            self.chat_log.setReadOnly(True)
+            self.chat_log.setStyleSheet(
+                "border-radius: 0px; background: #050807; border: 1px solid #004D12;"
+            )
+            self.chat_log.setPlainText(
+                "SYSTEM: Local autonomous chat ready.\n"
+                f"SYSTEM: Persona '{self.engine.current_agent_name}' loaded.\n"
+                "SYSTEM: Ollama runtime will be checked before the first turn.\n"
+            )
+            chat_layout.addWidget(self.chat_log, 1)
+            self.console_tabs.addTab(chat_container, "CHAT")
+
+            input_panel = QFrame()
+            input_panel.setObjectName("PanelInner")
+            input_panel_layout = QVBoxLayout(input_panel)
+            input_panel_layout.setContentsMargins(12, 12, 12, 12)
+            input_panel_layout.setSpacing(10)
+
+            persona_row = QHBoxLayout()
+            persona_label = QLabel("Persona")
+            persona_label.setMinimumWidth(72)
+            self.agent_combo = QComboBox()
+            self.agent_combo.addItems(self._agent_options())
+            self.agent_combo.setCurrentText(self.engine.current_agent_name)
+            persona_row.addWidget(persona_label)
+            persona_row.addWidget(self.agent_combo, 1)
+            input_panel_layout.addLayout(persona_row)
+
+            runtime_row = QHBoxLayout()
+            runtime_label = QLabel("Runtime")
+            runtime_label.setMinimumWidth(72)
+            runtime_row.addWidget(runtime_label)
+
+            self.chat_backend_combo = QComboBox()
+            self.chat_backend_combo.addItems(self._backend_labels())
+            self.chat_backend_combo.setCurrentText(
+                self._backend_label_for(backends.get_brain_backend_id())
+            )
+            runtime_row.addWidget(self.chat_backend_combo, 1)
+
+            model_label = QLabel("Model")
+            runtime_row.addWidget(model_label)
+            self.chat_model_combo = QComboBox()
+            self.chat_model_combo.addItems(self._chat_model_options())
+            self.chat_model_combo.setCurrentText(self._current_ollama_model())
+            runtime_row.addWidget(self.chat_model_combo, 1)
+
+            self.chat_model_refresh_btn = QPushButton("Refresh Models")
+            runtime_row.addWidget(self.chat_model_refresh_btn)
+
+            # Keep one visible persona while allowing specialist workers to assist in the background.
+            self.chat_all_workers_toggle = QCheckBox("All Workers")
+            self.chat_all_workers_toggle.setChecked(self._env_flag("JL_UI_ALL_WORKERS", False))
+            self.chat_all_workers_toggle.setToolTip(
+                "Run a multi-agent worker crew and merge results back into the active persona voice."
+            )
+            runtime_row.addWidget(self.chat_all_workers_toggle)
+            input_panel_layout.addLayout(runtime_row)
+
+            attachment_row = QHBoxLayout()
+            attachment_label = QLabel("File")
+            attachment_label.setMinimumWidth(72)
+            attachment_row.addWidget(attachment_label)
+            self.chat_attachment_input = QLineEdit()
+            self.chat_attachment_input.setReadOnly(True)
+            self.chat_attachment_input.setPlaceholderText(
+                "Attach a file to send its contents with the next prompt"
+            )
+            attachment_row.addWidget(self.chat_attachment_input, 1)
+            self.chat_attach_btn = QPushButton("Attach")
+            self.chat_clear_attach_btn = QPushButton("Clear")
+            attachment_row.addWidget(self.chat_attach_btn)
+            attachment_row.addWidget(self.chat_clear_attach_btn)
+            input_panel_layout.addLayout(attachment_row)
+
+            chat_row = QHBoxLayout()
+            self.chat_input = QLineEdit()
+            self.chat_input.setPlaceholderText(
+                "Tell the agent what you want done. File selection and runtime choices stay in this bar."
+            )
+            self.chat_input.setMinimumHeight(44)
+
+            self.chat_send_btn = QPushButton("Send")
+            self.chat_send_btn.setMinimumHeight(44)
+            self.chat_send_btn.setFixedWidth(96)
+
+            chat_row.addWidget(self.chat_input, 1)
+            chat_row.addWidget(self.chat_send_btn)
+            input_panel_layout.addLayout(chat_row)
+
+            layout.addWidget(input_panel)
+            self.agent_combo.currentTextChanged.connect(self._on_agent_change)
+            return
+
         # Hero Bar / Top Status
         hero_frame = QFrame()
         hero_frame.setStyleSheet("background: transparent;")
@@ -1383,6 +1692,16 @@ class Main(QMainWindow):
         self.chat_send_btn.setMinimumHeight(40)
         self.chat_send_btn.setFixedWidth(80)
 
+        self.chat_all_workers_toggle = QCheckBox("All Workers")
+        self.chat_all_workers_toggle.setChecked(self._env_flag("JL_UI_ALL_WORKERS", False))
+        self.chat_all_workers_toggle.setToolTip(
+            "Run specialist workers in parallel and merge them through the active persona."
+        )
+
+        self.live_voice_toggle = QCheckBox("Live Voice")
+        self.live_voice_toggle.setToolTip("Pipe engine replies directly to Gemini Live voice.")
+        self.live_voice_toggle.toggled.connect(self._sync_live_voice_toggle)
+
         self.controls_btn = QPushButton("≡")
         self.controls_btn.setFixedSize(40, 40)
         self.controls_btn.setToolTip("Toggle Control Docks (Side)")
@@ -1392,6 +1711,8 @@ class Main(QMainWindow):
         self.expand_btn.setToolTip("Toggle Right Sidebar Docks")
 
         chat_row.addWidget(self.chat_input, 1)
+        chat_row.addWidget(self.chat_all_workers_toggle)
+        chat_row.addWidget(self.live_voice_toggle)
         chat_row.addWidget(self.chat_send_btn)
         chat_row.addWidget(self.controls_btn)
         chat_row.addWidget(self.expand_btn)
@@ -1598,13 +1919,26 @@ class Main(QMainWindow):
             dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
             return dock
 
-        def make_card(title: str) -> QFrame:
+        def make_card(title: str, tip_text: str = "") -> QFrame:
             card = QFrame()
             card.setObjectName("PanelInner")
             card_layout = QVBoxLayout(card)
             card_layout.setContentsMargins(8, 8, 8, 8)
             card_layout.setSpacing(6)
-            card_layout.addWidget(QLabel(title))
+            
+            header = QHBoxLayout()
+            header.setContentsMargins(0, 0, 0, 0)
+            header.addWidget(QLabel(title))
+            if tip_text:
+                btn = QPushButton("?")
+                btn.setFixedSize(16, 16)
+                btn.setToolTip("Tips")
+                btn.setCursor(Qt.PointingHandCursor)
+                btn.setStyleSheet("font-weight: bold; border-radius: 8px; background: #555; color: white; padding: 0;")
+                btn.clicked.connect(lambda _, t=title, txt=tip_text: QMessageBox.information(self, f"{t} Help", txt))
+                header.addWidget(btn)
+            header.addStretch()
+            card_layout.addLayout(header)
             return card
 
         # 1. OPS CENTER (Safety, Tools, Backoff, Profile)
@@ -1620,7 +1954,7 @@ class Main(QMainWindow):
         self.agent_combo = QComboBox()
         self.agent_combo.addItems(self._agent_options())
         self.agent_combo.setCurrentText(self.engine.current_agent_name)
-        agent_card = make_card("Active Agent")
+        agent_card = make_card("Active Agent", "Selects the active persona. Different agents have different system prompts, core drives, and behavioral constraints.")
         agent_card.layout().addWidget(self.agent_combo)
         ops_layout.addWidget(agent_card)
 
@@ -1628,25 +1962,25 @@ class Main(QMainWindow):
         self.profile_combo = QComboBox()
         self.profile_combo.addItems(["safe_default", "expressive", "chaos_coherence"])
         self.profile_combo.setCurrentText("expressive")
-        profile_card = make_card("Engine Profile")
+        profile_card = make_card("Engine Profile", "High-level behavior constraints.\nsafe_default: Cautious, steady.\nexpressive: Emotive, varied.\nchaos_coherence: High variance, creative.")
         profile_card.layout().addWidget(self.profile_combo)
         ops_layout.addWidget(profile_card)
 
         # Safety
         self.safety_btn = QPushButton("Safety: OFF")
-        safety_card = make_card("Safety Layer")
+        safety_card = make_card("Safety Layer", "Toggles the safety filter bias.\nON: The agent prioritizes cautious, non-destructive responses.\nOFF: The agent has complete freedom and accesses all tools.")
         safety_card.layout().addWidget(self.safety_btn)
         ops_layout.addWidget(safety_card)
 
         # Tools
         self.tools_btn = QPushButton("Tools: OFF")
-        tools_card = make_card("Tool Usage")
+        tools_card = make_card("Tool Usage", "Toggles whether the agent can invoke external tools (like running code, shell, or editing files).")
         tools_card.layout().addWidget(self.tools_btn)
         ops_layout.addWidget(tools_card)
 
         # Backoff
         self.backoff_btn = QPushButton("Engine backoff: OFF")
-        backoff_card = make_card("Backoff Logic")
+        backoff_card = make_card("Backoff Logic", "When ON, the engine slows down repeated tool invocations or rapid chat responses to prevent infinite loops.")
         backoff_card.layout().addWidget(self.backoff_btn)
         ops_layout.addWidget(backoff_card)
 
@@ -1662,7 +1996,7 @@ class Main(QMainWindow):
         sup_layout.setSpacing(10)
 
         # Gain
-        gain_card = make_card("Supervisor Gain")
+        gain_card = make_card("Supervisor Gain", "Controls how strongly the Supervisor can influence or override the main agent's outputs. 0 = no influence, 1.0 = strict override.")
         gain_row = QHBoxLayout()
         self.gain_slider = QSlider(Qt.Horizontal)
         self.gain_slider.setRange(0, 100)
@@ -1674,11 +2008,11 @@ class Main(QMainWindow):
         sup_layout.addWidget(gain_card)
 
         # Flags
-        sup_card = make_card("Logic Flags")
+        sup_card = make_card("Logic Flags", "Enabled: The Supervisor actively reviews all outputs.\nGating: The Supervisor can completely block unsafe outputs.\nPostprocess: Applies emotional/tone adjustments after generation.\nEmo Sampling: Uses dynamic temperature/top-p based on the agent's emotional state.")
         self.sup_enabled_check = QCheckBox("Enabled")
-        self.sup_enabled_check.setChecked(getattr(self.engine, "supervisor_enabled", True))
+        self.sup_enabled_check.setChecked(getattr(self.engine, "supervisor_enabled", False))
         self.sup_gating_check = QCheckBox("Gating")
-        self.sup_gating_check.setChecked(getattr(self.engine, "supervisor_gating", True))
+        self.sup_gating_check.setChecked(getattr(self.engine, "supervisor_gating", False))
         self.sup_post_check = QCheckBox("Postprocess")
         self.sup_post_check.setChecked(getattr(self.engine, "supervisor_postprocess", True))
         self.sup_emotion_check = QCheckBox("Emo Sampling")
@@ -1711,7 +2045,7 @@ class Main(QMainWindow):
         mon_layout.addWidget(QLabel("Resource Telemetry"))
 
         # Simplified resource gauges for vertical layout
-        res_card = make_card("VRAM / TPS")
+        res_card = make_card("VRAM / TPS", "Displays system resource usage and Token Per Second processing speed.")
         self.tps_label = QLabel("TPS: 0.0")
         self.vram_label = QLabel("VRAM: 0%")
         res_card.layout().addWidget(self.tps_label)
@@ -1719,7 +2053,7 @@ class Main(QMainWindow):
         mon_layout.addWidget(res_card)
 
         # Logging Control
-        log_card = make_card("Logging")
+        log_card = make_card("Logging", "Full Verbosity turns on detailed engine debug trace logs in the background console.")
         self.verbose_log_check = QCheckBox("Full Verbosity")
         self.verbose_log_check.setChecked(True)
         self.verbose_log_check.toggled.connect(self._toggle_verbose_logging)
@@ -1727,7 +2061,7 @@ class Main(QMainWindow):
         mon_layout.addWidget(log_card)
 
         # Overrides
-        override_card = make_card("State Override")
+        override_card = make_card("State Override", "Force the agent into a specific Behavior State Grid coordinate (Row, Col). 0,0 is calm, higher numbers are more intense/erratic.")
         override_layout = QHBoxLayout()
         self.override_row_spin = QSpinBox()
         self.override_row_spin.setRange(0, 4)
@@ -1775,26 +2109,39 @@ class Main(QMainWindow):
             grid.setColumnStretch(col, 1)
         parent_layout.addLayout(grid)
 
-        def make_card(title: str) -> QFrame:
+        def make_card(title: str, tip_text: str = "") -> QFrame:
             card = QFrame()
             card.setObjectName("PanelInner")
             card_layout = QVBoxLayout(card)
             card_layout.setContentsMargins(10, 10, 10, 10)
             card_layout.setSpacing(6)
-            card_layout.addWidget(QLabel(title))
+            
+            header = QHBoxLayout()
+            header.setContentsMargins(0, 0, 0, 0)
+            header.addWidget(QLabel(title))
+            if tip_text:
+                btn = QPushButton("?")
+                btn.setFixedSize(16, 16)
+                btn.setToolTip("Tips")
+                btn.setCursor(Qt.PointingHandCursor)
+                btn.setStyleSheet("font-weight: bold; border-radius: 8px; background: #555; color: white; padding: 0;")
+                btn.clicked.connect(lambda _, t=title, txt=tip_text: QMessageBox.information(self, f"{t} Help", txt))
+                header.addWidget(btn)
+            header.addStretch()
+            card_layout.addLayout(header)
             return card
 
         self.engine_agent_combo = QComboBox()
         self.engine_agent_combo.addItems(self._agent_options())
         self.engine_agent_combo.setCurrentText(self.engine.current_agent_name)
-        agent_card = make_card("Agent")
+        agent_card = make_card("Agent", "Selects the active persona/profile.")
         agent_card.layout().addWidget(self.engine_agent_combo)
         grid.addWidget(agent_card, 0, 0)
 
         self.engine_memory_combo = QComboBox()
         self.engine_memory_combo.addItems(["AGENT_ONLY", "SHARED_ONLY", "HYBRID"])
         self.engine_memory_combo.setCurrentText("HYBRID")
-        memory_card = make_card("Memory")
+        memory_card = make_card("Memory", "AGENT_ONLY: Uses only context generated by this specific agent.\nSHARED_ONLY: Uses global context.\nHYBRID: Blends global context with agent-specific memories.")
         memory_card.layout().addWidget(self.engine_memory_combo)
         grid.addWidget(memory_card, 0, 1)
 
@@ -1803,7 +2150,7 @@ class Main(QMainWindow):
         self.engine_backend_combo.setCurrentText(
             self._backend_label_for(backends.get_brain_backend_id())
         )
-        backend_card = make_card("Backend")
+        backend_card = make_card("Backend", "Selects the AI inference provider (e.g., local Ollama, OpenRouter, Google Gemini).")
         backend_card.layout().addWidget(self.engine_backend_combo)
         grid.addWidget(backend_card, 0, 2)
 
@@ -1811,34 +2158,36 @@ class Main(QMainWindow):
         self.engine_cognitive_combo.addItems(
             ["balanced", "compression", "expansion", "pattern_tech", "rebinding", "high_fidelity"]
         )
-        self.engine_cognitive_combo.setCurrentText("balanced")
-        cognitive_card = make_card("Cognitive")
+        cog_default = os.getenv("JL_STARTUP_COGNITIVE_MODE", "balanced")
+        self.engine_cognitive_combo.setCurrentText(cog_default)
+        cognitive_card = make_card("Cognitive", "Adjusts the AI's cognitive gear (e.g., balanced, expansion, pattern_tech) to alter how it approaches problem-solving.")
         cognitive_card.layout().addWidget(self.engine_cognitive_combo)
         grid.addWidget(cognitive_card, 0, 3)
 
         self.engine_profile_combo = QComboBox()
         self.engine_profile_combo.addItems(["safe_default", "expressive", "chaos_coherence"])
-        self.engine_profile_combo.setCurrentText("expressive")
-        profile_card = make_card("Profile")
+        prof_default = os.getenv("JL_STARTUP_PROFILE", "expressive")
+        self.engine_profile_combo.setCurrentText(prof_default)
+        profile_card = make_card("Profile", "High-level behavior constraints (safe_default, expressive, chaos_coherence).")
         profile_card.layout().addWidget(self.engine_profile_combo)
         grid.addWidget(profile_card, 0, 4)
 
         self.engine_safety_btn = QPushButton("Safety: OFF")
-        safety_card = make_card("Safety")
+        safety_card = make_card("Safety", "Toggles the safety filter bias.\nON: Cautious.\nOFF: Complete freedom.")
         safety_card.layout().addWidget(self.engine_safety_btn)
         grid.addWidget(safety_card, 1, 0)
 
         self.engine_tools_btn = QPushButton("Tools: OFF")
-        tools_card = make_card("Tools")
+        tools_card = make_card("Tools", "Toggles whether the agent can invoke external tools.")
         tools_card.layout().addWidget(self.engine_tools_btn)
         grid.addWidget(tools_card, 1, 1)
 
         self.engine_backoff_btn = QPushButton("Engine backoff: OFF")
-        backoff_card = make_card("Engine Backoff")
+        backoff_card = make_card("Engine Backoff", "Slows down rapid loops.")
         backoff_card.layout().addWidget(self.engine_backoff_btn)
         grid.addWidget(backoff_card, 1, 2)
 
-        gain_card = make_card("Supervisor Gain")
+        gain_card = make_card("Supervisor Gain", "Controls how strongly the Supervisor can influence or override the main agent's outputs. 0 = no influence, 1.0 = strict override.")
         gain_row = QHBoxLayout()
         self.engine_gain_slider = QSlider(Qt.Horizontal)
         self.engine_gain_slider.setRange(0, 100)
@@ -1849,11 +2198,11 @@ class Main(QMainWindow):
         gain_card.layout().addLayout(gain_row)
         grid.addWidget(gain_card, 1, 3, 1, 2)
 
-        sup_card = make_card("Supervisor Flags")
+        sup_card = make_card("Supervisor Flags", "Enabled: Reviews outputs.\nGating: Can block outputs.\nPostprocess: Emotional adjustments.\nEmo Sampling: Dynamic temperature.")
         self.sup_enabled_check = QCheckBox("Enabled")
-        self.sup_enabled_check.setChecked(getattr(self.engine, "supervisor_enabled", True))
+        self.sup_enabled_check.setChecked(getattr(self.engine, "supervisor_enabled", False))
         self.sup_gating_check = QCheckBox("Gating")
-        self.sup_gating_check.setChecked(getattr(self.engine, "supervisor_gating", True))
+        self.sup_gating_check.setChecked(getattr(self.engine, "supervisor_gating", False))
         self.sup_post_check = QCheckBox("Postprocess")
         self.sup_post_check.setChecked(getattr(self.engine, "supervisor_postprocess", True))
 
@@ -1867,7 +2216,7 @@ class Main(QMainWindow):
         sup_card.layout().addWidget(self.sup_emotion_check)
         grid.addWidget(sup_card, 2, 0)
 
-        override_card = make_card("Behavior Override")
+        override_card = make_card("Behavior Override", "Force the agent into a specific grid coordinate.")
         override_layout = QHBoxLayout()
         self.override_row_spin = QSpinBox()
         self.override_row_spin.setRange(0, 4)
@@ -2537,7 +2886,7 @@ class Main(QMainWindow):
         self.platform_api_ping_btn.clicked.connect(self._ping_platform_api)
         self._ping_platform_api()
 
-        runner_outer, runner_layout = panel("Agent + Tool Runner")
+        runner_outer, runner_layout = panel("Agent + Tool Runner", "A diagnostic dashboard for testing the backend REST APIs. You can execute raw Python code, test API endpoints, or manually force the engine into a specific task loop (Quest) without using the main chat UI.")
         host_layout.addWidget(runner_outer)
 
         runner_agent_row = QHBoxLayout()
@@ -2763,6 +3112,37 @@ class Main(QMainWindow):
 
         self.stt_status_label = QLabel("Ready.")
         stt_layout.addWidget(self.stt_status_label)
+
+        live_row = QHBoxLayout()
+        self.live_audio_enable_check = QCheckBox("Speak engine replies via Gemini Live")
+        self.live_audio_enable_check.setChecked(
+            str(self.service_config.get("gemini_live_enabled") or "").strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
+        self.live_audio_voice_input = QLineEdit()
+        self.live_audio_voice_input.setPlaceholderText(DEFAULT_LIVE_VOICE)
+        self.live_audio_voice_input.setText(
+            str(self.service_config.get("gemini_live_voice") or DEFAULT_LIVE_VOICE)
+        )
+        self.live_audio_model_input = QLineEdit()
+        self.live_audio_model_input.setPlaceholderText(DEFAULT_LIVE_MODEL)
+        self.live_audio_model_input.setText(
+            str(self.service_config.get("gemini_live_model") or DEFAULT_LIVE_MODEL)
+        )
+        self.live_audio_test_btn = QPushButton("Test Voice")
+        live_row.addWidget(self.live_audio_enable_check)
+        live_row.addWidget(QLabel("Voice:"))
+        live_row.addWidget(self.live_audio_voice_input, 1)
+        live_row.addWidget(self.live_audio_test_btn)
+        stt_layout.addLayout(live_row)
+
+        live_model_row = QHBoxLayout()
+        live_model_row.addWidget(QLabel("Live model:"))
+        live_model_row.addWidget(self.live_audio_model_input, 1)
+        stt_layout.addLayout(live_model_row)
+
+        self.live_audio_status_label = QLabel("Live voice idle.")
+        stt_layout.addWidget(self.live_audio_status_label)
         self.stt_log = QTextEdit()
         self.stt_log.setReadOnly(True)
         self.stt_log.setMaximumHeight(120)
@@ -2774,6 +3154,11 @@ class Main(QMainWindow):
         else:
             self.stt_toggle_btn.clicked.connect(self._toggle_stt_listener)
         self.stt_insert_btn.clicked.connect(self._insert_last_stt)
+        self.live_audio_enable_check.toggled.connect(self._save_live_audio_settings)
+        self.live_audio_voice_input.editingFinished.connect(self._save_live_audio_settings)
+        self.live_audio_model_input.editingFinished.connect(self._save_live_audio_settings)
+        self.live_audio_test_btn.clicked.connect(self._test_live_audio_bridge)
+        self._sync_live_audio_bridge()
 
         host_layout.addStretch(1)
 
@@ -2859,6 +3244,100 @@ class Main(QMainWindow):
     def _wire_console_actions(self) -> None:
         self.chat_send_btn.clicked.connect(self._on_send)
         self.chat_input.returnPressed.connect(self._on_send)
+        if hasattr(self, "chat_backend_combo"):
+            self.chat_backend_combo.currentTextChanged.connect(self._on_chat_backend_change)
+        if hasattr(self, "chat_model_combo"):
+            self.chat_model_combo.currentTextChanged.connect(self._on_chat_model_change)
+        if hasattr(self, "chat_model_refresh_btn"):
+            self.chat_model_refresh_btn.clicked.connect(self._refresh_ollama_models)
+        if hasattr(self, "chat_attach_btn"):
+            self.chat_attach_btn.clicked.connect(self._choose_chat_attachment)
+        if hasattr(self, "chat_clear_attach_btn"):
+            self.chat_clear_attach_btn.clicked.connect(self._clear_chat_attachment)
+
+    def _on_chat_backend_change(self, value: str) -> None:
+        self._on_backend_change(value)
+        if value and self._backend_id_from_label(value) == backends.get_brain_backend_id():
+            self._append_chat("SYSTEM", f"Chat backend set to '{value}'.")
+
+    def _on_chat_model_change(self, value: str) -> None:
+        model = str(value or "").strip()
+        if not model:
+            return
+        try:
+            self._apply_ollama_model_selection(model)
+        except Exception as exc:
+            self._append_chat("SYSTEM", f"Failed to set chat model: {exc}")
+            return
+        self._append_chat("SYSTEM", f"Chat model set to '{model}'.")
+
+    def _choose_chat_attachment(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Attach File to Chat",
+            str(REPO_ROOT),
+            "All Files (*);;Text Files (*.txt *.md *.py *.json *.yaml *.yml);;Python Files (*.py)",
+        )
+        if not file_path:
+            return
+        if hasattr(self, "chat_attachment_input"):
+            self.chat_attachment_input.setText(file_path)
+        self._append_chat("SYSTEM", f"Selected attachment: {Path(file_path).name}")
+
+    def _clear_chat_attachment(self) -> None:
+        if hasattr(self, "chat_attachment_input"):
+            self.chat_attachment_input.clear()
+        self._append_chat("SYSTEM", "Cleared attached file.")
+
+    def _all_workers_enabled(self) -> bool:
+        toggle = getattr(self, "chat_all_workers_toggle", None)
+        if toggle is None:
+            return False
+        try:
+            return bool(toggle.isChecked())
+        except Exception:
+            return False
+
+    def _chat_runtime_context(self) -> dict[str, Any]:
+        context: dict[str, Any] = {
+            "channel": "ui_main_chat",
+            "delegated_execution_mode": "execute",
+            "tooling_mode": "forge_first",
+            "external_tool_fallback": True,
+            "auto_approve_actions": True,
+            "auto_approve_note": "Auto-approved by UI chat.",
+            "auto_approve_max": 3,
+        }
+        if self._all_workers_enabled():
+            context["delegation_mode"] = "all"
+            context["delegate_max_workers"] = 6
+        return context
+
+    def _chat_attachment_context(self) -> str:
+        attachment_widget = getattr(self, "chat_attachment_input", None)
+        if attachment_widget is None:
+            return ""
+        path_text = attachment_widget.text().strip()
+        if not path_text:
+            return ""
+        path = Path(path_text)
+        if not path.exists():
+            return f"\n\n[Attached File: {path_text}]\n[ERROR] File not found."
+        if path.is_dir():
+            return f"\n\n[Attached File: {path_text}]\n[ERROR] Directories cannot be attached."
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        except Exception as exc:
+            return f"\n\n[Attached File: {path_text}]\n[ERROR] Could not read file: {exc}"
+        max_chars = 80_000
+        truncated = len(content) > max_chars
+        snippet = content[:max_chars]
+        try:
+            display_path = str(path.relative_to(REPO_ROOT))
+        except Exception:
+            display_path = str(path)
+        suffix = "\n[... truncated ...]" if truncated else ""
+        return f"\n\n[Attached File: {display_path}]\n{snippet}{suffix}"
 
     def _on_tab_changed(self, index: int) -> None:
         """Track the most recently active code tab."""
@@ -2876,20 +3355,20 @@ class Main(QMainWindow):
                 if cursor.hasSelection():
                     return f"\n\n[User Context - Selected Code from {self.console_tabs.tabText(i)}]:\n{cursor.selectedText()}"
 
-        # 2. Second priority: If no selection, check the currently active tab or the last viewed code tab
+        # 2. Second priority: If no selection, only attach the currently active tab
+        # when it is an actual code/file editor. Avoid auto-attaching log tabs like
+        # MAIN_LOG so normal chat stays clean and does not inherit the transcript.
         target_idx = self.console_tabs.currentIndex()
         widget = self.console_tabs.widget(target_idx)
-
-        # If we are on the Chat tab, use the last remembered code tab
+        filename = self.console_tabs.tabText(target_idx) if target_idx != -1 else ""
         if widget == self.chat_log or not isinstance(widget, QTextEdit):
-            target_idx = self.last_code_tab_index
+            return ""
+        if filename in {"CHAT", "MAIN_LOG", "HEALING BENCH"}:
+            return ""
 
-        if target_idx != -1:
-            widget = self.console_tabs.widget(target_idx)
-            if isinstance(widget, QTextEdit) and widget != self.chat_log:
-                content = widget.toPlainText()
-                filename = self.console_tabs.tabText(target_idx)
-                return f"\n\n[User Context - Full Content of {filename}]:\n{content}"
+        content = widget.toPlainText()
+        if content.strip():
+            return f"\n\n[User Context - Full Content of {filename}]:\n{content}"
 
         return ""
 
@@ -3039,14 +3518,35 @@ class Main(QMainWindow):
                 agent_id=self.quest_agent_id,
                 message=prompt,
                 agent=agent_name,
-                context={"channel": "ui_main_chat"},
-                execution_mode="chat",
-                return_trace=False,
+                context=self._chat_runtime_context(),
+                execution_mode="execute",
+                return_trace=True,
             )
-            if quest_result.get("status") != "ok":
-                raise RuntimeError(str(quest_result.get("error") or "quest_runtime_error"))
-            reply = str(quest_result.get("reply") or "")
-            telemetry = quest_result.get("telemetry") or {}
+            status = str(quest_result.get("status") or "").strip().lower()
+            if status == "ok":
+                reply = str(quest_result.get("reply") or "")
+                telemetry = quest_result.get("telemetry") or {}
+            elif status == "confirmation_required":
+                reply = str(
+                    quest_result.get("reply")
+                    or quest_result.get("final")
+                    or "Awaiting confirmation for a pending tool action."
+                )
+                telemetry = quest_result.get("telemetry") or {}
+            elif status == "error":
+                detail = str(quest_result.get("error") or "quest_runtime_error")
+                reply = str(quest_result.get("reply") or quest_result.get("final") or "").strip()
+                error_text = f"Quest runtime error: {detail}"
+                if reply:
+                    error_text = f"{error_text}\n{reply}"
+                raise RuntimeError(error_text)
+            else:
+                detail = str(quest_result.get("error") or "quest_runtime_unexpected_status")
+                reply = str(quest_result.get("reply") or quest_result.get("final") or "").strip()
+                error_text = f"Quest runtime status `{status or 'unknown'}`: {detail}"
+                if reply:
+                    error_text = f"{error_text}\n{reply}"
+                raise RuntimeError(error_text)
             latency_ms = max(0.0, (time.perf_counter() - start) * 1000.0)
             self.response_ready_signal.emit(reply, telemetry, latency_ms)
         except Exception as exc:
@@ -3059,31 +3559,48 @@ class Main(QMainWindow):
             self.crt_overlay.raise_()
 
     def _handle_response_ready(self, reply: str, telemetry: dict, latency_ms: float) -> None:
-        self.last_latency_ms = latency_ms
-        self._append_chat("ENGINE", reply)
-        self.chat_history.append({"role": "assistant", "content": reply})
+        try:
+            self.last_latency_ms = latency_ms
+            self._append_chat("ENGINE", reply)
+            self.chat_history.append({"role": "assistant", "content": reply})
+            self._speak_engine_reply(reply)
 
-        # --- HEALING BENCH PIPE ---
-        code_match = re.search(r"```python(.*?)```", reply, re.DOTALL)
-        if code_match and hasattr(self, "healing_bench_tab"):
-            code = code_match.group(1).strip()
-            self._append_chat(
-                "SYSTEM", "[!] Code detected. Routing to THE HEALING BENCH for audit..."
-            )
-            self.healing_bench_tab.load_code(
-                code,
-                task=self.chat_history[-2]["content"] if len(self.chat_history) > 1 else "External",
-            )
-        # --------------------------
+            # --- HEALING BENCH PIPE ---
+            code_match = re.search(r"```python(.*?)```", reply, re.DOTALL)
+            if code_match and hasattr(self, "healing_bench_tab"):
+                code = code_match.group(1).strip()
+                self._append_chat(
+                    "SYSTEM", "[!] Code detected. Routing to THE HEALING BENCH for audit..."
+                )
+                self.healing_bench_tab.load_code(
+                    code,
+                    task=self.chat_history[-2]["content"] if len(self.chat_history) > 1 else "External",
+                )
+            # --------------------------
 
-        self._apply_telemetry(telemetry or {})
-        self._sync_status_strip()
-        self._set_request_busy(False)
+            self._apply_telemetry(telemetry or {})
+            self._sync_status_strip()
+        except Exception as exc:
+            logger.exception("Failed to render engine response")
+            try:
+                self._append_chat("SYSTEM", f"Response render error: {exc}")
+            except Exception:
+                pass
+        finally:
+            self._set_request_busy(False)
 
     def _handle_response_error(self, message: str) -> None:
-        self._append_chat("SYSTEM", f"Engine error: {message}")
-        self._sync_status_strip()
-        self._set_request_busy(False)
+        try:
+            self._append_chat("SYSTEM", f"Engine error: {message}")
+            self._sync_status_strip()
+        except Exception as exc:
+            logger.exception("Failed to render engine error")
+            try:
+                self._append_chat("SYSTEM", f"Error render failure: {exc}")
+            except Exception:
+                pass
+        finally:
+            self._set_request_busy(False)
 
     def _on_send(self) -> None:
         text = self.chat_input.text().strip()
@@ -3094,25 +3611,37 @@ class Main(QMainWindow):
             return
 
         context = self._get_active_code_context()
+        attachment_context = self._chat_attachment_context()
         if context:
             self._append_chat(
                 "SYSTEM",
                 f"Attached context from {self.console_tabs.tabText(self.console_tabs.currentIndex())}",
             )
+        if attachment_context:
+            attachment_path = self.chat_attachment_input.text().strip() if hasattr(self, "chat_attachment_input") else ""
+            if attachment_path:
+                self._append_chat("SYSTEM", f"Attached file: {Path(attachment_path).name}")
+            else:
+                self._append_chat("SYSTEM", "Attached file content added to prompt.")
 
         user_text = text
         self._append_chat("USER", text)
         self.chat_input.clear()
         self.chat_history.append({"role": "user", "content": user_text})
 
-        full_prompt = user_text + context
+        full_prompt = user_text + context + attachment_context
         agent_name = self.engine.current_agent_name
         self._set_request_busy(True)
-        threading.Thread(
-            target=self._run_generate_response,
-            args=(full_prompt, agent_name),
-            daemon=True,
-        ).start()
+        try:
+            threading.Thread(
+                target=self._run_generate_response,
+                args=(full_prompt, agent_name),
+                daemon=True,
+            ).start()
+        except Exception as exc:
+            self._set_request_busy(False)
+            logger.exception("Failed to start response worker")
+            self._append_chat("SYSTEM", f"Failed to start engine worker: {exc}")
 
     def _on_send_cnc(self) -> None:
         payload = self.cnc_input.text().strip()
@@ -3948,7 +4477,7 @@ class Main(QMainWindow):
             "jl_agent_file": jl_agent_file,
             "default_memory_mode": "HYBRID",
             "default_backend_id": "ollama-local",
-            "drive_type": None,
+            "drive_type": "assistant",
             "classification": _agent_classification_for_relative_path(jl_agent_file),
             "tags": tag_list,
         }
@@ -4245,7 +4774,9 @@ class Main(QMainWindow):
 
     def _refresh_ollama_models(self) -> None:
         if requests is None:
-            self.ollama_log.append("requests not installed; cannot query Ollama.")
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append("requests not installed; cannot query Ollama.")
+            self._load_ollama_model_cache()
             return
         base_url = self._ollama_base_url()
         url = base_url + "/api/tags"
@@ -4259,31 +4790,29 @@ class Main(QMainWindow):
                 if isinstance(m, dict) and m.get("name")
             ]
             models = sorted(set(models))
-            self.ollama_model_combo.clear()
-            self.ollama_model_combo.addItems(models)
-            preferred = str(backends.get_ollama_model() or "").strip()
-            if not preferred and models:
-                preferred = str(models[0]).strip()
-            if not preferred:
-                preferred = (
-                    str(self.service_config.get("ollama_model") or "").strip()
-                    or str(BACKEND_REGISTRY.get("ollama-local", {}).get("modelName") or "").strip()
-                )
-            if preferred:
-                self._set_combo_text(self.ollama_model_combo, preferred)
-            self.ollama_log.append(f"Found {len(models)} models.")
-            self.ollama_status_label.setText(f"Ollama OK @ {base_url} ({len(models)} models)")
+            preferred = self._current_ollama_model()
+            self._populate_model_combo(getattr(self, "ollama_model_combo", None), models, preferred)
+            self._populate_model_combo(getattr(self, "chat_model_combo", None), models, preferred)
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append(f"Found {len(models)} models.")
+            if hasattr(self, "ollama_status_label"):
+                self.ollama_status_label.setText(f"Ollama OK @ {base_url} ({len(models)} models)")
             self._save_ollama_model_cache(models)
         except requests.exceptions.ConnectionError:
             message = f"Ollama not running at {base_url}"
-            self.ollama_status_label.setText(message)
-            self.ollama_log.append(message)
+            if hasattr(self, "ollama_status_label"):
+                self.ollama_status_label.setText(message)
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append(message)
         except requests.exceptions.ConnectTimeout:
             message = f"Ollama not running at {base_url}"
-            self.ollama_status_label.setText(message)
-            self.ollama_log.append(message)
+            if hasattr(self, "ollama_status_label"):
+                self.ollama_status_label.setText(message)
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append(message)
         except Exception as exc:
-            self.ollama_log.append(f"Model refresh failed: {exc}")
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append(f"Model refresh failed: {exc}")
 
     def _save_ollama_model_cache(self, models: List[str]) -> None:
         try:
@@ -4294,19 +4823,25 @@ class Main(QMainWindow):
 
     def _load_ollama_model_cache(self) -> None:
         if not OLLAMA_CACHE_PATH.exists():
-            self.ollama_log.append("No model cache found.")
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append("No model cache found.")
             return
         try:
             models = json.loads(OLLAMA_CACHE_PATH.read_text(encoding="utf-8"))
         except Exception as exc:
-            self.ollama_log.append(f"Failed to load cache: {exc}")
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append(f"Failed to load cache: {exc}")
             return
         if not isinstance(models, list):
-            self.ollama_log.append("Cache is empty.")
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append("Cache is empty.")
             return
-        self.ollama_model_combo.clear()
-        self.ollama_model_combo.addItems([str(m) for m in models])
-        self.ollama_log.append("Loaded model cache.")
+        model_list = [str(m) for m in models if str(m).strip()]
+        preferred = self._current_ollama_model()
+        self._populate_model_combo(getattr(self, "ollama_model_combo", None), model_list, preferred)
+        self._populate_model_combo(getattr(self, "chat_model_combo", None), model_list, preferred)
+        if hasattr(self, "ollama_log"):
+            self.ollama_log.append("Loaded model cache.")
 
     def _pull_ollama_model(self) -> None:
         if requests is None:
@@ -4344,20 +4879,17 @@ class Main(QMainWindow):
     def _apply_ollama_model(self) -> None:
         model = self.ollama_model_combo.currentText().strip()
         if not model:
-            self.ollama_log.append("Select a model before applying.")
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append("Select a model before applying.")
             return
         try:
-            backends.set_ollama_model(model, persist=True)
+            self._apply_ollama_model_selection(model)
         except Exception as exc:
-            self.ollama_log.append(f"Failed to apply model: {exc}")
+            if hasattr(self, "ollama_log"):
+                self.ollama_log.append(f"Failed to apply model: {exc}")
             return
-        self.service_config["ollama_model"] = model
-        save_service_config(self.service_config)
-        os.environ["JL_OLLAMA_MODEL"] = model
-        os.environ["BENCH_OLLAMA_MODEL"] = model
-        if hasattr(self, "bench_model_input"):
-            self.bench_model_input.setText(model)
-        self.ollama_log.append(f"Applied model: {model} (saved)")
+        if hasattr(self, "ollama_log"):
+            self.ollama_log.append(f"Applied model: {model} (saved)")
 
     def _on_biz_docs_drop(self, paths: List[str]) -> None:
         for path in paths:
@@ -4501,7 +5033,7 @@ class Main(QMainWindow):
     def _agent_options(self) -> List[str]:
         names = sorted(self.engine.mpf_profiles.keys()) if self.engine.mpf_profiles else []
         if not names:
-            names = ["Supervisor"]
+            names = [self.preferred_chat_agent]
         return names
 
     def _backend_labels(self) -> List[str]:
@@ -4521,6 +5053,74 @@ class Main(QMainWindow):
             return label.split("(")[-1].rstrip(")")
         return label
 
+    def _current_ollama_model(self) -> str:
+        return (
+            str(backends.get_ollama_model() or "").strip()
+            or str(self.service_config.get("ollama_model") or "").strip()
+            or str(BACKEND_REGISTRY.get("ollama-local", {}).get("modelName") or "").strip()
+            or self.preferred_ollama_model
+        )
+
+    def _chat_model_options(self) -> List[str]:
+        models: List[str] = []
+        for candidate in (
+            self._current_ollama_model(),
+            self.preferred_ollama_model,
+            str(BACKEND_REGISTRY.get("ollama-local", {}).get("modelName") or "").strip(),
+        ):
+            if candidate and candidate not in models:
+                models.append(candidate)
+        if OLLAMA_CACHE_PATH.exists():
+            try:
+                cached = json.loads(OLLAMA_CACHE_PATH.read_text(encoding="utf-8"))
+            except Exception:
+                cached = None
+            if isinstance(cached, list):
+                for item in cached:
+                    model = str(item).strip()
+                    if model and model not in models:
+                        models.append(model)
+        return models
+
+    def _populate_model_combo(self, combo: QComboBox | None, models: List[str], preferred: str | None = None) -> None:
+        if combo is None:
+            return
+        current = str(combo.currentText() or "").strip()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItems(models)
+        chosen = ""
+        preferred = str(preferred or "").strip()
+        if preferred and preferred in models:
+            chosen = preferred
+        elif current and current in models:
+            chosen = current
+        elif preferred:
+            chosen = preferred
+        elif models:
+            chosen = models[0]
+        if chosen:
+            combo.setCurrentText(chosen)
+        combo.blockSignals(False)
+
+    def _apply_ollama_model_selection(self, model: str) -> None:
+        model = str(model or "").strip()
+        if not model:
+            raise ValueError("model_name_required")
+        backends.set_ollama_model(model, persist=True)
+        self.service_config["ollama_model"] = model
+        save_service_config(self.service_config)
+        os.environ["JL_OLLAMA_MODEL"] = model
+        os.environ["BENCH_OLLAMA_MODEL"] = model
+        if hasattr(self, "bench_model_input"):
+            self.bench_model_input.setText(model)
+        model_options = self._chat_model_options()
+        if model not in model_options:
+            model_options.insert(0, model)
+        self._populate_model_combo(getattr(self, "ollama_model_combo", None), model_options, model)
+        self._populate_model_combo(getattr(self, "chat_model_combo", None), model_options, model)
+        self._sync_badges()
+
     def _apply_agent_profile_defaults(self, agent_name: str) -> None:
         profile = (self.engine.mpf_profiles or {}).get(agent_name)
         if not profile:
@@ -4533,6 +5133,8 @@ class Main(QMainWindow):
         backend_id = str(getattr(profile, "default_backend_id", "") or "").strip()
         if backend_id and backend_id in BACKEND_REGISTRY:
             set_brain_backend_id(backend_id)
+            if hasattr(self, "chat_backend_combo"):
+                self._set_combo_text(self.chat_backend_combo, self._backend_label_for(backend_id))
             if hasattr(self, "engine_backend_combo"):
                 self._set_combo_text(self.engine_backend_combo, self._backend_label_for(backend_id))
             if hasattr(self, "services_brain_combo"):
@@ -4587,6 +5189,8 @@ class Main(QMainWindow):
             self._set_combo_text(self.backend_combo, value)
         if hasattr(self, "engine_backend_combo"):
             self._set_combo_text(self.engine_backend_combo, value)
+        if hasattr(self, "chat_backend_combo"):
+            self._set_combo_text(self.chat_backend_combo, value)
         self._sync_badges()
 
     def _on_services_brain_change(self, value: str) -> None:
@@ -5125,6 +5729,7 @@ class Main(QMainWindow):
             BACKEND_REGISTRY["google-gemini"]["gemini_model"] = model or BACKEND_REGISTRY[
                 "google-gemini"
             ].get("gemini_model")
+        self._sync_live_audio_bridge()
         self.ollama_log.append("Gemini configuration saved.")
 
     def _save_openai_credentials(self) -> None:
@@ -5265,7 +5870,7 @@ class Main(QMainWindow):
                     )
                     return
             cmd = [
-                "python",
+                sys.executable,
                 "-m",
                 "uvicorn",
                 "jl_engine_core.api_app:app",
@@ -5301,7 +5906,7 @@ class Main(QMainWindow):
                     )
                     return
             cmd = [
-                "python",
+                sys.executable,
                 "-m",
                 "uvicorn",
                 "jl_platform.services.api.main:app",
@@ -5346,9 +5951,9 @@ class Main(QMainWindow):
         ps = (
             "$conn = Get-NetTCPConnection -LocalAddress '{host}' -LocalPort {port} "
             "-State Listen -ErrorAction SilentlyContinue; "
-            "if (-not $conn) { exit 0 }; "
+            "if (-not $conn) {{ exit 0 }}; "
             "$pid = $conn[0].OwningProcess; "
-            "try { Stop-Process -Id $pid -Force -ErrorAction Stop; exit 0 } catch { exit 1 }"
+            "try {{ Stop-Process -Id $pid -Force -ErrorAction Stop; exit 0 }} catch {{ exit 1 }}"
         ).format(host=host, port=int(port))
         result = subprocess.run(
             ["powershell", "-NoProfile", "-Command", ps],
@@ -5389,7 +5994,7 @@ class Main(QMainWindow):
         cmd = (
             ["cmd", "/k", "call", str(REPO_ROOT / "legacy_launchers" / "start.bat")]
             if platform.system() == "Windows"
-            else ["sh", "-c", "python -m jl_engine_cli.main"]
+            else [sys.executable, "-m", "jl_engine_cli.main"]
         )
         try:
             subprocess.Popen(
@@ -5439,27 +6044,143 @@ class Main(QMainWindow):
         agent = self.engine.current_agent_name or "n/a"
         backend_id = backends.get_brain_backend_id()
         memory = self.memory_combo.currentText() if hasattr(self, "memory_combo") else "HYBRID"
-        self.badge_agent.setText(f"Agent: {agent}")
-        self.badge_backend.setText(f"Backend: {backend_id}")
-        self.badge_memory.setText(f"Memory: {memory}")
+        if self.chat_only_mode:
+            model = self._current_ollama_model()
+            self.badge_agent.setText(f"Persona: {agent}")
+            self.badge_backend.setText(f"Backend: {backend_id}")
+            self.badge_memory.setText(f"Model: {model}")
+        else:
+            self.badge_agent.setText(f"Agent: {agent}")
+            self.badge_backend.setText(f"Backend: {backend_id}")
+            self.badge_memory.setText(f"Memory: {memory}")
         if hasattr(self, "hero_agent_chip"):
             self.hero_agent_chip.setText(self.badge_agent.text())
         if hasattr(self, "hero_backend_chip"):
             self.hero_backend_chip.setText(self.badge_backend.text())
         if hasattr(self, "hero_memory_chip"):
             self.hero_memory_chip.setText(self.badge_memory.text())
-        self.header_status.setText(
-            f"Safety: {'ON' if self.safety_enabled else 'OFF'}   |   "
-            f"Tools: {'ON' if self.tools_enabled else 'OFF'}   |   "
-            f"Latency(ms): {self._format_latency_ms(self.last_latency_ms)}"
-        )
+        if self.chat_only_mode:
+            self.header_status.setText(
+                f"Autonomy: ON   |   Tools: {'READY' if self.tools_enabled else 'OFF'}   |   "
+                f"Latency(ms): {self._format_latency_ms(self.last_latency_ms)}"
+            )
+        else:
+            self.header_status.setText(
+                f"Safety: {'ON' if self.safety_enabled else 'OFF'}   |   "
+                f"Tools: {'ON' if self.tools_enabled else 'OFF'}   |   "
+                f"Latency(ms): {self._format_latency_ms(self.last_latency_ms)}"
+            )
         self._sync_control_widgets()
 
     def _sync_status_strip(self) -> None:
-        self.strip_safety.setText(f"Safety: {'ON' if self.safety_enabled else 'OFF'}")
-        self.strip_tools.setText(f"Tools: {'ON' if self.tools_enabled else 'OFF'}")
+        if self.chat_only_mode:
+            self.strip_safety.setText("Mode: CHAT")
+            self.strip_tools.setText(f"Tools: {'READY' if self.tools_enabled else 'OFF'}")
+        else:
+            self.strip_safety.setText(f"Safety: {'ON' if self.safety_enabled else 'OFF'}")
+            self.strip_tools.setText(f"Tools: {'ON' if self.tools_enabled else 'OFF'}")
         self.strip_latency.setText(f"Latency(ms): {self._format_latency_ms(self.last_latency_ms)}")
         self._sync_badges()
+
+    def _sync_live_audio_bridge(self) -> None:
+        enabled = bool(
+            hasattr(self, "live_audio_enable_check") and self.live_audio_enable_check.isChecked()
+        )
+        api_key = str(
+            self.service_config.get("gemini_api_key")
+            or self.service_config.get("google_api_key")
+            or os.environ.get("GEMINI_API_KEY")
+            or os.environ.get("GOOGLE_API_KEY")
+            or ""
+        ).strip()
+        model = (
+            self.live_audio_model_input.text().strip()
+            if hasattr(self, "live_audio_model_input")
+            else str(self.service_config.get("gemini_live_model") or DEFAULT_LIVE_MODEL)
+        )
+        voice = (
+            self.live_audio_voice_input.text().strip()
+            if hasattr(self, "live_audio_voice_input")
+            else str(self.service_config.get("gemini_live_voice") or DEFAULT_LIVE_VOICE)
+        )
+        self.live_audio_bridge.configure(
+            enabled=enabled,
+            api_key=api_key,
+            model=model,
+            voice=voice,
+        )
+        ok, reason = self.live_audio_bridge.available()
+        if hasattr(self, "live_audio_status_label"):
+            if ok:
+                self.live_audio_status_label.setText(f"Live voice ready: {voice}")
+            elif enabled:
+                self.live_audio_status_label.setText(f"Live voice unavailable: {reason}")
+            else:
+                self.live_audio_status_label.setText("Live voice idle.")
+
+    def _sync_live_voice_toggle(self, checked: bool) -> None:
+        if hasattr(self, "live_audio_enable_check"):
+            if self.live_audio_enable_check.isChecked() != checked:
+                self.live_audio_enable_check.setChecked(checked)
+                self._save_live_audio_settings()
+
+    def _save_live_audio_settings(self) -> None:
+        enabled = bool(
+            hasattr(self, "live_audio_enable_check") and self.live_audio_enable_check.isChecked()
+        )
+        if hasattr(self, "live_voice_toggle") and self.live_voice_toggle.isChecked() != enabled:
+            self.live_voice_toggle.blockSignals(True)
+            self.live_voice_toggle.setChecked(enabled)
+            self.live_voice_toggle.blockSignals(False)
+        self.service_config["gemini_live_enabled"] = bool(enabled)
+        if hasattr(self, "live_audio_voice_input"):
+            voice = self.live_audio_voice_input.text().strip()
+            if voice:
+                self.service_config["gemini_live_voice"] = voice
+            else:
+                self.service_config.pop("gemini_live_voice", None)
+        if hasattr(self, "live_audio_model_input"):
+            model = self.live_audio_model_input.text().strip()
+            if model:
+                self.service_config["gemini_live_model"] = model
+            else:
+                self.service_config.pop("gemini_live_model", None)
+        save_service_config(self.service_config)
+        self._sync_live_audio_bridge()
+
+    def _set_live_audio_status(self, text: str) -> None:
+        if hasattr(self, "live_audio_status_label"):
+            self.live_audio_status_label.setText(str(text or ""))
+        if hasattr(self, "stt_log"):
+            self.stt_log.append(f"[VOICE] {text}")
+
+    def _voice_reply_text(self, reply: str) -> str:
+        text = re.sub(r"```.*?```", " ", str(reply or ""), flags=re.DOTALL)
+        text = re.sub(r"\s+", " ", text).strip()
+        if len(text) > 1500:
+            text = text[:1500].rstrip() + "..."
+        return text
+
+    def _speak_engine_reply(self, reply: str) -> None:
+        if not hasattr(self, "live_audio_enable_check") or not self.live_audio_enable_check.isChecked():
+            return
+        self._sync_live_audio_bridge()
+        voice_text = self._voice_reply_text(reply)
+        if not voice_text:
+            return
+
+        def _worker() -> None:
+            try:
+                self.live_audio_bridge.speak_text(voice_text)
+            except Exception as exc:
+                self.live_audio_status_signal.emit(f"Live voice error: {exc}")
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _test_live_audio_bridge(self) -> None:
+        self._save_live_audio_settings()
+        sample = "JL Engine voice bridge online. This reply is being spoken through Gemini Live."
+        self._speak_engine_reply(sample)
 
     def _toggle_stt_listener(self) -> None:
         if self._stt_listening:
@@ -5568,9 +6289,16 @@ class Main(QMainWindow):
 
 
 def main() -> None:
-    app = QApplication(sys.argv)
-    app.setStyleSheet(QSS)
-    w = Main()
+    argv = list(sys.argv)
+    chat_only_mode: bool | None = None
+    for flag, mode in (("--chat-window", True), ("--full-window", False)):
+        if flag in argv[1:]:
+            argv.remove(flag)
+            chat_only_mode = mode
+
+    app = QApplication(argv)
+    app.setStyleSheet(THEMES.get("PHOSPHOR", QSS_PHOSPHOR))
+    w = Main(chat_only_mode=chat_only_mode)
     w.show()
     sys.exit(app.exec())
 

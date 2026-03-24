@@ -1,0 +1,73 @@
+File: create_persona.py
+Line Count: 0
+Character Count: 0
+Preview:
+
+--------------------
+
+File: drift_pressure.py
+Line Count: 101
+Character Count: 3629
+Preview:
+"""
+===========================
+ JL ENGINE MK-IV — MODULE 3
+  DRIFT PRESSURE SYSTEM
+===========================
+
+PURPOSE:
+The Drift Pressure subsystem monitors how far the assistant’s responses
+are drifting away from the persona’s intended behavior, tone, rhythm,
+and state-field coordinates. It generates a corrective “pressure”
+signal between 0.0 and 1.0 that the middleware uses to self-stabilize
+the persona.
+"""
+from __future__ import annotations
+from dataclasses import dataclass
+from typing im
+--------------------
+
+File: emotional_aperture.py
+Line Count: 211
+Character Count: 8698
+Preview:
+from typing import Optional
+from cognitive_gears import GearType, get_gear_modifiers
+
+class EmotionalAperture:
+    """
+    Implements the Emotional Aperture Module as per the JL-EMO-APERTURE-MKIV spec.
+    This module calculates a single score to determine the engine's expressive mode.
+    """
+
+    def __init__(self, drive_type: GearType = "spur"):
+        self.drive_type: GearType = drive_type
+        self._current_emotion: Optional[str] = None
+        self._focus_level: float = 0.0
+        sel
+--------------------
+
+File: helper_supervisor.py
+Line Count: 200
+Character Count: 7194
+Preview:
+"""
+Helper Supervisory Module (JL ENGINE MK-IV)
+
+Document ID: JL-HLPR-SUPERVISOR-MKIV
+
+This module implements the supervisory logic defined in the JL Engine MK-IV spec.
+It evaluates engine output against safety, coherence, and task alignment signals,
+then generates corrective signals to maintain stability.
+"""
+
+from typing import Dict, Any
+import backends
+
+
+# Static correction map from the spec
+CORRECTIONS_MAP: Dict[str, Dict[str, Any]] = {
+    "CORRECTIVE": {
+        "drift_pressure_delta": +0.
+--------------------
+

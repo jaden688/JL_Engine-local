@@ -18,26 +18,35 @@ if /I "%JL_COMMAND_DECK_TRANSCRIPT%"=="0" (
     set "LAUNCHER_LOGS=1"
 )
 
+if /I "%JL_PLATFORM_ALLOW_NETWORK%"=="0" (
+    set "LAUNCHER_NETWORK=0"
+) else (
+    set "LAUNCHER_NETWORK=1"
+)
+
 call :sync_env
 
 :menu
 echo.
 echo [JL Engine Launcher]
-echo   Unsafe tools: %LAUNCHER_UNSAFE_LABEL%
-echo   Deck logs:    %LAUNCHER_LOGS_LABEL%
+echo   Unsafe tools:   %LAUNCHER_UNSAFE_LABEL%
+echo   Deck logs:      %LAUNCHER_LOGS_LABEL%
+echo   Network Access: %LAUNCHER_NETWORK_LABEL%
 echo.
 echo   U^) Toggle unsafe tools
 echo   L^) Toggle command-deck logs
+echo   N^) Toggle network access
 echo   1^) Install dependencies and run the command deck
 echo   2^) Run the command deck
 echo   3^) Start the CLI
 echo   4^) Open the PySide6 desktop UI
 echo   Q^) Exit
 set "CHOICE="
-set /p CHOICE=Select an option (U/L/1-4, Q to quit):
+set /p CHOICE=Select an option (U/L/N/1-4, Q to quit):
 if errorlevel 1 goto end
 if /I "%CHOICE%"=="U" goto toggle_unsafe
 if /I "%CHOICE%"=="L" goto toggle_logs
+if /I "%CHOICE%"=="N" goto toggle_network
 if /I "%CHOICE%"=="1" goto install
 if /I "%CHOICE%"=="2" goto deck
 if /I "%CHOICE%"=="3" goto cli
@@ -63,6 +72,15 @@ if "%LAUNCHER_LOGS%"=="1" (
 call :sync_env
 goto menu
 
+:toggle_network
+if "%LAUNCHER_NETWORK%"=="1" (
+    set "LAUNCHER_NETWORK=0"
+) else (
+    set "LAUNCHER_NETWORK=1"
+)
+call :sync_env
+goto menu
+
 :sync_env
 if "%LAUNCHER_UNSAFE%"=="1" (
     set "JL_LOCAL_UNSAFE_TOOLS=1"
@@ -77,6 +95,13 @@ if "%LAUNCHER_LOGS%"=="1" (
 ) else (
     set "JL_COMMAND_DECK_TRANSCRIPT=0"
     set "LAUNCHER_LOGS_LABEL=OFF"
+)
+if "%LAUNCHER_NETWORK%"=="1" (
+    set "JL_PLATFORM_ALLOW_NETWORK=1"
+    set "LAUNCHER_NETWORK_LABEL=ON"
+) else (
+    set "JL_PLATFORM_ALLOW_NETWORK=0"
+    set "LAUNCHER_NETWORK_LABEL=OFF"
 )
 exit /b 0
 

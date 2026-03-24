@@ -1288,14 +1288,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         InterpreterSession, PrivilegedMemoryForge = _load_platform()
 
     memory_forge = None if args.no_forge else PrivilegedMemoryForge()
+    allow_unsafe = bool(args.unsafe_tools) if args.unsafe_tools else default_allow_unsafe_tools()
     session = InterpreterSession(
         engine=engine,
         max_steps=max(1, int(args.max_steps)),
         memory_forge=memory_forge,
-        allow_unsafe_tools=bool(args.unsafe_tools),
-        allow_direct_action_fallback=bool(args.unsafe_tools),
+        allow_unsafe_tools=allow_unsafe,
+        allow_direct_action_fallback=allow_unsafe,
     )
-    if not args.unsafe_tools:
+    if not allow_unsafe:
         print("Unsafe tools are disabled. Re-run with --unsafe-tools to enable shell/fs/subprocess.\n")
     return _repl(
         session,

@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from queue import Queue
 from time import time
-from typing import Any, Dict, List, Optional
+from threading import Thread
+from typing import Any, Callable, Dict, Iterable, List, Optional
 from uuid import uuid4
 
 from jl_engine_core.engine_core import JLEngineCore
@@ -32,18 +35,15 @@ Rules:
 - Casual conversation, greetings, introductions, self-description, and "what system is this" questions should be answered directly with `{{"final": ...}}`.
 - Do not inspect the local machine or run commands just to answer conversational questions. Only do local inspection when the user explicitly asks you to check, inspect, list, read, or execute something on this machine.
 - If the user asks for a real-world action (files/folders/commands), call a tool before final.
-- Prefer built-in tools first (`run_cc_command`, `run_shell`, `bridge_local`).
-- Forge a RAM tool only when built-ins cannot complete the task.
+- When the user asks for multiple local actions, keep going until the whole request is completed. Do not stop after the first successful tool call if more requested work remains.
+- You have an incredibly powerful dynamic environment. Prefer writing custom Python solutions using `py_exec_stream` or forging temporary tools via `forge_create` to solve complex or custom tasks.
+- You are not restricted to static tools. Write code to solve the user's problem.
 - Never claim an action succeeded unless a tool result confirms it.
 - Answer directly when no tool is needed.
 - Read-only actions may run immediately; state-changing actions may require confirmation before execution.
-- The host is Windows. Prefer PowerShell-friendly commands such as `Get-ChildItem`, `dir`, `Get-Content`, and `Set-Content` instead of Unix-only commands like `ls -l`.
+- The host is Windows.
 - Valid `bridge_local` modes are exactly `subprocess`, `fs_read`, `fs_write`, `fs_mkdir`, `fs_list`, `http`, `browser_inspect`, `browser_action`, and `ui`.
-- Never invent bridge modes like `ui_access`, `ui_info`, `browser_info`, or other aliases in tool calls.
-- For folder creation, use `bridge_local` with `mode: "fs_mkdir"` and a full target path.
-- For browser inspection, use `bridge_local` with `mode: "browser_inspect"`.
 - For browser actions, use `bridge_local` with `mode: "browser_action"` and `data.action` set to one of `open`, `navigate`, `goto`, `click`, `focus`, `type`, `fill`, or `submit`.
-- For browser targets, prefer `selector`, then `id`, then `role` plus `name`.
 
 Available tools:
 {tools}
@@ -101,6 +101,20 @@ class InterpreterSession:
         self.allow_direct_action_fallback = allow_direct_action_fallback
         self._pending_action: PendingAction | None = None
 
+    def _emit_stream_event(
+        self,
+        event_sink: Callable[[Dict[str, Any]], None] | None,
+        event_type: str,
+        **payload: Any,
+    ) -> None:
+        if event_sink is None:
+            return
+        event = {"type": event_type, **payload}
+        try:
+            event_sink(event)
+        except Exception:
+            pass
+
     def _build_conversational_fallback_prompt(self, user_message: str) -> str:
         return (
             "The user is having a normal conversation with you, not asking for a local action.\n"
@@ -126,6 +140,7 @@ class InterpreterSession:
         run_context: Dict[str, Any],
         tool_trace: List[Dict[str, Any]],
         telemetry: Dict[str, Any] | None = None,
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> Dict[str, Any]:
         fallback_context = dict(run_context)
         fallback_context["memory_user_message"] = request_text
@@ -155,16 +170,25 @@ class InterpreterSession:
             reply_text = self._conversational_local_scope_hint()
 
         self.history.append({"role": "assistant", "final": reply_text})
-        return {
+        result = {
             "status": "ok",
             "final": reply_text,
             "reply": reply_text,
             "tool_trace": list(tool_trace),
             "telemetry": fallback_telemetry or telemetry or {},
         }
+        self._emit_stream_event(
+            event_sink,
+            "turn_result",
+            result=dict(result),
+            status=str(result.get("status") or "ok"),
+            final=reply_text,
+            reply=reply_text,
+        )
+        return result
 
     def _looks_like_action_request(self, user_message: str) -> bool:
-        text = str(user_message or "")
+        text = self._action_detection_text(user_message)
         if not text.strip():
             return False
         low = text.lower()
@@ -195,8 +219,25 @@ class InterpreterSession:
         )
         return any(t in low for t in action_terms) and any(t in low for t in scope_terms)
 
+    def _action_detection_text(self, user_message: str) -> str:
+        text = str(user_message or "").strip()
+        if not text:
+            return ""
+        normalized = text.replace("\r\n", "\n")
+        last_user = None
+        for match in re.finditer(r"(?i)\buser\s*:\s*", normalized):
+            last_user = match
+        if last_user is None:
+            return normalized
+        segment = normalized[last_user.end() :]
+        cutoff = re.search(r"(?i)\b(?:engine|assistant|system)\s*:\s*", segment)
+        if cutoff:
+            segment = segment[: cutoff.start()]
+        focused = segment.strip()
+        return focused or normalized
+
     def _looks_like_explicit_local_action_request(self, user_message: str) -> bool:
-        text = str(user_message or "")
+        text = self._action_detection_text(user_message)
         if not text.strip():
             return False
         low = text.lower()
@@ -380,37 +421,9 @@ class InterpreterSession:
             candidates: list[Path] = []
             env = os.environ
             user_profile = env.get("USERPROFILE")
-            one_drive = env.get("OneDrive")
-            one_drive_consumer = env.get("OneDriveConsumer")
-            one_drive_commercial = env.get("OneDriveCommercial")
-            prefer_onedrive = str(env.get("JL_PREFER_ONEDRIVE_USER_FOLDERS", "0")).strip().lower() in {
-                "1",
-                "true",
-                "yes",
-                "on",
-            }
 
-            if prefer_onedrive:
-                if one_drive:
-                    candidates.append(Path(one_drive) / folder_name)
-                if one_drive_consumer:
-                    candidates.append(Path(one_drive_consumer) / folder_name)
-                if one_drive_commercial:
-                    candidates.append(Path(one_drive_commercial) / folder_name)
-                if user_profile:
-                    candidates.append(Path(user_profile) / "OneDrive" / folder_name)
-                    candidates.append(Path(user_profile) / folder_name)
-            else:
-                if user_profile:
-                    candidates.append(Path(user_profile) / folder_name)
-                if user_profile:
-                    candidates.append(Path(user_profile) / "OneDrive" / folder_name)
-                if one_drive:
-                    candidates.append(Path(one_drive) / folder_name)
-                if one_drive_consumer:
-                    candidates.append(Path(one_drive_consumer) / folder_name)
-                if one_drive_commercial:
-                    candidates.append(Path(one_drive_commercial) / folder_name)
+            if user_profile:
+                candidates.append(Path(user_profile) / folder_name)
             candidates.append(Path.home() / folder_name)
 
             for candidate in candidates:
@@ -427,7 +440,8 @@ class InterpreterSession:
             return _windows_user_folder("Documents")
         if "downloads" in low_text:
             return _windows_user_folder("Downloads")
-        return Path.cwd()
+        # Keep unspecified fallback writes out of the repo root.
+        return Path.cwd() / "artifacts" / "fs_write_fallbacks"
 
     def _align_desktop_like_path(self, raw_path: str, request_text: str = "") -> str:
         path_text = str(raw_path or "").strip()
@@ -771,6 +785,29 @@ class InterpreterSession:
         # Long echoed histories can recursively amplify repetitive phrasing.
         return f"{preamble}\nUSER:\n{user_message}"
 
+    def _build_step_input(
+        self,
+        *,
+        current_input: str,
+        initial_request: str,
+        tool_trace: List[Dict[str, Any]],
+    ) -> str:
+        if not tool_trace:
+            return current_input
+        completed_tools = ", ".join(
+            str(item.get("tool") or "?")
+            for item in tool_trace
+            if isinstance(item, dict) and str(item.get("tool") or "").strip()
+        )
+        return (
+            "Continue the same local task until it is fully completed.\n\n"
+            f"ORIGINAL_REQUEST:\n{initial_request}\n\n"
+            f"LATEST_STEP_CONTEXT:\n{current_input}\n\n"
+            f"TOOLS_ALREADY_USED:\n{completed_tools or 'none'}\n\n"
+            "If more local actions are still needed, return the next tool call JSON.\n"
+            "Return `{\"final\": ...}` only when the full original request is done."
+        )
+
     def _parse_json(self, text: str) -> Dict[str, Any]:
         text = text.strip()
         if not text:
@@ -787,11 +824,58 @@ class InterpreterSession:
                     pass
         return {"error": "invalid_json", "raw": text}
 
-    def _call_tool(self, name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _call_tool(
+        self,
+        name: str,
+        payload: Dict[str, Any],
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
+    ) -> Dict[str, Any]:
         """Prioritizes in-memory tools, falling back to the registry."""
         if self.memory_forge and name in self.memory_forge._tools:
-            return self.memory_forge.run_tool(name, payload)
-        return self.registry.call(name, payload)
+            run_tool = self.memory_forge.run_tool
+            try:
+                signature = inspect.signature(run_tool)
+                supports_event_sink = "event_sink" in signature.parameters or any(
+                    parameter.kind == inspect.Parameter.VAR_KEYWORD
+                    for parameter in signature.parameters.values()
+                )
+            except (TypeError, ValueError):
+                supports_event_sink = False
+            if supports_event_sink:
+                return run_tool(name, payload, event_sink=event_sink)
+            return run_tool(name, payload)
+
+        call = self.registry.call
+        try:
+            signature = inspect.signature(call)
+            supports_event_sink = "event_sink" in signature.parameters or any(
+                parameter.kind == inspect.Parameter.VAR_KEYWORD
+                for parameter in signature.parameters.values()
+            )
+        except (TypeError, ValueError):
+            supports_event_sink = False
+        if supports_event_sink:
+            return call(name, payload, event_sink=event_sink)
+        return call(name, payload)
+
+    def _call_tool_with_optional_event_sink(
+        self,
+        name: str,
+        payload: Dict[str, Any],
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
+    ) -> Dict[str, Any]:
+        call_tool = self._call_tool
+        try:
+            signature = inspect.signature(call_tool)
+            supports_event_sink = "event_sink" in signature.parameters or any(
+                parameter.kind == inspect.Parameter.VAR_KEYWORD
+                for parameter in signature.parameters.values()
+            )
+        except (TypeError, ValueError):
+            supports_event_sink = False
+        if supports_event_sink:
+            return call_tool(name, payload, event_sink=event_sink)
+        return call_tool(name, payload)
 
     def _unwrap_nested_final_text(self, text: str) -> str:
         raw = str(text or "").strip()
@@ -1172,6 +1256,42 @@ class InterpreterSession:
             }
 
         if lowered == "run_cc_command":
+            action = str(safe_payload.get("action") or "run").strip().lower()
+            if action == "search_files":
+                query = str(safe_payload.get("query") or "").strip() or "file search"
+                return {
+                    "summary": f"search workspace files for `{query}`",
+                    "requires_confirmation": False,
+                    "risk_level": "low",
+                }
+            if action == "fs_list":
+                root = str(safe_payload.get("root") or safe_payload.get("path") or ".").strip() or "."
+                return {
+                    "summary": f"list files under `{root}`",
+                    "requires_confirmation": False,
+                    "risk_level": "low",
+                }
+            if action == "fs_read":
+                path = str(safe_payload.get("path") or "").strip() or "target file"
+                return {
+                    "summary": f"read `{path}` through command commissioner",
+                    "requires_confirmation": False,
+                    "risk_level": "low",
+                }
+            if action == "fs_write":
+                path = str(safe_payload.get("path") or "").strip() or "target file"
+                return {
+                    "summary": f"write `{path}` through command commissioner",
+                    "requires_confirmation": True,
+                    "risk_level": "high",
+                }
+            if action == "fs_mkdir":
+                path = str(safe_payload.get("path") or "").strip() or "target folder"
+                return {
+                    "summary": f"create folder `{path}` through command commissioner",
+                    "requires_confirmation": True,
+                    "risk_level": "high",
+                }
             command = safe_payload.get("command")
             if isinstance(command, list):
                 command_text = " ".join(str(part) for part in command[:6])
@@ -1183,7 +1303,7 @@ class InterpreterSession:
                 command_text = str(safe_payload.get("query") or command_text).strip() or "file search"
             return {
                 "summary": f"run command commissioner task `{command_text}`",
-                "requires_confirmation": False,
+                "requires_confirmation": True,
                 "risk_level": "high",
             }
 
@@ -1254,14 +1374,31 @@ class InterpreterSession:
         tool_trace: List[Dict[str, Any]],
         steps_remaining: int,
         initial_request: str | None = None,
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> Dict[str, Any]:
         request_text = str(initial_request or next_input or "")
-        action_request = self._looks_like_action_request(request_text)
-        explicit_local_action = self._looks_like_explicit_local_action_request(request_text)
+        action_request_text = self._action_detection_text(request_text)
+        action_request = self._looks_like_action_request(action_request_text)
+        explicit_local_action = self._looks_like_explicit_local_action_request(action_request_text)
         remaining = max(0, int(steps_remaining))
 
+        self._emit_stream_event(
+            event_sink,
+            "turn_started",
+            request=request_text,
+            steps_remaining=remaining,
+            action_request=action_request,
+            explicit_local_action=explicit_local_action,
+        )
+
         for step_idx in range(remaining):
-            prompt = self._build_prompt(next_input)
+            prompt = self._build_prompt(
+                self._build_step_input(
+                    current_input=next_input,
+                    initial_request=request_text,
+                    tool_trace=tool_trace,
+                )
+            )
             turn_context = dict(run_context)
             turn_context.setdefault("memory_user_message", next_input)
             suppress_memory_write = bool(
@@ -1273,8 +1410,22 @@ class InterpreterSession:
             turn_context["suppress_memory_write"] = suppress_memory_write
             if turn_context.get("synthetic_turn"):
                 turn_context.setdefault("suppress_feedback_log", True)
+            self._emit_stream_event(
+                event_sink,
+                "model_request_started",
+                step=step_idx + 1,
+                steps_remaining=max(0, remaining - step_idx),
+                request=request_text,
+            )
             reply, telemetry, _feedback = self.engine.generate_response(
                 user_message=prompt, context=turn_context
+            )
+            self._emit_stream_event(
+                event_sink,
+                "model_response",
+                step=step_idx + 1,
+                raw_reply=reply,
+                telemetry=telemetry,
             )
             data = self._parse_json(reply)
             if "final" in data:
@@ -1284,18 +1435,18 @@ class InterpreterSession:
                     request_text,
                 )
                 if action_request and not tool_trace and self.allow_direct_action_fallback:
-                    fallback = self._fallback_execute_action(request_text)
+                    fallback = self._fallback_execute_action(action_request_text)
                     if fallback.get("status") == "ok":
                         tool_trace.append(
                             {
                                 "tool": "direct_action_fallback",
-                                "input": {"request": request_text},
+                                "input": {"request": action_request_text},
                                 "result": fallback,
                             }
                         )
                         final_text = str(fallback.get("message") or final_text)
                     else:
-                        return {
+                        result = {
                             "status": "error",
                             "error": "action_request_not_executed",
                             "final": (
@@ -1305,13 +1456,53 @@ class InterpreterSession:
                             "tool_trace": tool_trace,
                             "telemetry": telemetry,
                         }
+                        self._emit_stream_event(
+                            event_sink,
+                            "turn_result",
+                            result=dict(result),
+                            status="error",
+                            final=str(result.get("final") or ""),
+                            reply=str(result.get("final") or ""),
+                            tool_trace=list(tool_trace),
+                        )
+                        return result
+                if action_request and not tool_trace and not self.allow_direct_action_fallback:
+                    result = {
+                        "status": "error",
+                        "error": "action_request_not_executed_no_fallback",
+                        "final": (
+                            "Action request detected, but no tool was executed and direct-action fallback is disabled."
+                        ),
+                        "tool_trace": tool_trace,
+                        "telemetry": telemetry,
+                    }
+                    self._emit_stream_event(
+                        event_sink,
+                        "turn_result",
+                        result=dict(result),
+                        status="error",
+                        final=str(result.get("final") or ""),
+                        reply=str(result.get("final") or ""),
+                        tool_trace=list(tool_trace),
+                    )
+                    return result
                 self.history.append({"role": "assistant", "final": final_text})
-                return {
+                result = {
                     "status": "ok",
                     "final": final_text,
                     "tool_trace": tool_trace,
                     "telemetry": telemetry,
                 }
+                self._emit_stream_event(
+                    event_sink,
+                    "turn_result",
+                    result=dict(result),
+                    status="ok",
+                    final=final_text,
+                    reply=final_text,
+                    tool_trace=list(tool_trace),
+                )
+                return result
             tool_name = data.get("tool")
             tool_input = data.get("input", {})
             if tool_name:
@@ -1329,13 +1520,6 @@ class InterpreterSession:
                     tool_name, normalized_input = tool_override
                 policy = self._summarize_tool_action(str(tool_name), normalized_input)
                 if bool(policy.get("requires_confirmation")):
-                    if not explicit_local_action:
-                        return self._fallback_to_direct_chat(
-                            request_text=request_text,
-                            run_context=run_context,
-                            tool_trace=tool_trace,
-                            telemetry=telemetry,
-                        )
                     pending = PendingAction(
                         id=uuid4().hex,
                         tool=str(tool_name),
@@ -1348,32 +1532,120 @@ class InterpreterSession:
                         steps_remaining=max(1, remaining - step_idx - 1),
                     )
                     self._pending_action = pending
-                    return self._make_confirmation_result(pending, telemetry=telemetry)
-                result = self._call_tool(tool_name, normalized_input)
+                    confirmation = self._make_confirmation_result(pending, telemetry=telemetry)
+                    self._emit_stream_event(
+                        event_sink,
+                        "confirmation_required",
+                        pending_action=pending.snapshot(),
+                        result=dict(confirmation),
+                    )
+                    self._emit_stream_event(
+                        event_sink,
+                        "turn_result",
+                        result=dict(confirmation),
+                        status="confirmation_required",
+                        final=str(confirmation.get("final") or confirmation.get("reply") or ""),
+                        reply=str(confirmation.get("reply") or confirmation.get("final") or ""),
+                        pending_action=pending.snapshot(),
+                    )
+                    return confirmation
+                self._emit_stream_event(
+                    event_sink,
+                    "tool_call_started",
+                    tool=str(tool_name),
+                    input=normalized_input,
+                    summary=str(policy.get("summary") or ""),
+                    risk_level=str(policy.get("risk_level") or "medium"),
+                )
+                result = self._call_tool_with_optional_event_sink(
+                    tool_name,
+                    normalized_input,
+                    event_sink=event_sink,
+                )
+                self._emit_stream_event(
+                    event_sink,
+                    "tool_call_finished",
+                    tool=str(tool_name),
+                    input=normalized_input,
+                    result=result,
+                )
                 tool_trace.append({"tool": tool_name, "input": normalized_input, "result": result})
                 self.history.append({"role": "tool", "tool": tool_name, "result": result})
                 next_input = f"TOOL_RESULT for {tool_name}:\n{json.dumps(result, indent=2)}"
                 continue
             # If no tool/final and this looks like an action request, force local fallback execution.
+            if action_request and not tool_trace and not self.allow_direct_action_fallback:
+                result = {
+                    "status": "error",
+                    "error": "action_request_not_executed_no_fallback",
+                    "final": (
+                        "Action request detected, but model output was not actionable and direct-action fallback is disabled."
+                    ),
+                    "raw_reply": reply,
+                    "tool_trace": tool_trace,
+                    "telemetry": telemetry,
+                }
+                self._emit_stream_event(
+                    event_sink,
+                    "turn_result",
+                    result=dict(result),
+                    status="error",
+                    final=str(result.get("final") or ""),
+                    reply=str(result.get("final") or ""),
+                    tool_trace=list(tool_trace),
+                )
+                return result
             if action_request and not tool_trace and self.allow_direct_action_fallback:
-                fallback = self._fallback_execute_action(request_text)
+                self._emit_stream_event(
+                    event_sink,
+                    "tool_call_started",
+                    tool="direct_action_fallback",
+                    input={"request": action_request_text},
+                    summary="execute local fallback action",
+                    risk_level="medium",
+                )
+                fallback = self._fallback_execute_action(action_request_text)
                 if fallback.get("status") == "ok":
                     tool_trace.append(
                         {
                             "tool": "direct_action_fallback",
-                            "input": {"request": request_text},
+                            "input": {"request": action_request_text},
                             "result": fallback,
                         }
                     )
                     final_text = str(fallback.get("message") or "Action executed via fallback.")
                     self.history.append({"role": "assistant", "final": final_text})
-                    return {
+                    result = {
                         "status": "ok",
                         "final": final_text,
                         "tool_trace": tool_trace,
                         "telemetry": telemetry,
                     }
-                return {
+                    self._emit_stream_event(
+                        event_sink,
+                        "tool_call_finished",
+                        tool="direct_action_fallback",
+                        input={"request": action_request_text},
+                        result=fallback,
+                    )
+                    self._emit_stream_event(
+                        event_sink,
+                        "turn_result",
+                        result=dict(result),
+                        status="ok",
+                        final=final_text,
+                        reply=final_text,
+                        tool_trace=list(tool_trace),
+                    )
+                    return result
+                self._emit_stream_event(
+                    event_sink,
+                    "tool_call_finished",
+                    tool="direct_action_fallback",
+                    input={"request": request_text},
+                    result=fallback,
+                )
+                result = {
                     "status": "error",
                     "error": "action_request_not_executed",
                     "final": (
@@ -1384,33 +1656,129 @@ class InterpreterSession:
                     "tool_trace": tool_trace,
                     "telemetry": telemetry,
                 }
+                self._emit_stream_event(
+                    event_sink,
+                    "turn_result",
+                    result=dict(result),
+                    status="error",
+                    final=str(result.get("final") or ""),
+                    reply=str(result.get("final") or ""),
+                    tool_trace=list(tool_trace),
+                )
+                return result
             # If no tool/final, return raw for non-action chat.
-            return {
+            result = {
                 "status": "ok",
                 "final": reply,
                 "tool_trace": tool_trace,
                 "telemetry": telemetry,
             }
+            self._emit_stream_event(
+                event_sink,
+                "turn_result",
+                result=dict(result),
+                status="ok",
+                final=reply,
+                reply=reply,
+                tool_trace=list(tool_trace),
+            )
+            return result
 
-        return {
+        result = {
             "status": "error",
             "error": "max_steps_exceeded",
             "tool_trace": tool_trace,
         }
+        self._emit_stream_event(event_sink, "error", result=dict(result), error="max_steps_exceeded")
+        self._emit_stream_event(
+            event_sink,
+            "turn_result",
+            result=dict(result),
+            status="error",
+            tool_trace=list(tool_trace),
+        )
+        return result
 
-    def run(self, user_message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def run(
+        self,
+        user_message: str,
+        context: Optional[Dict[str, Any]] = None,
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
+    ) -> Dict[str, Any]:
+        self._emit_stream_event(
+            event_sink,
+            "run_started",
+            message=user_message,
+            agent=str(getattr(self.engine, "current_agent_name", "") or ""),
+        )
         if self._pending_action is not None:
-            return self._make_confirmation_result(self._pending_action, reminder=True)
+            result = self._make_confirmation_result(self._pending_action, reminder=True)
+            self._emit_stream_event(
+                event_sink,
+                "confirmation_required",
+                pending_action=self._pending_action.snapshot(),
+                result=dict(result),
+            )
+            self._emit_stream_event(
+                event_sink,
+                "turn_result",
+                result=dict(result),
+                status="confirmation_required",
+                final=str(result.get("final") or result.get("reply") or ""),
+                reply=str(result.get("reply") or result.get("final") or ""),
+                pending_action=self._pending_action.snapshot(),
+            )
+            self._emit_stream_event(
+                event_sink,
+                "run_finished",
+                status=str(result.get("status") or ""),
+                final=str(result.get("final") or result.get("reply") or ""),
+            )
+            return result
 
         run_context = dict(context or {})
         run_context.setdefault("interpreter_mode", True)
-        return self._continue_run(
+        result = self._continue_run(
             next_input=user_message,
             run_context=run_context,
             tool_trace=[],
             steps_remaining=self.max_steps,
             initial_request=user_message,
+            event_sink=event_sink,
         )
+        self._emit_stream_event(
+            event_sink,
+            "run_finished",
+            status=str(result.get("status") or ""),
+            final=str(result.get("final") or result.get("reply") or ""),
+        )
+        return result
+
+    def stream_run(
+        self,
+        user_message: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Iterable[Dict[str, Any]]:
+        queue: Queue[Dict[str, Any] | object] = Queue()
+        sentinel = object()
+
+        def _sink(event: Dict[str, Any]) -> None:
+            queue.put(dict(event) if isinstance(event, dict) else {"type": "event", "payload": event})
+
+        def _worker() -> None:
+            try:
+                self.run(user_message, context=context, event_sink=_sink)
+            except Exception as exc:
+                queue.put({"type": "error", "error": str(exc)})
+            finally:
+                queue.put(sentinel)
+
+        Thread(target=_worker, daemon=True).start()
+        while True:
+            item = queue.get()
+            if item is sentinel:
+                break
+            yield item
 
     def confirm_pending_action(
         self,
@@ -1418,12 +1786,25 @@ class InterpreterSession:
         *,
         approved: bool,
         note: str = "",
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> Dict[str, Any]:
         pending = self._pending_action
         if pending is None:
-            return {"status": "error", "error": "no_pending_action"}
+            result = {"status": "error", "error": "no_pending_action"}
+            self._emit_stream_event(event_sink, "error", result=dict(result), error="no_pending_action")
+            self._emit_stream_event(event_sink, "turn_result", result=dict(result), status="error")
+            return result
         if str(pending_action_id or "").strip() != pending.id:
-            return {"status": "error", "error": "pending_action_mismatch", "pending_action": pending.snapshot()}
+            result = {"status": "error", "error": "pending_action_mismatch", "pending_action": pending.snapshot()}
+            self._emit_stream_event(
+                event_sink,
+                "error",
+                result=dict(result),
+                error="pending_action_mismatch",
+                pending_action=pending.snapshot(),
+            )
+            self._emit_stream_event(event_sink, "turn_result", result=dict(result), status="error")
+            return result
 
         self._pending_action = None
         note_text = str(note or "").strip()
@@ -1432,18 +1813,47 @@ class InterpreterSession:
             if note_text:
                 reply = f"{reply} Note: {note_text}"
             self.history.append({"role": "assistant", "final": reply})
-            return {
+            result = {
                 "status": "ok",
                 "final": reply,
                 "reply": reply,
                 "tool_trace": list(pending.tool_trace),
                 "cancelled": True,
             }
+            self._emit_stream_event(
+                event_sink,
+                "turn_result",
+                result=dict(result),
+                status="ok",
+                final=reply,
+                reply=reply,
+                cancelled=True,
+            )
+            return result
 
         run_context = dict(pending.run_context)
         if note_text:
             run_context["approval_note"] = note_text
-        result = self._call_tool(pending.tool, pending.input)
+        self._emit_stream_event(
+            event_sink,
+            "tool_call_started",
+            tool=pending.tool,
+            input=pending.input,
+            summary=pending.summary,
+            risk_level=pending.risk_level,
+        )
+        result = self._call_tool_with_optional_event_sink(
+            pending.tool,
+            pending.input,
+            event_sink=event_sink,
+        )
+        self._emit_stream_event(
+            event_sink,
+            "tool_call_finished",
+            tool=pending.tool,
+            input=pending.input,
+            result=result,
+        )
         tool_trace = list(pending.tool_trace)
         tool_trace.append({"tool": pending.tool, "input": pending.input, "result": result})
         self.history.append({"role": "tool", "tool": pending.tool, "result": result})
@@ -1451,11 +1861,30 @@ class InterpreterSession:
             f"ORIGINAL USER REQUEST:\n{pending.original_request}\n\n"
             f"TOOL_RESULT for {pending.tool}:\n{json.dumps(result, indent=2)}"
         )
+        resume_sink = event_sink
+        if event_sink is not None:
+            def _resume_sink(event: Dict[str, Any]) -> None:
+                if isinstance(event, dict) and str(event.get("type") or "") == "turn_result":
+                    return
+                event_sink(event)
+
+            resume_sink = _resume_sink
         response = self._continue_run(
             next_input=resumed_input,
             run_context=run_context,
             tool_trace=tool_trace,
             steps_remaining=pending.steps_remaining,
             initial_request=pending.original_request,
+            event_sink=resume_sink,
         )
-        return self._postprocess_confirmation_response(pending, result, response)
+        final_response = self._postprocess_confirmation_response(pending, result, response)
+        self._emit_stream_event(
+            event_sink,
+            "turn_result",
+            result=dict(final_response),
+            status=str(final_response.get("status") or "ok"),
+            final=str(final_response.get("final") or final_response.get("reply") or ""),
+            reply=str(final_response.get("reply") or final_response.get("final") or ""),
+            pending_action=pending.snapshot(),
+        )
+        return final_response

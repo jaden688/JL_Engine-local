@@ -25,6 +25,12 @@ artifacts/
 ui/models/ollama_models.json
 src/tools_runtime/
 docs/REAL_RUN_*.md
+.env
+.foundry/
+.gemini/
+verification.txt
+new_file
+jl_engine_core/data/agents/generated/*__main*.json
 
 data/*.sqlite3
 human_guidance/

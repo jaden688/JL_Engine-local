@@ -3,9 +3,12 @@
 import copy
 import os
 import json
+import re
 import time
 import socket
+import subprocess
 import urllib.error
+import urllib.parse
 import urllib.request
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -165,6 +168,7 @@ OLLAMA_CONNECT_TIMEOUT = _env_float("JL_OLLAMA_CONNECT_TIMEOUT", 3.0, minimum=0.
 OLLAMA_READ_TIMEOUT = _env_float("JL_OLLAMA_READ_TIMEOUT", 300.0, minimum=1.0)
 OLLAMA_TIMEOUT_CAP = _env_float("JL_OLLAMA_TIMEOUT_CAP", 600.0, minimum=10.0)
 OLLAMA_MAX_RETRIES = _env_int("JL_OLLAMA_MAX_RETRIES", 1, minimum=0, maximum=6)
+_OLLAMA_AUTOSTART_ATTEMPTS: set[str] = set()
 
 
 def _first_non_empty(*values: object, fallback: str) -> str:
@@ -240,6 +244,86 @@ def list_ollama_model_names(base_url: str | None = None) -> list[str]:
         return []
 
 
+def ollama_model_allowed(model_name: str | None) -> bool:
+    """Heuristic filter for startup model auto-selection in UI paths."""
+    name = str(model_name or "").strip().lower()
+    if not name:
+        return False
+    if any(token in name for token in ("70b", "72b", "90b", "110b", "405b", "671b")):
+        return False
+    size_match = re.search(r"(\d+(?:\.\d+)?)b", name)
+    if size_match:
+        try:
+            if float(size_match.group(1)) > 34.0:
+                return False
+        except (TypeError, ValueError):
+            pass
+    return True
+
+
+def _is_loopback_ollama_url(base_url: str) -> bool:
+    try:
+        host = str(urllib.parse.urlparse(base_url).hostname or "").strip().lower()
+    except Exception:
+        return False
+    return host in {"127.0.0.1", "localhost", "::1"}
+
+
+def _start_ollama_server_process() -> bool:
+    command = ["ollama", "serve"]
+    creationflags = 0
+    if os.name == "nt":
+        creationflags = int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)) | int(
+            getattr(subprocess, "DETACHED_PROCESS", 0)
+        )
+    try:
+        subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=creationflags,
+        )
+        logger.info("[Backends] Requested Ollama autostart with command: %s", " ".join(command))
+        return True
+    except Exception as exc:
+        logger.warning("[Backends] Failed to autostart Ollama (%s): %s", " ".join(command), exc)
+        return False
+
+
+def ensure_ollama_server(
+    base_url: str | None = None,
+    *,
+    autostart: bool = True,
+    wait_timeout: float = 15.0,
+    poll_interval: float = 0.5,
+) -> bool:
+    target = _normalize_ollama_base_url(base_url)
+    deadline = time.time() + max(0.0, float(wait_timeout))
+    poll_delay = max(0.1, float(poll_interval))
+
+    should_autostart = bool(autostart) and _is_loopback_ollama_url(target)
+    if should_autostart and target not in _OLLAMA_AUTOSTART_ATTEMPTS:
+        _OLLAMA_AUTOSTART_ATTEMPTS.add(target)
+        _start_ollama_server_process()
+
+    while True:
+        try:
+            resp = requests.get(
+                f"{target}/api/tags",
+                timeout=(OLLAMA_CONNECT_TIMEOUT, min(10.0, OLLAMA_READ_TIMEOUT)),
+            )
+            status = int(getattr(resp, "status_code", 0) or 0)
+            if 200 <= status < 500:
+                return True
+        except RequestException:
+            pass
+
+        if time.time() >= deadline:
+            return False
+        time.sleep(poll_delay)
+
+
 def resolve_ollama_model_name(
     preferred: str | None = None,
     *,
@@ -294,6 +378,15 @@ BACKEND_REGISTRY = {
         "modelName": DEFAULT_OLLAMA_MODEL,
         "model_name": DEFAULT_OLLAMA_MODEL,
         "apiKey": "",
+    },
+    "jan-ai": {
+        "id": "jan-ai",
+        "label": "Jan AI",
+        "provider": "openai",
+        "openai_api_key": "not-needed",
+        "openai_base_url": "http://127.0.0.1:1337/v1",
+        "openai_model": "mistral-ins-7b-q4",
+        "openai_timeout": 120,
     },
     "openai": {
         "id": "openai",

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jl-mpf-spec"
+version = "0.1.0"
+description = "JL MPF personality specification with jl_engine extensions and a small reference library."
+authors = [
+  { name = "JL Engine", email = "dev@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT License" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+dependencies = [
+  "jsonschema>=4.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "mypy",
+  "ruff"
+]
+
+[project.urls]
+Homepage = "https://example.com/jl-mpf-spec"
+
+[tool.setuptools]
+package-dir = {"" = "python"}
+
+[tool.setuptools.packages.find]
+where = ["python"]

@@ -1,0 +1,12 @@
+{
+  "tenants": [
+    {
+      "id": "demo",
+      "name": "Demo Tenant",
+      "token": "demo-token-123",
+      "mpf_registry_file": "personas/Personas.mpf.json",
+      "default_persona": "SparkByte",
+      "history_length": 12
+    }
+  ]
+}

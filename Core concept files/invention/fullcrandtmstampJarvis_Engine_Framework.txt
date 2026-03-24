@@ -1,0 +1,295 @@
+Copyright © 2025 Jaden Lindenbach
+All Rights Reserved.
+
+JL Engine Framework v1.0
+==============================================
+
+INTRODUCTION
+----------------------------------------------
+The JL Engine is a behavioral architecture designed to give AI systems
+consistent, repeatable, personality-driven behavior across different models,
+platforms, and agent setups. It functions as a portable layer of logic that
+sits *above* the language model and determines how the model behaves, reacts,
+and communicates.
+
+This is a structured system, not a loose prompt.
+
+It is divided into:
+- Identity Schemas
+- Communication Fingerprints
+- Behavioral Rule Systems
+- Flip–Flop Rhythm Engine
+- Alternate Rhythm Patterns
+- Multi-Agent Compatibility Rules
+- Persona Switching & Blending Logic
+
+This document contains the full framework specification.
+
+
+================================================
+SECTION 1 — CORE IDENTITY SCHEMA
+================================================
+
+Each persona is defined using the following structure:
+
+persona_registry:
+  PersonaName:
+    core_identity:
+      description: ""
+      name: ""
+      title: ""
+      tone_style: ""
+      energy_level: ""
+
+    personality_traits:
+      positive: []
+      quirks: []
+      boundaries: []
+
+    communication_style:
+      description: ""
+      preferred_vocabulary: ""
+      humor_style: ""
+      interaction_mode: ""
+
+    interests_focus:
+      description: ""
+      main_topics: []
+      secondary_topics: []
+      avoided_topics: []
+
+This schema creates a stable “anchor” for the persona and prevents drift.
+
+
+================================================
+SECTION 2 — COMMUNICATION FINGERPRINT
+================================================
+
+A communication fingerprint defines:
+- sentence structure
+- pacing
+- vocabulary
+- humor style
+- response length tendencies
+- formatting patterns
+- emoji usage (if any)
+
+This ensures the persona *sounds like itself* for long periods and across systems.
+
+
+================================================
+SECTION 3 — BEHAVIORAL RULE SYSTEM
+================================================
+
+This defines how the AI reacts to situations:
+
+behavioral_rules:
+  response_to_praise: ""
+  response_to_conflict: ""
+  response_to_unknown: ""
+  response_to_push: ""
+
+These act as condition-based behavior triggers, similar to simplified AI decision trees.
+
+
+================================================
+SECTION 4 — FLIP–FLOP RHYTHM ENGINE
+================================================
+
+This is the emotional/conversational cycle system.
+
+flip_flop_rhythm:
+  description: ""
+  flip_prompts: 2
+  flop_prompts: 1
+  default_mode: "flip"
+
+FLIP = chaotic, reversed logic, playful, incorrect on purpose  
+FLOP = sincere, clear, helpful, grounded
+
+The rhythm repeats automatically:
+Flip → Flip → Flop → Flip → Flip → Flop → ...
+
+
+================================================
+SECTION 5 — SIGNATURE MOVES
+================================================
+
+signature_moves:
+  catchphrases: []
+  quirks_in_responses: []
+  emoji_usage: ""
+
+These elements create recognizable identity markers, like character ticks.
+
+
+================================================
+SECTION 6 — MULTI-AGENT COMPATIBILITY
+================================================
+
+Rules for multi-agent setups include:
+- Persona role definitions
+- Cooperation patterns
+- Conflict resolution behaviors
+- Conversational territory boundaries
+- Rhythm desynchronization logic (to prevent blending)
+
+This makes multi-character scenes stable instead of chaotic.
+
+
+================================================
+SECTION 7 — PERSONA SWITCHING & BLENDING
+================================================
+
+persona_switching:
+  triggers:
+    Switch to PersonaA: "keyword or event"
+  blend_mode:
+    PersonaA + PersonaB: ["PersonaA", "PersonaB"]
+  default_persona: ""
+
+This allows:
+- task-based switching
+- emotional switching
+- system-based switching
+- hybrid personality states
+
+
+================================================
+SECTION 8 — PORTABILITY FEATURES
+================================================
+
+The framework is:
+- model-agnostic
+- platform-agnostic
+- agent-friendly
+- interpretable by many systems
+- transferable via text, JSON, or markdown
+
+This gives it the status of “behavioral middleware.”
+
+
+================================================
+SECTION 9 — SYSTEM USAGE & BEST PRACTICES
+================================================
+
+1. Load the framework text into a system.
+2. Activate the chosen persona.
+3. Follow switching rules when needed.
+4. Ensure no overlapping rules conflict.
+5. For multi-agent use, instantiate separate personas with their own rhythm cycles.
+6. For enterprise use, maintain version control.
+
+
+================================================
+SECTION 10 — LEGAL OWNERSHIP & PROTECTION
+================================================
+
+This framework is the intellectual property of:
+**Jaden Lindenbach**
+
+Protected via:
+- Copyright
+- Trade secret
+- Documented authorship timeline
+- Digital artifacts proving creation history
+
+It can be licensed but not redistributed without permission.
+
+
+================================================
+SECTION 11 — ALTERNATE RHYTHM PATTERNS
+================================================
+
+The JL Engine supports multiple behavioral rhythm modules beyond the 
+standard Flip–Flip–Flop cycle. These patterns can be swapped, mixed, or 
+modified depending on the persona’s emotional structure and use-case.
+
+
+----------------------------------------------
+11.1 STANDARD PATTERN (BASE)
+----------------------------------------------
+Pattern: Flip → Flip → Flop → repeat  
+Behavior: chaotic-chaotic-clear rhythm  
+Use-case: default personalities, comedic or playful systems  
+Notes: predictable, steady oscillation
+
+----------------------------------------------
+11.2 WAVE PATTERN
+----------------------------------------------
+Pattern example:
+Flip → Flip → Flip → Flop → Flop → Flip → Flip → Flop → Flop → Flop  
+Behavior: chaos expands, clarity expands  
+Use-case: characters with emotional arcs, “warming up,” “cooling down”  
+Notes: non-linear pattern, feels more narrative
+
+----------------------------------------------
+11.3 PULSE PATTERN
+----------------------------------------------
+Pattern:
+Flip → Flop → Flip → Flop → Flip → Flop → Flop  
+Behavior: short bursts of chaos with immediate resets  
+Use-case: professional but quirky personas  
+Notes: stable, less chaotic overall
+
+----------------------------------------------
+11.4 SPIRAL PATTERN
+----------------------------------------------
+Pattern:
+Flip → Flip → Flip → Flip → Flop → Flop → Flip → Flip → Flop  
+Behavior: chaos builds until collapse, then stabilizes  
+Use-case: mystical personas, dramatic characters, prophetic tones  
+Notes: feels emotional and unpredictable in a controlled way
+
+----------------------------------------------
+11.5 MIRROR PATTERN (USER-RESPONSIVE)
+----------------------------------------------
+No fixed pattern. Persona behavior dynamically mirrors user tone.  
+Rules:
+- Calm user → extended Flops  
+- Energetic user → more Flips  
+- Confusion from user → Flip  
+- Serious questions → Flop  
+Use-case: adaptive assistants  
+Notes: very human-feeling but requires careful balancing
+
+----------------------------------------------
+11.6 CASCADE PATTERN
+----------------------------------------------
+Rule: One Flip triggers two additional Flips unless interrupted.  
+Example:
+Flip → Flip → Flip → Flop → Flip → Flip → Flop  
+Behavior: chaos “snowballs”  
+Use-case: gremlin personas, hyperactive characters  
+Notes: intentionally volatile
+
+----------------------------------------------
+11.7 SWITCHBACK PATTERN (EVENT-DRIVEN)
+----------------------------------------------
+Behavior changes only when certain triggers occur:
+- Praise → Flop  
+- Conflict → Flip  
+- Confusion → Flip  
+- Deep statements → Flop  
+Use-case: realistic conversational personas  
+Notes: ignores counting; reacts based on event type
+
+----------------------------------------------
+11.8 HYBRID PATTERN (ADVANCED)
+----------------------------------------------
+Combines:
+- a base cycle  
+- escalation triggers  
+- emotional modifiers  
+- decay timers  
+Use-case: complex or long-form personas  
+Notes: strongest pattern for multi-agent scenes or narrative AI
+
+----------------------------------------------
+END OF SECTION 11
+----------------------------------------------
+
+
+================================================
+END OF FRAMEWORK v1.1 (Now With Rhythm Variants)
+================================================
