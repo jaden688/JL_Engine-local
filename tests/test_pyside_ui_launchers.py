@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 from types import SimpleNamespace
@@ -152,3 +153,21 @@ def test_kill_stale_listener_windows_returns_true_on_success(monkeypatch) -> Non
     assert captured["cmd"][:3] == ["powershell", "-NoProfile", "-Command"]
     assert "Get-NetTCPConnection" in str(captured["cmd"][3])
     assert "{ exit 0 }" in str(captured["cmd"][3])
+
+
+def test_save_service_config_omits_default_ollama_base_url(tmp_path, monkeypatch) -> None:
+    import ui.pyside_ui as pyside_ui
+
+    service_path = tmp_path / "gemini_config.json"
+    monkeypatch.setattr(pyside_ui, "SERVICE_CONFIG_PATH", service_path)
+
+    pyside_ui.save_service_config(
+        {
+            "ollama_model": "gemma3:4b",
+            "ollama_base_url": "http://127.0.0.1:11434",
+        }
+    )
+
+    saved = json.loads(service_path.read_text(encoding="utf-8"))
+    assert saved["ollama_model"] == "gemma3:4b"
+    assert "ollama_base_url" not in saved

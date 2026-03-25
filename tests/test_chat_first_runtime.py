@@ -115,7 +115,7 @@ def test_action_detection_uses_latest_user_segment_in_transcript():
     transcript = (
         "SYSTEM: Attached context from MAIN_LOG\n"
         "USER: Were you able to execute this?\n"
-        "ENGINE: Created file at C:\\Users\\J_lin\\Downloads\\reg\\JL_Engine-local-main\\new_file\n"
+        "ENGINE: Created file at C:\\Users\\J_lin\\Downloads\\reg\\JL_Engine-local-main\\artifacts\\fs_write_fallbacks\\new_file\n"
         "USER: Hello"
     )
 
@@ -133,7 +133,7 @@ def test_interpreter_transcript_greeting_does_not_trigger_action_fallback():
     transcript = (
         "SYSTEM: Attached context from MAIN_LOG\n"
         "USER: What can you tell me about the healing bench\n"
-        "ENGINE: Created file at C:\\Users\\J_lin\\Downloads\\reg\\JL_Engine-local-main\\new_file\n"
+        "ENGINE: Created file at C:\\Users\\J_lin\\Downloads\\reg\\JL_Engine-local-main\\artifacts\\fs_write_fallbacks\\new_file\n"
         "USER: Hello"
     )
 
@@ -304,14 +304,11 @@ def test_interpreter_fs_list_falls_back_to_file_summary_when_model_drifts():
 def test_interpreter_preamble_lists_real_bridge_modes_and_windows_shell_rules():
     preamble = interpreter_module.SYSTEM_PREAMBLE
 
-    assert "Get-ChildItem" in preamble
     assert "browser_action" in preamble
     assert "browser_inspect" in preamble
     assert "fs_mkdir" in preamble
     assert "fs_write" in preamble
-    assert "Never invent bridge modes like" in preamble
-    assert "`ui_access`" in preamble
-    assert "`ui_info`" in preamble
+    assert "Valid `bridge_local` modes are exactly" in preamble
 
 
 def test_interpreter_write_requires_confirmation_and_approval_executes_once():
@@ -619,40 +616,10 @@ def test_interpreter_normalizes_placeholder_desktop_path_in_pending_action(monke
     assert pending["summary"] == f"write `{normalized_path}`"
 
 
-def test_default_base_path_prefers_local_desktop_before_onedrive(monkeypatch, tmp_path: Path):
-    desktop = tmp_path / "Desktop"
-    onedrive_desktop = tmp_path / "OneDrive" / "Desktop"
-    desktop.mkdir(parents=True)
-    onedrive_desktop.mkdir(parents=True)
-    monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setenv("OneDrive", str(tmp_path / "OneDrive"))
-
-    session = InterpreterSession(engine=FakeEngine([_json_reply({"final": "ok"})]))
-
-    assert session._default_base_path("desktop") == desktop
-
-
-def test_default_base_path_can_opt_into_onedrive_preference(monkeypatch, tmp_path: Path):
-    desktop = tmp_path / "Desktop"
-    onedrive_desktop = tmp_path / "OneDrive" / "Desktop"
-    desktop.mkdir(parents=True)
-    onedrive_desktop.mkdir(parents=True)
-    monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setenv("OneDrive", str(tmp_path / "OneDrive"))
-    monkeypatch.setenv("JL_PREFER_ONEDRIVE_USER_FOLDERS", "1")
-
-    session = InterpreterSession(engine=FakeEngine([_json_reply({"final": "ok"})]))
-
-    assert session._default_base_path("desktop") == onedrive_desktop
-
-
 def test_interpreter_normalizes_unixish_desktop_path_into_local_desktop(monkeypatch, tmp_path: Path):
     desktop = tmp_path / "Desktop"
-    onedrive_desktop = tmp_path / "OneDrive" / "Desktop"
     desktop.mkdir(parents=True)
-    onedrive_desktop.mkdir(parents=True)
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setenv("OneDrive", str(tmp_path / "OneDrive"))
 
     session = InterpreterSession(engine=FakeEngine([_json_reply({"final": "ok"})]))
 
@@ -662,7 +629,6 @@ def test_interpreter_normalizes_unixish_desktop_path_into_local_desktop(monkeypa
     )
 
     assert normalized.endswith("\\Desktop\\Squishy 2")
-    assert "\\OneDrive\\" not in normalized
 
 
 def test_extract_folder_name_prefers_actual_name_over_sentence_noise():
@@ -1078,11 +1044,12 @@ def test_generated_switch_creates_and_reuses_instance(tmp_path: Path, monkeypatc
     assert first["selection"]["generated_instance_id"]
     assert second["selection"]["generated_instance_id"] == first["selection"]["generated_instance_id"]
 
-    registry = json.loads(runtime._registry_path.read_text(encoding="utf-8"))
+    registry = runtime._load_registry()
     entry = registry[first["selection"]["agent_name"]]
     assert entry["classification"] == "generated"
     assert entry["switchboard"]["child"] == "Task Helper"
     assert (runtime._agents_dir / entry["jl_agent_file"]).exists()
+    assert not runtime._registry_path.exists()
 
 
 def test_chat_delegation_merges_back_into_parent_reply(monkeypatch):

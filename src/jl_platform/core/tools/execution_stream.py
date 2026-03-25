@@ -35,10 +35,14 @@ def run_py_exec_stream(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     stdout_buf = io.StringIO()
     stderr_buf = io.StringIO()
-    profile = cProfile.Profile()
+
+    # Detect nested calls — skip profiling to avoid pstats conflict
+    _nested = tracemalloc.is_tracing()
+    profile = cProfile.Profile() if not _nested else None
 
     start = time.perf_counter()
-    tracemalloc.start()
+    if not _nested:
+        tracemalloc.start()
     error = None
     tb = None
 
@@ -47,24 +51,34 @@ def run_py_exec_stream(payload: Dict[str, Any]) -> Dict[str, Any]:
     exec_namespace: Dict[str, Any] = {}
     try:
         with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
-            profile.enable()
+            if profile:
+                profile.enable()
             exec(code, exec_namespace, exec_namespace)
     except Exception as exc:
         error = str(exc)
         tb = traceback.format_exc()
     finally:
-        profile.disable()
-        current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
+        if profile:
+            profile.disable()
+        if not _nested:
+            current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+        else:
+            current, peak = 0, 0
 
     duration_ms = (time.perf_counter() - start) * 1000.0
     stdout_val = stdout_buf.getvalue()
     stderr_val = stderr_buf.getvalue()
 
-    stats_stream = io.StringIO()
-    stats = pstats.Stats(profile, stream=stats_stream)
-    stats.strip_dirs().sort_stats("cumtime").print_stats(15)
-    call_graph = stats_stream.getvalue()
+    call_graph = ""
+    if profile:
+        try:
+            stats_stream = io.StringIO()
+            stats = pstats.Stats(profile, stream=stats_stream)
+            stats.strip_dirs().sort_stats("cumtime").print_stats(15)
+            call_graph = stats_stream.getvalue()
+        except Exception:
+            call_graph = ""
 
     output_text = (stdout_val + ("\n" if stderr_val else "") + stderr_val).strip()
     response = {

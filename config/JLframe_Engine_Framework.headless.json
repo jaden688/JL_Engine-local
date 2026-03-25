@@ -1,27 +1,30 @@
 {
   "jl_engine": {
     "backends": {
-      "default": "ollama-local",
-      "brain_backend": "ollama-local",
-      "tool_backend": "ollama-local",
+      "default": "google-gemini",
+      "brain_backend": "google-gemini",
+      "tool_backend": "google-gemini",
       "brain_config": {
-        "id": "ollama-local",
-        "label": "Ollama (Local)",
-        "provider": "ollama",
-        "baseUrl": "http://127.0.0.1:11434",
-        "modelName": "gemma3:4b",
-        "model_name": "gemma3:4b",
-        "base_url": "http://127.0.0.1:11434"
+        "id": "google-gemini",
+        "label": "Google Gemini",
+        "provider": "google_gemini",
+        "google_gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        "gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        "gemini_model": "gemini-2.0-flash",
+        "google_gemini_timeout": 30,
+        "google_gemini_api_key": "AIzaSyAdTjAkoBAKlcmeGidRFiG1wqgNRCGrU5o"
       },
       "tool_config": {
-        "id": "ollama-local",
-        "label": "Ollama (Local)",
-        "provider": "ollama",
-        "baseUrl": "http://127.0.0.1:11434",
-        "modelName": "gemma3:4b",
-        "model_name": "gemma3:4b",
-        "base_url": "http://127.0.0.1:11434"
+        "id": "google-gemini",
+        "label": "Google Gemini",
+        "provider": "google_gemini",
+        "google_gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        "gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        "gemini_model": "gemini-2.0-flash",
+        "google_gemini_timeout": 30,
+        "google_gemini_api_key": "AIzaSyAdTjAkoBAKlcmeGidRFiG1wqgNRCGrU5o"
       }
-    }
+    },
+    "runtime_mode": "hybrid"
   }
 }

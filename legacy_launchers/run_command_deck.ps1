@@ -216,6 +216,36 @@ if ($openBrowser) {
     } else {
         ""
     }
+    function Get-PowerShellExecutor {
+        $candidates = @()
+
+        $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+        if ($pwsh) { $candidates += $pwsh.Source }
+
+        $winPs = Get-Command powershell -ErrorAction SilentlyContinue
+        if ($winPs) { $candidates += $winPs.Source }
+
+        foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+                return $candidate
+            }
+        }
+
+        return $null
+    }
+
+    $executor = Get-PowerShellExecutor
+    if (-not $executor) {
+        Write-LaunchLog "Browser helper failed to start: neither pwsh nor powershell was found on PATH."
+        if ($transcriptStarted) {
+            try {
+                Stop-Transcript | Out-Null
+            } catch {
+            }
+        }
+        exit 1
+    }
+
     try {
         $browserArgs = @(
             "-NoLogo",
@@ -236,7 +266,7 @@ if ($openBrowser) {
         if ($browserLogPath) {
             $browserArgs += @("-LogPath", $browserLogPath)
         }
-        Start-Process -FilePath "powershell.exe" -WindowStyle Normal -ArgumentList $browserArgs | Out-Null
+        Start-Process -FilePath $executor -WindowStyle Normal -ArgumentList $browserArgs | Out-Null
         if ($browserLogPath) {
             Write-LaunchLog "Browser helper window started. Log: $browserLogPath"
         } else {

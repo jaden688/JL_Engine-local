@@ -313,3 +313,45 @@ def test_run_generate_response_includes_status_when_runtime_errors():
     assert not emitted
     assert errors
     assert "backend_disconnected" in errors[0]
+
+
+def test_voice_reply_text_strips_code_blocks():
+    main = Main.__new__(Main)
+
+    spoken = Main._voice_reply_text(
+        main,
+        "Here is the fix. ```python\nprint('secret code')\n``` Now restart the app.",
+    )
+
+    assert "secret code" not in spoken
+    assert spoken == "Here is the fix. Now restart the app."
+
+
+def test_speak_engine_reply_uses_live_bridge_when_enabled(monkeypatch):
+    import ui.pyside_ui as pyside_ui
+
+    calls: list[str] = []
+
+    class _ImmediateThread:
+        def __init__(self, target=None, args=(), daemon=None):
+            self._target = target
+
+        def start(self) -> None:
+            if self._target:
+                self._target()
+
+    main = Main.__new__(Main)
+    main.live_audio_enable_check = SimpleNamespace(isChecked=lambda: True)
+    main.live_audio_bridge = SimpleNamespace(
+        configure=lambda **kwargs: None,
+        available=lambda: (True, "ok"),
+        speak_text=lambda text: calls.append(text),
+    )
+    main.live_audio_status_signal = SimpleNamespace(emit=lambda _msg: None)
+    main._sync_live_audio_bridge = lambda: None
+
+    monkeypatch.setattr(pyside_ui.threading, "Thread", _ImmediateThread)
+
+    Main._speak_engine_reply(main, "SparkByte says hello.")
+
+    assert calls == ["SparkByte says hello."]

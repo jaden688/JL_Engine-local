@@ -87,8 +87,8 @@ app = FastAPI(title="JL Platform API", lifespan=_lifespan)
 logger = logging.getLogger(__name__)
 _HOST_APPS: Dict[str, PlatformApp] = {}
 _QUEST_RUNTIME = FatQuestRuntime()
-_UI_DIR = Path(__file__).resolve().parents[4] / "ui_web"
-_UI_EASY_DIR = Path(__file__).resolve().parents[4] / "ui_easy"
+_UI_DIR = Path(__file__).resolve().parents[5] / "ui_web"
+_UI_EASY_DIR = Path(__file__).resolve().parents[5] / "ui_easy"
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
 _REVIEW_ENGINE = JLEngineCore()
 _BROWSER_BRIDGE = BrowserBridgeManager()

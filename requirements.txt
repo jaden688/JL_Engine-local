@@ -8,3 +8,5 @@ httpx
 PySide6
 jsonschema
 playwright
+pyaudio
+google-genai

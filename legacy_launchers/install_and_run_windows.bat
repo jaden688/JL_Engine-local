@@ -10,15 +10,16 @@ set "BOOTSTRAP_PYTHON="
 set "BOOTSTRAP_ARGS="
 set "ACTIVE_PYTHON="
 set "ACTIVE_ARGS="
-set "USE_VENV=0"
+set "USE_VENV=0"  REM fully disable local virtualenv usage for this project
 
 call :resolve_python
 if errorlevel 1 goto :fail
 
-if /I "%JL_PLATFORM_USE_VENV%"=="1" set "USE_VENV=1"
-if /I "%JL_PLATFORM_USE_VENV%"=="true" set "USE_VENV=1"
-if /I "%JL_PLATFORM_USE_VENV%"=="yes" set "USE_VENV=1"
-if /I "%JL_PLATFORM_USE_VENV%"=="on" set "USE_VENV=1"
+REM Force using system interpreter; ignore JL_PLATFORM_USE_VENV
+REM if /I "%JL_PLATFORM_USE_VENV%"=="1" set "USE_VENV=1"
+REM if /I "%JL_PLATFORM_USE_VENV%"=="true" set "USE_VENV=1"
+REM if /I "%JL_PLATFORM_USE_VENV%"=="yes" set "USE_VENV=1"
+REM if /I "%JL_PLATFORM_USE_VENV%"=="on" set "USE_VENV=1"
 
 if "%USE_VENV%"=="1" (
     if not exist "%VENV_PYTHON%" (
