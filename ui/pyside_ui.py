@@ -453,6 +453,9 @@ def save_service_config(config: dict) -> None:
     payload = dict(config or {})
     if str(payload.get("ollama_base_url") or "").strip() == "http://127.0.0.1:11434":
         payload.pop("ollama_base_url", None)
+    # Never persist API keys to disk — use environment variables instead
+    for _key in ("gemini_api_key", "google_api_key", "openai_api_key"):
+        payload.pop(_key, None)
     SERVICE_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     SERVICE_CONFIG_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
