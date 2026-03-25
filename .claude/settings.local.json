@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(head -15 /c/Users/J_lin/Downloads/reg/JL_Engine-local-main/jl_engine_core/*.py)",
+      "Bash(grep -r \"Open Interpreter\\\\|open-interpreter\" /c/Users/J_lin/Downloads/reg/JL_Engine-local-main --include=*.py --include=*.txt --include=*.md)",
+      "Bash(git log:*)",
+      "Bash(find . -type f -name *.env* -o -name *secret* -o -name *credential* -o -name *key* -o -name *token*)",
+      "Bash(grep -r \"from src.jl_engine\\\\|import src.jl_engine\\\\|from jl_engine import\\\\|src/jl_engine\" --include=*.py -l)",
+      "Bash(grep -r \"JL-Engine-local\\\\|jl_engine_local\\\\|jl-engine-local\" --include=*.py -l)"
+    ]
+  }
+}

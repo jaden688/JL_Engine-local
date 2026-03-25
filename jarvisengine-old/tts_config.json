@@ -1,7 +1,0 @@
-{
-  "provider": "google",
-  "api_keys": {
-    "google": ""
-  },
-  "selected_voice": "en-US-Neural2-F"
-}

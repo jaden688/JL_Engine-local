@@ -210,19 +210,19 @@ There are two API layers in this repo:
 ## Project layout
 
 ```text
-jl_engine_core/         Core engine runtime, data, compatibility API
-src/jl_platform/        Full platform runtime and FastAPI service
-src/jl_engine_cli/      CLI wrappers and entrypoints (j-engine, j-agent)
-ui_web/                 Main command deck (served at /ui/)
-ui_easy/                Lightweight flow deck (served at /ui-easy/)
-ui/                     PySide desktop UI
-game_integrations/      Game persona integration layer
-modules/                Utility modules (MPF card converter, etc.)
-tools/                  Shared utility scripts
-tests/                  Regression and smoke tests
-docs/                   Architecture, MPF standard, tool forge, error-handling notes
-agents/                 Fat-agent payload files and MPF registry pointer
-config/                 JSON schema files for agents and registry
+jl_engine_core/             Core engine runtime, data, compatibility API
+jl_engine_core/data/        Authoritative runtime data (agents, config, personas)
+src/jl_platform/            Full platform runtime and FastAPI service
+src/jl_engine_cli/          CLI wrappers and entrypoints (j-engine, j-agent)
+src/jl_engine_local/        MCP server subpackage
+ui_web/                     Main command deck (served at /ui/)
+ui_easy/                    Lightweight flow deck (served at /ui-easy/)
+ui/                         PySide desktop UI
+game_integrations/          Game persona integration layer
+modules/                    Utility modules (MPF card converter, etc.)
+tools/                      Shared utility scripts
+tests/                      Regression and smoke tests
+docs/                       Architecture, MPF standard, tool forge, error-handling notes
 ```
 
 ## Verification

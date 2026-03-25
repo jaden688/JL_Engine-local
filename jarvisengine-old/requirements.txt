@@ -1,8 +1,0 @@
-requests
-tkinterdnd2
-google-generativeai
-gTTS
-playsound==1.2.2
-open-interpreter
-watchdog
-google-cloud-texttospeech
