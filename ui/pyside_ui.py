@@ -1706,16 +1706,19 @@ class Main(QMainWindow):
         input_panel_layout.setContentsMargins(12, 12, 12, 12)
         input_panel_layout.setSpacing(10)
 
-        # Chat Input Row
-        chat_row = QHBoxLayout()
+        # Chat Input — full-width row above the controls
         self.chat_input = ChatInputEdit()
         self.chat_input.setPlaceholderText(
-            "Transmission prompt (auto-attaches focused code/selection)... Shift+Enter for newline."
+            "Transmission prompt... Shift+Enter for newline."
         )
-        self.chat_input.setMinimumHeight(90)
+        self.chat_input.setMinimumHeight(60)
+        self.chat_input.setMaximumHeight(100)
+        input_panel_layout.addWidget(self.chat_input)
 
+        # Controls Row — Send + toggles + dock buttons
+        chat_row = QHBoxLayout()
         self.chat_send_btn = QPushButton("SEND")
-        self.chat_send_btn.setMinimumHeight(40)
+        self.chat_send_btn.setMinimumHeight(36)
         self.chat_send_btn.setFixedWidth(80)
 
         self.chat_all_workers_toggle = QCheckBox("All Workers")
@@ -1729,17 +1732,17 @@ class Main(QMainWindow):
         self.live_voice_toggle.toggled.connect(self._sync_live_voice_toggle)
 
         self.controls_btn = QPushButton("≡")
-        self.controls_btn.setFixedSize(40, 40)
+        self.controls_btn.setFixedSize(36, 36)
         self.controls_btn.setToolTip("Toggle Control Docks (Side)")
 
         self.expand_btn = QPushButton("□")
-        self.expand_btn.setFixedSize(40, 40)
+        self.expand_btn.setFixedSize(36, 36)
         self.expand_btn.setToolTip("Toggle Right Sidebar Docks")
 
-        chat_row.addWidget(self.chat_input, 1)
+        chat_row.addWidget(self.chat_send_btn)
         chat_row.addWidget(self.chat_all_workers_toggle)
         chat_row.addWidget(self.live_voice_toggle)
-        chat_row.addWidget(self.chat_send_btn)
+        chat_row.addStretch(1)
         chat_row.addWidget(self.controls_btn)
         chat_row.addWidget(self.expand_btn)
         input_panel_layout.addLayout(chat_row)
