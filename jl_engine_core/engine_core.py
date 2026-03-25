@@ -196,6 +196,11 @@ class JLEngineCore:
 
     def __init__(self, config: EngineConfig | None = None) -> None:
         self.config = config or EngineConfig()
+
+        # Override config from environment variables (launcher settings)
+        raw_safety = str(os.getenv("JL_ENGINE_SAFETY_ON", "1")).strip().lower()
+        self.config.safety_on = raw_safety not in {"0", "false", "off", "no"}
+
         if self.config.drive_weights is None:
             self.config.drive_weights = {
                 "curiosity": 0.7,
@@ -281,8 +286,11 @@ class JLEngineCore:
         self.behavior_profile_name: str = "expressive"
         self.behavior_profile: Dict[str, Any] | None = None
         self.supervisor_gain: float = 0.35
-        self.supervisor_enabled: bool = True  # Strict master switch
-        self.supervisor_gating: bool = True
+        # Read supervisor settings from environment (launcher toggles)
+        raw_supervisor = str(os.getenv("JL_ENGINE_SUPERVISOR_ON", "1")).strip().lower()
+        supervisor_on = raw_supervisor not in {"0", "false", "off", "no"}
+        self.supervisor_enabled: bool = supervisor_on  # Strict master switch
+        self.supervisor_gating: bool = supervisor_on
         self.supervisor_postprocess: bool = True
         self.emotional_sampling: bool = ENABLE_EMOTION_SAMPLING
         self.backoff_mode: bool = False
