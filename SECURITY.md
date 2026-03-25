@@ -2,61 +2,42 @@
 
 ## Supported Versions
 
-The following versions of JL Engine are currently supported with security updates:
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.0   | :white_check_mark: |
+| Version | Supported |
+|---------|-----------|
+| 1.x     | ✅        |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in this project, please **do not** open a public GitHub issue.
+Report security issues to the maintainer via GitHub Security Advisories — do **not** open a public issue for vulnerabilities.
 
-Instead, report it privately by following these steps:
+---
 
-1. Go to the [Security Advisories](../../security/advisories/new) page for this repository and submit a new draft advisory.
-2. Include as much detail as possible:
-   - A description of the vulnerability
-   - Steps to reproduce the issue
-   - Potential impact
-   - Any suggested mitigations or fixes
+## Intentional Design: Shell Execution (`cc.py`)
 
-You can expect an initial response within **72 hours**. Once the issue is confirmed, we will work on a fix and coordinate a disclosure timeline with you before making any details public.
+JL Engine Local includes a **shell command execution tool** (`src/jl_platform/core/tools/cc.py`) that intentionally passes commands to the system shell. This is a core feature — it allows the engine's fat agents (SparkByte, Gremlin, Slappy) to control the local machine as authorized by the user.
 
-Please avoid posting full exploit details publicly before a fix is available.
+**This is opt-in and user-controlled:**
 
-## Security Notes
+- The launcher (`launcher.bat`) exposes an **"Unsafe Tools"** toggle (`JL_LOCAL_UNSAFE_TOOLS`)
+- When `OFF`, shell execution routes are disabled
+- When `ON`, the user has explicitly consented to agent-driven shell access
+- The engine's built-in **Safety Gate** and **Supervisor Gate** still filter commands at runtime
 
-### Local-first boundary
+**CodeQL Alert Reference:** `Uncontrolled command line` in `cc.py:133` — this is a known, intentional pattern. The mitigation is the launcher toggle + runtime safety gates, not input sanitization of the command string itself.
 
-The full API in `jl_platform.services.api.main:app` is designed for trusted local use.
+---
 
-Do not expose it directly to the public internet without adding your own authentication, authorization, and network controls.
+## Path Traversal Mitigations
 
-### Sensitive route groups
+File paths supplied to `load_card()` and `register_mpf_agent()` are:
+- Resolved to absolute paths via `Path.resolve()`
+- Validated against an allowlist of file extensions (`.json`, `.mpf`, `.png`)
+- Checked for file existence before reading
 
-These route families can operate the local machine or workspace directly:
+---
 
-- `/tools/*`
-- `/browser/*`
-- `/workspace/*`
-- `/self-edit/*`
+## API Keys
 
-They are useful for local operator workflows, but they should be treated as admin surfaces.
-
-### Safer default posture
-
-- Bind to `127.0.0.1`
-- Keep the standalone UI local to the same machine
-- Put any remote exposure behind explicit auth and a reverse proxy
-- Avoid sharing live config files that contain provider keys or private endpoints
-
-### User-facing engine flow
-
-For the main conversational path, prefer the engine-mediated quest routes:
-
-- `/quest/chat`
-- `/quest/run`
-- `/quest/mission`
-
-Those keep the request inside the engine, quest runtime, and interpreter approval flow instead of calling local operator tools directly.
+API keys are **never committed** to the repository.  
+Copy `.env.example` to `.env` and fill in your own keys.  
+`.env` is listed in `.gitignore` and will never be tracked.

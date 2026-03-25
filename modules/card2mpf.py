@@ -30,10 +30,21 @@ def _slugify(value: str) -> str:
     return cleaned or "agent"
 
 
+_ALLOWED_CARD_SUFFIXES = {".json", ".mpf", ".png"}
+
+
+def _safe_card_path(path: Path) -> Path:
+    """Resolve and validate a card file path before reading."""
+    resolved = Path(path).expanduser().resolve()
+    if resolved.suffix.lower() not in _ALLOWED_CARD_SUFFIXES:
+        raise ValueError(f"Unsupported card format: {resolved.suffix}")
+    if not resolved.is_file():
+        raise FileNotFoundError(f"Card file not found: {resolved}")
+    return resolved
+
+
 def load_card(path: Path) -> dict[str, Any]:
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(f"Card file not found: {path}")
+    path = _safe_card_path(Path(path))
 
     suffix = path.suffix.lower()
     if suffix in {".json", ".mpf"}:

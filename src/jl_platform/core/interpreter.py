@@ -327,9 +327,11 @@ class InterpreterSession:
                     break
 
         if strip_content:
+            # Limit input length to prevent ReDoS on crafted inputs
+            name_clipped = name[:512]
             content_match = re.search(
-                r'\s+(?:containing|with content|that says|saying)\b',
-                name,
+                r'[ \t]+(?:containing|with[ \t]+content|that[ \t]+says|saying)\b',
+                name_clipped,
                 flags=re.IGNORECASE,
             )
             if content_match:
@@ -337,8 +339,8 @@ class InterpreterSession:
                 lowered = name.lower()
 
         location_match = re.search(
-            r'\s+(?:on|in|at|to)\s+(?:my|the)?\s*(desktop|documents|downloads)\b',
-            name,
+            r'[ \t]+(?:on|in|at|to)[ \t]+(?:my|the)?[ \t]*(desktop|documents|downloads)\b',
+            name[:512],
             flags=re.IGNORECASE,
         )
         if location_match:

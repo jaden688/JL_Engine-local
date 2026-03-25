@@ -901,7 +901,12 @@ class FatQuestRuntime:
         return self.register_agent(agent_id=agent_id, agent_name=agent_name)
 
     def register_mpf_agent(self, agent_id: str, mpf_path: str) -> dict[str, Any]:
-        payload = json.loads(Path(mpf_path).read_text(encoding="utf-8"))
+        safe_path = Path(mpf_path).expanduser().resolve()
+        if safe_path.suffix.lower() not in {".json", ".mpf"}:
+            raise ValueError(f"Invalid MPF file type: {safe_path.suffix}")
+        if not safe_path.is_file():
+            raise FileNotFoundError(f"MPF file not found: {safe_path}")
+        payload = json.loads(safe_path.read_text(encoding="utf-8"))
         agent_payload = card2mpf.normalizeFinal(card2mpf.normalizeAgentInput(payload))
         agent_name = str(((agent_payload.get("identity") or {}).get("name")) or Path(mpf_path).stem)
         self._persist_agent(agent_name, agent_payload)
