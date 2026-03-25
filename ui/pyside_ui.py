@@ -562,6 +562,29 @@ class DropTextEdit(QTextEdit):
             super().dropEvent(event)
 
 
+class ChatInputEdit(QTextEdit):
+    """Multiline chat input. Enter sends, Shift+Enter inserts a newline."""
+
+    send_pressed = Signal()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setAcceptRichText(False)
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter) and not (event.modifiers() & Qt.ShiftModifier):
+            self.send_pressed.emit()
+        else:
+            super().keyPressEvent(event)
+
+    # Compatibility shims so existing code using QLineEdit API still works
+    def text(self) -> str:
+        return self.toPlainText()
+
+    def setText(self, text: str) -> None:
+        self.setPlainText(text)
+
+
 class DropLineEdit(QLineEdit):
     def __init__(self, on_drop, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1599,14 +1622,14 @@ class Main(QMainWindow):
             input_panel_layout.addLayout(attachment_row)
 
             chat_row = QHBoxLayout()
-            self.chat_input = QLineEdit()
+            self.chat_input = ChatInputEdit()
             self.chat_input.setPlaceholderText(
-                "Tell the agent what you want done. File selection and runtime choices stay in this bar."
+                "Tell the agent what you want done. Shift+Enter for newline."
             )
-            self.chat_input.setMinimumHeight(44)
+            self.chat_input.setMinimumHeight(90)
 
             self.chat_send_btn = QPushButton("Send")
-            self.chat_send_btn.setMinimumHeight(44)
+            self.chat_send_btn.setMinimumHeight(90)
             self.chat_send_btn.setFixedWidth(96)
 
             chat_row.addWidget(self.chat_input, 1)
@@ -1685,11 +1708,11 @@ class Main(QMainWindow):
 
         # Chat Input Row
         chat_row = QHBoxLayout()
-        self.chat_input = QLineEdit()
+        self.chat_input = ChatInputEdit()
         self.chat_input.setPlaceholderText(
-            "Transmission prompt (auto-attaches focused code/selection)..."
+            "Transmission prompt (auto-attaches focused code/selection)... Shift+Enter for newline."
         )
-        self.chat_input.setMinimumHeight(40)
+        self.chat_input.setMinimumHeight(90)
 
         self.chat_send_btn = QPushButton("SEND")
         self.chat_send_btn.setMinimumHeight(40)
@@ -3246,7 +3269,7 @@ class Main(QMainWindow):
 
     def _wire_console_actions(self) -> None:
         self.chat_send_btn.clicked.connect(self._on_send)
-        self.chat_input.returnPressed.connect(self._on_send)
+        self.chat_input.send_pressed.connect(self._on_send)
         if hasattr(self, "chat_backend_combo"):
             self.chat_backend_combo.currentTextChanged.connect(self._on_chat_backend_change)
         if hasattr(self, "chat_model_combo"):
