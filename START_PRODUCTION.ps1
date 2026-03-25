@@ -1,8 +1,8 @@
-$unsafe = $true
-$network = $true
+$unsafe = $false
+$network = $false
 $temporal = $false
 $tqa = $false
-$autoApprove = $true
+$autoApprove = $false
 
 $cognitiveModes = @("balanced", "high_fidelity", "pattern_tech", "compression", "expansion", "rebinding")
 $cognitiveIdx = 0
