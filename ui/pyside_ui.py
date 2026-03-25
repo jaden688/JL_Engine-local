@@ -856,7 +856,7 @@ class Main(QMainWindow):
         self._interpreter_session = InterpreterSession(
             engine=self.engine,
             memory_forge=PrivilegedMemoryForge(),
-            allow_unsafe_tools=True,
+            allow_unsafe_tools=False,
             allow_direct_action_fallback=False,
         )
         self._ensure_local_ollama_ready()
@@ -3330,7 +3330,7 @@ class Main(QMainWindow):
             "delegated_execution_mode": "execute",
             "tooling_mode": "forge_first",
             "external_tool_fallback": True,
-            "auto_approve_actions": True,
+            "auto_approve_actions": self.tools_enabled,
             "auto_approve_note": "Auto-approved by UI chat.",
             "auto_approve_max": 3,
         }
