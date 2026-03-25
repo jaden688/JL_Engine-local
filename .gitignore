@@ -35,6 +35,7 @@ ui/models/ollama_models.json
 src/tools_runtime/
 docs/REAL_RUN_*.md
 .env
+jl_engine_core/gemini_config.json
 .foundry/
 .gemini/
 verification.txt
