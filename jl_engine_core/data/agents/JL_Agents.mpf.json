@@ -194,5 +194,29 @@
     "drive_type": null,
     "classification": null,
     "tags": []
+  },
+  "Specialist Builder (main)": {
+    "jl_agent_file": "generated/Specialist_Builder__main.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "classification": "generated",
+    "tags": [
+      "generated",
+      "specialist",
+      "builder"
+    ]
+  },
+  "Support Wing (main)": {
+    "jl_agent_file": "generated/Support_Wing__main.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "classification": "generated",
+    "tags": [
+      "generated",
+      "support",
+      "triage"
+    ]
   }
 }

@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Platform API",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-c",
+        "import sys; sys.path.insert(0,'src'); import uvicorn; uvicorn.run('jl_platform.cli.services.api.main:app', host='127.0.0.1', port=8000, reload=False)"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "JL Engine MCP SSE",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "JL-Engine-local/JL-Engine-local.py"
+      ],
+      "port": 8002
+    }
+  ]
+}
