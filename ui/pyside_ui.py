@@ -1373,7 +1373,7 @@ class Main(QMainWindow):
         layout = QVBoxLayout(parent)
         layout.setContentsMargins(0, 0, 0, 0)
         self.file_model = QFileSystemModel()
-        self.file_model.setRootPath(QDir.rootPath())
+        self.file_model.setRootPath(str(BASE_DIR))
 
         explorer_bar = QHBoxLayout()
         explorer_bar.setContentsMargins(6, 6, 6, 6)
@@ -1402,7 +1402,7 @@ class Main(QMainWindow):
 
         self.file_tree = QTreeView()
         self.file_tree.setModel(self.file_model)
-        self._set_explorer_root(QDir.rootPath())
+        self._set_explorer_root(str(BASE_DIR))
         self.file_tree.setHeaderHidden(True)
         self.file_tree.setColumnHidden(1, True)
         self.file_tree.setColumnHidden(2, True)

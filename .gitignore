@@ -36,6 +36,8 @@ src/tools_runtime/
 docs/REAL_RUN_*.md
 .env
 jl_engine_core/gemini_config.json
+.claude/settings.local.json
+.claude/launch.json
 .foundry/
 .gemini/
 verification.txt
