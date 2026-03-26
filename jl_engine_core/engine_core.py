@@ -67,6 +67,7 @@ logger = get_logger(__name__)
 RECENT_INTERACTION_LIMIT = 12
 RECENT_INTERACTION_REPEAT_WINDOW = 4
 RECENT_INTERACTION_REPEAT_RATIO = 0.92
+SPEC_NUMBER_PRECISION = 4
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parent
@@ -75,6 +76,21 @@ DATA_DIR = PACKAGE_ROOT / "data"
 
 def _data(*parts: str) -> str:
     return str((DATA_DIR / Path(*parts)).resolve())
+
+
+def _round_spec_numbers(value: Any, *, places: int = SPEC_NUMBER_PRECISION) -> Any:
+    """Round spec-style numeric values while preserving ints, bools, and structure."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        return round(value, places)
+    if isinstance(value, dict):
+        return {key: _round_spec_numbers(item, places=places) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_round_spec_numbers(item, places=places) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_round_spec_numbers(item, places=places) for item in value)
+    return value
 
 
 # Feature flag: emotion-driven sampling stays ON unless explicitly disabled.
@@ -716,16 +732,16 @@ class JLEngineCore:
             logger.exception("[EngineCore] Failed to compute memory focus: %s", exc)
             memory_focus = 0.0
 
-        return {
+        return _round_spec_numbers({
             "gait": getattr(self, "current_gait", None),
             "rhythm": getattr(self, "current_rhythm_mode", None),
             "aperture": {
-                "emotional": emotional_score,
-                "safety": safety_score,
-                "memory_focus": memory_focus,
+                "emotional": round(emotional_score, SPEC_NUMBER_PRECISION),
+                "safety": round(safety_score, SPEC_NUMBER_PRECISION),
+                "memory_focus": round(memory_focus, SPEC_NUMBER_PRECISION),
             },
             "mode": getattr(self, "behavior_profile_name", None),
-        }
+        })
 
     def get_engine_status(self) -> Dict[str, Any]:
         """
@@ -740,15 +756,15 @@ class JLEngineCore:
             except Exception:
                 temporal_loop = {"running": False}
                 temporal_backend = {"backend_name": "error", "warm_lane_detected": False}
-        return {
+        return _round_spec_numbers({
             "gait": self.current_gait,
             "rhythm": self.current_rhythm_mode,
             "aperture_mode": self.aperture_mode,
-            "stability_score": self.stability_score,
+            "stability_score": round(self.stability_score, SPEC_NUMBER_PRECISION),
             "modulation_fault": self.modulation_fault,
             "temporal_loop": temporal_loop,
             "temporal_backend": temporal_backend,
-        }
+        })
 
     def start_temporal_field_loop(self) -> None:
         if not self.temporal_field:
@@ -766,7 +782,7 @@ class JLEngineCore:
         if not self.temporal_field:
             return {}
         self.temporal_field_state = self.temporal_field.sample_field()
-        return dict(self.temporal_field_state)
+        return _round_spec_numbers(dict(self.temporal_field_state))
 
     def shutdown(self) -> None:
         self.stop_temporal_field_loop()
@@ -1039,6 +1055,7 @@ class JLEngineCore:
                 "stability_score": self.stability_score,
                 "engine_status": self.get_engine_status(),
             }
+            telemetry = _round_spec_numbers(telemetry)
             feedback: EngineFeedback = {
                 "agent_id": "ENGINE_CORE_DIAGNOSTIC_MODE",
                 "agent_name": "ENGINE_CORE_DIAGNOSTIC_MODE",
@@ -1438,19 +1455,19 @@ class JLEngineCore:
                 temp, top_p, self.agent_state.get("emotion_meta")
             )
             logger.debug(
-                "[EngineCore] Emotional sampling active: temp=%.2f, top_p=%.2f", temp, top_p
+                "[EngineCore] Emotional sampling active: temp=%.4f, top_p=%.4f", temp, top_p
             )
         if self.temporal_field_sampling and temporal_state.get("sampling_ready"):
             temp, top_p = apply_temporal_sampling_bias(temp, top_p, temporal_state)
             logger.debug(
-                "[EngineCore] Temporal field sampling active: temp=%.2f, top_p=%.2f", temp, top_p
+                "[EngineCore] Temporal field sampling active: temp=%.4f, top_p=%.4f", temp, top_p
             )
 
         # STRICT BACKOFF ENFORCEMENT
         if self.backoff_mode:
             temp = min(0.4, temp)
             top_p = min(0.85, top_p)
-            logger.info("[EngineCore] Backoff active: Clamped temp=%.2f, top_p=%.2f", temp, top_p)
+            logger.info("[EngineCore] Backoff active: Clamped temp=%.4f, top_p=%.4f", temp, top_p)
 
         options = {"temperature": temp, "top_p": top_p}
         backend_timeout = self._extract_backend_timeout(context)
@@ -1622,6 +1639,7 @@ class JLEngineCore:
             memory_preview=memory_preview,
         )
 
+        telemetry = _round_spec_numbers(telemetry)
         telemetry["feedback"] = feedback
         if os.getenv("JL_STRIP_CHAT_TELEMETRY"):
             telemetry = {
@@ -2330,9 +2348,14 @@ class JLEngineCore:
             or behavior.get("constraints")
         )
         avoidances = _as_list(behavior.get("avoidances") or behavior.get("boundaries"))
+        pillars = _as_list(behavior.get("pillars"))
         if directives:
             system_chunks.append("\nAGENT DIRECTIVES:")
             for item in directives[:10]:
+                system_chunks.append(f"- {item}")
+        if pillars:
+            system_chunks.append("\nAGENT PILLARS:")
+            for item in pillars[:8]:
                 system_chunks.append(f"- {item}")
         if avoidances:
             system_chunks.append("\nAGENT BOUNDARIES:")
@@ -2380,7 +2403,25 @@ class JLEngineCore:
             else {}
         )
         tonal_range = _as_list(gait_profile.get("tonal_range"))
+        sentence_style = _pick_str(gait_profile.get("sentence_style"))
+        rhythm_modulation = _pick_str(gait_profile.get("rhythm_modulation"))
+        verbosity_preference = _pick_str(gait_profile.get("verbosity_preference"))
+        syntax_prefs = (
+            gait_profile.get("syntax_preferences")
+            if isinstance(gait_profile.get("syntax_preferences"), dict)
+            else {}
+        )
         signature_moves = _as_list(rhythm_profile.get("signature_moves"))
+        pacing = _pick_str(rhythm_profile.get("pacing"))
+        emotional_register = _pick_str(rhythm_profile.get("emotional_register"))
+        interaction_flow = _as_list(rhythm_profile.get("interaction_flow"))
+        emotion_wheel = (
+            agent_source.get("emotion_wheel")
+            if isinstance(agent_source.get("emotion_wheel"), dict)
+            else {}
+        )
+        emotion_baseline_root = _pick_str(emotion_wheel.get("baseline_root"))
+        emotion_baseline_family = _pick_str(emotion_wheel.get("baseline_family"))
         if (
             preferred_gears
             or active_modes
@@ -2388,6 +2429,10 @@ class JLEngineCore:
             or signature_moves
             or runtime_gear_label
             or mode_weights
+            or sentence_style
+            or pacing
+            or emotional_register
+            or emotion_baseline_root
         ):
             system_chunks.append("\nEXPRESSION PROFILE:")
             if preferred_gears:
@@ -2411,8 +2456,33 @@ class JLEngineCore:
                 system_chunks.append(f"- Live mode blend: {live_modes}")
             if tonal_range:
                 system_chunks.append(f"- Tonal range: {', '.join(tonal_range[:6])}")
+            if sentence_style:
+                system_chunks.append(f"- Sentence style: {sentence_style}")
+            if rhythm_modulation:
+                system_chunks.append(f"- Rhythm modulation: {rhythm_modulation}")
+            if verbosity_preference:
+                system_chunks.append(f"- Verbosity: {verbosity_preference}")
+            if syntax_prefs:
+                emoji = _pick_str(syntax_prefs.get("emoji_usage"))
+                metaphor = _pick_str(syntax_prefs.get("metaphor_tolerance"))
+                paren_flair = _pick_str(syntax_prefs.get("parenthetical_flair"))
+                if emoji:
+                    system_chunks.append(f"- Emoji usage: {emoji}")
+                if metaphor:
+                    system_chunks.append(f"- Metaphor tolerance: {metaphor}")
+                if paren_flair:
+                    system_chunks.append(f"- Parenthetical flair: {paren_flair}")
+            if pacing:
+                system_chunks.append(f"- Pacing: {pacing}")
+            if emotional_register:
+                system_chunks.append(f"- Emotional register: {emotional_register}")
+            if interaction_flow:
+                system_chunks.append(f"- Interaction flow: {' -> '.join(interaction_flow[:1])}")
             if signature_moves:
                 system_chunks.append(f"- Signature moves: {', '.join(signature_moves[:6])}")
+            if emotion_baseline_root or emotion_baseline_family:
+                baseline = emotion_baseline_root or emotion_baseline_family
+                system_chunks.append(f"- Emotion baseline: {baseline}")
 
         if engine_alignment:
             agent_class = _pick_str(engine_alignment.get("agent_class"))
@@ -2630,21 +2700,21 @@ class JLEngineCore:
         if behavior_blend and behavior_blend.get("secondary"):
             w_primary, w_secondary = behavior_blend.get("weights", (1.0, 0.0))
             system_chunks.append(
-                f"- Behavior blend: {behavior_blend['primary']['name']} ({w_primary}) + {behavior_blend['secondary']['name']} ({w_secondary})"
+                f"- Behavior blend: {behavior_blend['primary']['name']} ({w_primary:.4f}) + {behavior_blend['secondary']['name']} ({w_secondary:.4f})"
             )
         system_chunks.append(
-            f"- Dynamic aperture: temp={round(self.temp, 2)}, top_p={round(self.top_p, 2)}"
+            f"- Dynamic aperture: temp={round(self.temp, 4)}, top_p={round(self.top_p, 4)}"
         )
         if self.internal_tension:
             system_chunks.append(
-                f"- Internal tension: {round(self.internal_tension.get('score', 0.0), 3)}"
+                f"- Internal tension: {round(self.internal_tension.get('score', 0.0), 4)}"
             )
             drives = self.internal_tension.get("drives") or {}
             if drives:
                 system_chunks.append(
-                    "- Drives: " + ", ".join([f"{k}={round(v, 2)}" for k, v in drives.items()])
+                    "- Drives: " + ", ".join([f"{k}={round(v, 4)}" for k, v in drives.items()])
                 )
-            system_chunks.append(f"- Strain tolerance: {round(float(self.config.strain), 2)}")
+            system_chunks.append(f"- Strain tolerance: {round(float(self.config.strain), 4)}")
 
         # 4b) Listener agent (if enabled and included in prompt)
         listener_cfg = self.listener_agent if isinstance(self.listener_agent, dict) else {}

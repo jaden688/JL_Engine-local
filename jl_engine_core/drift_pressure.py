@@ -73,7 +73,7 @@ class DriftPressureSystem:
         )
         pressure = max(0.0, min(1.0, pressure))
         logger.debug(
-            "[Drift] agent=%.2f behavior=%.2f safety=%.2f memory=%.2f coherence=%.2f -> pressure=%.3f",
+            "[Drift] agent=%.4f behavior=%.4f safety=%.4f memory=%.4f coherence=%.4f -> pressure=%.4f",
             signals.agent_alignment_score,
             signals.behavior_grid_alignment_score,
             signals.safety_alignment_score,

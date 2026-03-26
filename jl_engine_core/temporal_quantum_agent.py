@@ -8,10 +8,25 @@ from threading import Event, RLock, Thread
 from typing import Any, Dict, Tuple
 
 logger = logging.getLogger(__name__)
+SPEC_NUMBER_PRECISION = 4
 
 
 def _clamp(val: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, val))
+
+
+def _round_spec_numbers(value: Any, *, places: int = SPEC_NUMBER_PRECISION) -> Any:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        return round(value, places)
+    if isinstance(value, dict):
+        return {key: _round_spec_numbers(item, places=places) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_round_spec_numbers(item, places=places) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_round_spec_numbers(item, places=places) for item in value)
+    return value
 
 
 @dataclass
@@ -131,18 +146,18 @@ class TemporalQuantumAgent:
             agent_choice = (
                 "Forgebinder" if requested_agent != "Forgebinder" else requested_agent
             )
-            reasons.append(f"burnout_risk={burnout_risk:.2f}")
+            reasons.append(f"burnout_risk={burnout_risk:.4f}")
             if requested_agent not in {"Forgebinder", "Scribe"}:
                 agent_choice = "Forgebinder"
         if failure_prob > 0.7:
             agent_choice = "Slappy"
-            reasons.append(f"failure_cascade_probability={failure_prob:.2f}")
+            reasons.append(f"failure_cascade_probability={failure_prob:.4f}")
         if perf_regression > 0.6:
             agent_choice = "Optimizer"
-            reasons.append(f"performance_regression_probability={perf_regression:.2f}")
+            reasons.append(f"performance_regression_probability={perf_regression:.4f}")
         if operator_overwhelm > 0.6:
             agent_choice = "Jado"
-            reasons.append(f"operator_overwhelm_probability={operator_overwhelm:.2f}")
+            reasons.append(f"operator_overwhelm_probability={operator_overwhelm:.4f}")
 
         reason = ", ".join(reasons)
         return agent_choice, reason
@@ -172,15 +187,15 @@ class TemporalQuantumAgent:
             {
                 "agent": prev_zero.agent,
                 "outcome": prev_zero.outcome,
-                "metrics": prev_zero.metrics,
+                "metrics": _round_spec_numbers(prev_zero.metrics),
             },
             {
                 "agent": new_present.agent,
                 "outcome": new_present.outcome,
-                "metrics": new_present.metrics,
+                "metrics": _round_spec_numbers(new_present.metrics),
             },
             reason,
-            projection_metrics,
+            _round_spec_numbers(projection_metrics),
         )
 
     def _generate_projection(self, anchor: TemporalState) -> TemporalState:
@@ -255,7 +270,7 @@ class TemporalQuantumAgent:
             running = bool(self._loop_thread and self._loop_thread.is_alive())
             return {
                 "running": running,
-                "interval_seconds": self._loop_interval_seconds,
+                "interval_seconds": round(self._loop_interval_seconds, 4),
                 "ticks": self._loop_ticks,
                 "last_tick_at": self._loop_last_tick_at.isoformat()
                 if isinstance(self._loop_last_tick_at, datetime)

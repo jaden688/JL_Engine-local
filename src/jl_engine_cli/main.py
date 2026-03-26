@@ -353,7 +353,7 @@ def _print_telemetry_hud(telemetry: Dict[str, Any]) -> None:
         print(" | ".join(detail_bits))
     print("-" * 56)
     for label, value in metrics:
-        print(f"{label:<10} {_metric_bar(value)} {value:>4.2f}")
+        print(f"{label:<10} {_metric_bar(value)} {value:>7.4f}")
     print("=" * 56 + "\n")
 
 

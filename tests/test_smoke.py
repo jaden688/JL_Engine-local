@@ -15,7 +15,7 @@ def test_legacy_import_shims_resolve():
     engine_core = importlib.import_module("jl_engine_core.engine_core")
     legacy_cli = importlib.import_module("jl_engine_core.cli")
     headless_cli = importlib.import_module("jl_engine_core.headless_cli")
-    gremlin_forge = importlib.import_module("gremlin_cli.forge")
+    forge_module = importlib.import_module("jl_platform.core.tools.PrivilegedMemoryForge")
 
     assert callable(agent_cli.main)
     assert callable(api_app.create_app)
@@ -23,7 +23,7 @@ def test_legacy_import_shims_resolve():
     assert callable(legacy_cli.main)
     assert legacy_cli.HeadlessConsole is not None
     assert callable(headless_cli.main)
-    assert gremlin_forge.PrivilegedMemoryForge is not None
+    assert forge_module.PrivilegedMemoryForge is not None
 
 
 def test_new_package_imports_resolve():
