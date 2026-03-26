@@ -13,7 +13,8 @@ def test_cc_commissioner_searches_files(tmp_path: Path) -> None:
     result = run_cc_command(
         {
             "action": "search_files",
-            "root": str(tmp_path),
+            "cwd": str(tmp_path),
+            "root": ".",
             "query": "keyword",
             "recursive": True,
         }
@@ -31,14 +32,16 @@ def test_cc_commissioner_handles_fs_write_and_read(tmp_path: Path) -> None:
     write_result = run_cc_command(
         {
             "action": "fs_write",
-            "path": str(target),
+            "cwd": str(tmp_path),
+            "path": "scratch/message.txt",
             "content": "hello from CC",
         }
     )
     read_result = run_cc_command(
         {
             "action": "fs_read",
-            "path": str(target),
+            "cwd": str(tmp_path),
+            "path": "scratch/message.txt",
         }
     )
 

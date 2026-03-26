@@ -6,7 +6,7 @@ This repository is a layered local runtime:
 
 - `jl_engine_core` owns MPF registry loading, persona selection, behavior state, memory, and backend orchestration
 - `jl_platform` adds the richer local app runtime: quest sessions, interpreter flow, browser bridge, workspace actions, and the main FastAPI service
-- `ui_web` and `ui_easy` are thin clients served by the platform API
+- `ui_web` is the main thin client served by the platform API
 
 The architecture is a layered monolith rather than a microservice split. Most behavior lives in-process and shares the same runtime data tree.
 
@@ -14,7 +14,7 @@ The architecture is a layered monolith rather than a microservice split. Most be
 
 ```mermaid
 flowchart LR
-    UI["Web UIs (/ui, /ui-easy)"] --> API["JL Platform API\njl_platform.services.api.main:app"]
+    UI["Web UI (/ui)"] --> API["JL Platform API\njl_platform.services.api.main:app"]
     CLI["CLI\nj-engine / j-agent"] --> Core["JLEngineCore"]
     API --> Quest["FatQuestRuntime / InterpreterSession"]
     API --> Admin["Local operator routes\nbrowser, workspace, tools, self-edit"]
@@ -57,7 +57,7 @@ That means fat agents are not bypassing the engine. They are the persona capsule
 - Compatibility API: `jl_engine_core/api_app.py`
 - CLI: `src/jl_engine_cli/main.py`
 - Desktop UI: `ui/pyside_ui.py`
-- Web UIs: `ui_web/` and `ui_easy/`
+- Web UI: `ui_web/`
 
 ## Current pressure points
 

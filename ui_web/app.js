@@ -1382,17 +1382,38 @@ function renderSwitchboardChildren(preferredChild = "") {
   }
 
   if (matrix) {
-    const cards = Object.entries(children).map(([childName, childEntry]) => {
-      const tags = Array.isArray(childEntry?.tags) && childEntry.tags.length ? `Tags: ${childEntry.tags.join(", ")}` : "";
-      const meta = [String(childEntry?.classification || lane).trim(), tags].filter(Boolean).join(" | ");
-      return `
-        <div class="card${childName === activeChild ? " selected" : ""}">
-          <div class="title">${childEntry?.label || childName}</div>
-          <div class="muted">${meta || lane}</div>
-        </div>
-      `;
-    });
-    matrix.innerHTML = cards.length ? cards.join("") : `<div class="card"><div class="muted">No children defined.</div></div>`;
+    matrix.replaceChildren();
+    const entries = Object.entries(children);
+    if (!entries.length) {
+      const emptyCard = document.createElement("div");
+      emptyCard.className = "card";
+      const emptyMuted = document.createElement("div");
+      emptyMuted.className = "muted";
+      emptyMuted.textContent = "No children defined.";
+      emptyCard.appendChild(emptyMuted);
+      matrix.appendChild(emptyCard);
+    } else {
+      for (const [childName, childEntry] of entries) {
+        const tags =
+          Array.isArray(childEntry?.tags) && childEntry.tags.length
+            ? `Tags: ${childEntry.tags.join(", ")}`
+            : "";
+        const meta = [String(childEntry?.classification || lane).trim(), tags]
+          .filter(Boolean)
+          .join(" | ");
+        const card = document.createElement("div");
+        card.className = `card${childName === activeChild ? " selected" : ""}`;
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = String(childEntry?.label || childName);
+        const muted = document.createElement("div");
+        muted.className = "muted";
+        muted.textContent = meta || lane;
+        card.appendChild(title);
+        card.appendChild(muted);
+        matrix.appendChild(card);
+      }
+    }
   }
 
   if (newInstanceWrap) {

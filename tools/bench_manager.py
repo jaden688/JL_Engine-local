@@ -171,7 +171,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             "jl_engine_core",
             "tests",
             "ui_web",
-            "ui_easy",
             "tools",
             "docs",
             "game_integrations",

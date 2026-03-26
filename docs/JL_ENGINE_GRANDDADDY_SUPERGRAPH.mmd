@@ -22,7 +22,6 @@ flowchart TD
 
     subgraph Surfaces["Product Surfaces"]
         UIWeb["ui_web<br/>index.html app.js styles.css sw.js manifest"]
-        UIEasy["ui_easy<br/>index.html app.js styles.css"]
         UIDesktop["ui/pyside_ui.py<br/>desktop command deck"]
         HealingWidget["ui/healing_bench_widget.py"]
         CLI["src/jl_engine_cli/main.py<br/>j-engine / j-agent"]
@@ -236,7 +235,6 @@ flowchart TD
     User --> LegacyDeck
     User --> LegacyPySide
     User --> UIWeb
-    User --> UIEasy
     User --> UIDesktop
     User --> CLI
     User --> MCPWrapper
@@ -256,7 +254,6 @@ flowchart TD
     LaunchTrace --> UIDesktop
 
     UIWeb --> API
-    UIEasy --> API
     UIDesktop --> API
     HealingWidget --> UIDesktop
     CLI --> Core
@@ -558,12 +555,10 @@ flowchart TD
     ToolEffects --> Audit
 
     Stream --> UIWeb
-    Stream --> UIEasy
     Stream --> UIDesktop
     Stream --> CLI
     Stream --> MCPWrapper
     Reply --> UIWeb
-    Reply --> UIEasy
     Reply --> UIDesktop
     Reply --> CLI
     Reply --> MCPWrapper
@@ -577,7 +572,6 @@ flowchart TD
     Docs --> Security
     Docs --> Launcher
     Tests --> UIWeb
-    Tests --> UIEasy
     Tests --> UIDesktop
     Tests --> API
     Tests --> Forge
@@ -586,4 +580,3 @@ flowchart TD
     Tests --> AgentValidation
     Tests --> ModularAgents
     Tests --> Backends
-

@@ -5,7 +5,7 @@ import os
 import sys
 from types import SimpleNamespace
 
-from ui.pyside_ui import Main
+from ui.pyside_ui import Main, REPO_ROOT, SRC_DIR
 
 
 class FakeProcessHandle:
@@ -125,7 +125,8 @@ def test_runtime_env_strips_conda_state(monkeypatch) -> None:
     assert "CONDA_DEFAULT_ENV" not in env
     path_key = next(key for key in env if key.lower() == "path")
     assert all("miniconda" not in part.lower() for part in env[path_key].split(os.pathsep))
-    assert env["PYTHONPATH"].startswith("C:\\Users\\J_lin\\Downloads\\reg\\JL_Engine-local-main")
+    expected_prefix = os.pathsep.join([str(REPO_ROOT), str(SRC_DIR)])
+    assert env["PYTHONPATH"].startswith(expected_prefix)
 
 
 def test_kill_stale_listener_windows_returns_true_on_success(monkeypatch) -> None:

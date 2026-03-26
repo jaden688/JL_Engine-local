@@ -327,24 +327,44 @@ class InterpreterSession:
                     break
 
         if strip_content:
-            # Limit input length to prevent ReDoS on crafted inputs
             name_clipped = name[:512]
-            content_match = re.search(
-                r'[ \t]+(?:containing|with[ \t]+content|that[ \t]+says|saying)\b',
-                name_clipped,
-                flags=re.IGNORECASE,
+            lowered_clipped = name_clipped.lower()
+            content_markers = (
+                " containing",
+                "\tcontaining",
+                " with content",
+                "\twith content",
+                " that says",
+                "\tthat says",
+                " saying",
+                "\tsaying",
             )
-            if content_match:
-                name = name[: content_match.start()].strip().strip('".,;:')
+            content_index = min(
+                (idx for marker in content_markers if (idx := lowered_clipped.find(marker)) >= 0),
+                default=-1,
+            )
+            if content_index >= 0:
+                name = name[:content_index].strip().strip('".,;:')
                 lowered = name.lower()
 
-        location_match = re.search(
-            r'[ \t]+(?:on|in|at|to)[ \t]+(?:my|the)?[ \t]*(desktop|documents|downloads)\b',
-            name[:512],
-            flags=re.IGNORECASE,
+        lowered_clipped = name[:512].lower()
+        location_markers = tuple(
+            f" {prep} {article}{folder}"
+            for prep in ("on", "in", "at", "to")
+            for article in ("", "my ", "the ")
+            for folder in ("desktop", "documents", "downloads")
+        ) + tuple(
+            f"\t{prep} {article}{folder}"
+            for prep in ("on", "in", "at", "to")
+            for article in ("", "my ", "the ")
+            for folder in ("desktop", "documents", "downloads")
         )
-        if location_match:
-            name = name[: location_match.start()].strip().strip('".,;:')
+        location_index = min(
+            (idx for marker in location_markers if (idx := lowered_clipped.find(marker)) >= 0),
+            default=-1,
+        )
+        if location_index >= 0:
+            name = name[:location_index].strip().strip('".,;:')
             lowered = name.lower()
 
         filler_prefixes = (

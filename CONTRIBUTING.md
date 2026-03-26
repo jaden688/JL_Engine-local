@@ -46,7 +46,7 @@ Fill in any provider keys you need. The smoke tests only require the base instal
 ### 5. Verify the baseline
 
 ```bash
-python -m pytest tests/test_smoke.py tests/test_web_ui_easy.py tests/test_web_ui_shell.py
+python -m pytest tests/test_smoke.py tests/test_web_ui_shell.py
 ```
 
 All tests should pass before you make any changes.
@@ -58,7 +58,6 @@ jl_engine_core/     Core engine runtime, MPF registry, data, and compatibility A
 src/jl_platform/    Full platform runtime, FastAPI service, quest runtime, interpreter
 src/jl_engine_cli/  CLI entrypoints (j-engine, j-agent)
 ui_web/             Main command deck (served at /ui/)
-ui_easy/            Lightweight flow deck (served at /ui-easy/)
 ui/                 PySide desktop UI
 tests/              Smoke and regression tests
 docs/               Architecture, MPF standard, tool forge, error handling notes
@@ -105,7 +104,7 @@ Reference issue numbers where applicable: `Closes #42`.
 - Run the full smoke suite before opening a PR:
 
 ```bash
-python -m pytest tests/test_smoke.py tests/test_web_ui_easy.py tests/test_web_ui_shell.py
+python -m pytest tests/test_smoke.py tests/test_web_ui_shell.py
 ```
 
 ## Pull request checklist
@@ -128,7 +127,7 @@ Before submitting:
 | Platform API routes | `src/jl_platform/services/api/main.py` |
 | Tool forge | `src/jl_platform/core/tools/`, `docs/TOOL_FORGE.md` |
 | Browser bridge | `src/jl_platform/browser/` |
-| Web UIs | `ui_web/`, `ui_easy/` |
+| Web UI | `ui_web/` |
 | CLI | `src/jl_engine_cli/main.py` |
 | Desktop UI | `ui/pyside_ui.py` |
 

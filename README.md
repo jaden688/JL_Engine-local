@@ -34,7 +34,7 @@ This repository is open source under the MIT License (see `LICENSE.md`).
 - **Quest sessions** — structured request flow through `FatQuestRuntime` → `JLEngineCore` → `InterpreterSession` with approval gating for privileged actions
 - **Browser automation** — Playwright-backed browser bridge for local web tasks (optional install)
 - **Tool Forge** — create, run, and promote temporary tools via API without restarting the engine
-- **Multiple UIs** — main command deck (`/ui/`) and a lighter flow deck (`/ui-easy/`) served by the same API
+- **Web command deck** — the main web UI served at `/ui/` by the platform API
 - **CLI** — `j-engine` and `j-agent` entrypoints for headless and scripted use
 - **Pluggable backends** — route inference to Ollama (local), OpenAI, OpenRouter, or Google Gemini per agent
 - **MPF registry** — a short pointer layer that maps agent names to full payload files, making it easy to add or swap agents without changing engine code
@@ -44,7 +44,6 @@ This repository is open source under the MIT License (see `LICENSE.md`).
 - `jl_engine_core/`: the core engine, MPF registry loader, backends, behavior engine, memory, cognitive gears, and compatibility API
 - `src/jl_platform/`: the full local platform runtime, quest/interpreter flow, browser bridge, and operator tools
 - `ui_web/`: the main command deck served at `/ui/`
-- `ui_easy/`: the lighter flow deck served at `/ui-easy/`
 - `src/jl_engine_cli/`: CLI entrypoints (`j-engine`, `j-agent`)
 - `game_integrations/`: game persona integration layer
 - `modules/`: utility modules including MPF card converter
@@ -90,7 +89,6 @@ Choose option `2` for the standalone command deck. That path starts the full JL 
 Optional launcher switches:
 
 - `JL_PLATFORM_UI_PATH=/ui/` keeps the main command deck
-- `JL_PLATFORM_UI_PATH=/ui-easy/` opens the lighter flow deck
 - `JL_PLATFORM_LAUNCH_MODE=standalone` opens an app-style window when Edge or Chrome is available
 - `JL_PLATFORM_LAUNCH_MODE=browser` opens a normal browser tab
 - `JL_LOCAL_UNSAFE_TOOLS=0` disables shell, filesystem, and bridge tools for the API and CLI
@@ -106,7 +104,6 @@ python -m uvicorn jl_platform.services.api.main:app --host 127.0.0.1 --port 8000
 Then open:
 
 - `http://127.0.0.1:8000/ui/`
-- `http://127.0.0.1:8000/ui-easy/`
 - `http://127.0.0.1:8000/health`
 
 ### CLI path
@@ -201,7 +198,7 @@ See [`docs/MPF_OPEN_STANDARD.md`](docs/MPF_OPEN_STANDARD.md) for the full regist
 There are two API layers in this repo:
 
 1. Full local platform API: `jl_platform.services.api.main:app`
-   This is the primary runtime for `/ui/`, `/ui-easy/`, quest chat, browser bridge, workspace review, and operator tooling.
+   This is the primary runtime for `/ui/`, quest chat, browser bridge, workspace review, and operator tooling.
 2. Compatibility API: `jl_engine_core.api_app:app`
    This remains for older integrations and smoke checks, but it is not the main product surface anymore.
 
@@ -214,7 +211,6 @@ jl_engine_core/         Core engine runtime, data, compatibility API
 src/jl_platform/        Full platform runtime and FastAPI service
 src/jl_engine_cli/      CLI wrappers and entrypoints (j-engine, j-agent)
 ui_web/                 Main command deck (served at /ui/)
-ui_easy/                Lightweight flow deck (served at /ui-easy/)
 ui/                     PySide desktop UI
 game_integrations/      Game persona integration layer
 modules/                Utility modules (MPF card converter, etc.)
@@ -230,7 +226,7 @@ config/                 JSON schema files for agents and registry
 Useful checks:
 
 ```bash
-python -m pytest tests/test_smoke.py tests/test_web_ui_easy.py tests/test_web_ui_shell.py
+python -m pytest tests/test_smoke.py tests/test_web_ui_shell.py
 python -m uvicorn jl_platform.services.api.main:app --host 127.0.0.1 --port 8000
 ```
 

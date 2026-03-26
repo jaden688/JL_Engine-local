@@ -79,7 +79,6 @@ python -m uvicorn jl_platform.services.api.main:app --host 127.0.0.1 --port 8000
 Then open one of:
 
 - `http://127.0.0.1:8000/ui/` — main command deck
-- `http://127.0.0.1:8000/ui-easy/` — lighter flow deck
 - `http://127.0.0.1:8000/health` — quick health check
 
 ### CLI
@@ -92,7 +91,7 @@ j-engine --agent SparkByte
 ## Step 5 — Verify the install
 
 ```bash
-python -m pytest tests/test_smoke.py tests/test_web_ui_easy.py tests/test_web_ui_shell.py
+python -m pytest tests/test_smoke.py tests/test_web_ui_shell.py
 ```
 
 All tests should pass on a clean install.
@@ -118,7 +117,6 @@ Privileged actions return a confirmation-required response. Approve them from th
 | Path | Purpose |
 |------|---------|
 | `/ui/` | Full command deck with all features |
-| `/ui-easy/` | Lightweight flow deck |
 | `/health` | API health check |
 
 ### Configuration and secrets
@@ -134,7 +132,7 @@ See `TROUBLESHOOTING.md` for a full list. The most common first-run issues are:
 | `ModuleNotFoundError: jl_platform` | Run `pip install -e .[api]` from the repo root |
 | `/health` returns 404 | Make sure you started `jl_platform.services.api.main:app`, not the older compat API |
 | Ollama calls fail | Start Ollama, then run `j-engine --brain-backend ollama-local` |
-| Wrong UI opens | Set `JL_PLATFORM_UI_PATH=/ui-easy/` before launching |
+| Wrong UI opens | Set `JL_PLATFORM_UI_PATH=/ui/` before launching |
 
 ## Next steps
 

@@ -31,16 +31,54 @@ def _slugify(value: str) -> str:
 
 
 _ALLOWED_CARD_SUFFIXES = {".json", ".mpf", ".png"}
+_DEFAULT_IMPORT_FOLDERS = ("Desktop", "Documents", "Downloads")
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _iter_allowed_import_roots() -> list[Path]:
+    candidates = [Path.cwd()]
+    home = Path.home()
+    candidates.extend(home / folder for folder in _DEFAULT_IMPORT_FOLDERS)
+    roots: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except Exception:
+            continue
+        key = str(resolved).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        roots.append(resolved)
+    return roots
+
+
+def _path_within_allowed_roots(path: Path) -> bool:
+    return any(_is_relative_to(path, root) for root in _iter_allowed_import_roots())
+
+
+def resolve_safe_import_path(path: Path, *, allowed_suffixes: set[str]) -> Path:
+    resolved = Path(path).expanduser().resolve()
+    if resolved.suffix.lower() not in allowed_suffixes:
+        raise ValueError(f"Unsupported card format: {resolved.suffix}")
+    if not resolved.is_file():
+        raise FileNotFoundError(f"Card file not found: {resolved}")
+    if not _path_within_allowed_roots(resolved):
+        raise ValueError("path_outside_allowed_import_roots")
+    return resolved
 
 
 def _safe_card_path(path: Path) -> Path:
     """Resolve and validate a card file path before reading."""
-    resolved = Path(path).expanduser().resolve()
-    if resolved.suffix.lower() not in _ALLOWED_CARD_SUFFIXES:
-        raise ValueError(f"Unsupported card format: {resolved.suffix}")
-    if not resolved.is_file():
-        raise FileNotFoundError(f"Card file not found: {resolved}")
-    return resolved
+    return resolve_safe_import_path(path, allowed_suffixes=_ALLOWED_CARD_SUFFIXES)
 
 
 def load_card(path: Path) -> dict[str, Any]:

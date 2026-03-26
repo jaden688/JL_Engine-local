@@ -33,6 +33,7 @@ re-used by:
 from __future__ import annotations
 
 from difflib import SequenceMatcher
+import hashlib
 import json
 import logging
 from dataclasses import dataclass, asdict
@@ -76,6 +77,15 @@ DATA_DIR = PACKAGE_ROOT / "data"
 
 def _data(*parts: str) -> str:
     return str((DATA_DIR / Path(*parts)).resolve())
+
+
+def _text_audit_summary(value: str) -> Dict[str, Any]:
+    text = str(value or "")
+    return {
+        "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "chars": len(text),
+        "lines": text.count("\n") + (1 if text else 0),
+    }
 
 
 def _round_spec_numbers(value: Any, *, places: int = SPEC_NUMBER_PRECISION) -> Any:
@@ -1685,11 +1695,11 @@ class JLEngineCore:
         try:
             payload = {
                 "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-                "user_input": user_text,
-                "reply": reply_text,
+                "user_input_meta": _text_audit_summary(user_text),
+                "reply_meta": _text_audit_summary(reply_text),
                 "feedback": feedback,
-                "agent_state": (
-                    dict(self.agent_state) if isinstance(self.agent_state, dict) else None
+                "agent_state_keys": (
+                    sorted(dict(self.agent_state).keys()) if isinstance(self.agent_state, dict) else None
                 ),
             }
             line = json.dumps(payload, ensure_ascii=False)

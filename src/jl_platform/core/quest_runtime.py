@@ -432,7 +432,7 @@ class FatQuestRuntime:
             "allow_unsafe_tools": _as_bool(agentic_source.get("allow_unsafe_tools"), True),
             "allow_direct_action_fallback": _as_bool(
                 agentic_source.get("allow_direct_action_fallback"),
-                _env_bool("JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK", True),
+                _env_bool("JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK", False),
             ),
             "delegation_mode": str(agentic_source.get("delegation_mode") or "").strip().lower() or None,
             "delegate_max_workers": max(
@@ -901,11 +901,7 @@ class FatQuestRuntime:
         return self.register_agent(agent_id=agent_id, agent_name=agent_name)
 
     def register_mpf_agent(self, agent_id: str, mpf_path: str) -> dict[str, Any]:
-        safe_path = Path(mpf_path).expanduser().resolve()
-        if safe_path.suffix.lower() not in {".json", ".mpf"}:
-            raise ValueError(f"Invalid MPF file type: {safe_path.suffix}")
-        if not safe_path.is_file():
-            raise FileNotFoundError(f"MPF file not found: {safe_path}")
+        safe_path = card2mpf.resolve_safe_import_path(Path(mpf_path), allowed_suffixes={".json", ".mpf"})
         payload = json.loads(safe_path.read_text(encoding="utf-8"))
         agent_payload = card2mpf.normalizeFinal(card2mpf.normalizeAgentInput(payload))
         agent_name = str(((agent_payload.get("identity") or {}).get("name")) or Path(mpf_path).stem)
@@ -2321,7 +2317,7 @@ class FatQuestRuntime:
                 allow_unsafe_tools=None,
                 allow_direct_action_fallback=_env_bool(
                     "JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK",
-                    True,
+                    False,
                 ),
             )
             # Start cloned sessions with clean short-term interpreter history.

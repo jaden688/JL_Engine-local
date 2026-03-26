@@ -53,10 +53,10 @@ $env:JL_PLATFORM_LAUNCH_MODE = "browser"
 .\launcher.bat
 ```
 
-If you want the lighter flow deck:
+If you want the main command deck:
 
 ```powershell
-$env:JL_PLATFORM_UI_PATH = "/ui-easy/"
+$env:JL_PLATFORM_UI_PATH = "/ui/"
 .\launcher.bat
 ```
 
@@ -93,7 +93,7 @@ $env:JL_PLATFORM_UI_PATH = "/ui/"
 or
 
 ```powershell
-$env:JL_PLATFORM_UI_PATH = "/ui-easy/"
+$env:JL_PLATFORM_UI_PATH = "/ui/"
 .\launcher.bat
 ```
 

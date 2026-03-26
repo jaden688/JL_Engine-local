@@ -88,7 +88,6 @@ logger = logging.getLogger(__name__)
 _HOST_APPS: Dict[str, PlatformApp] = {}
 _QUEST_RUNTIME = FatQuestRuntime()
 _UI_DIR = Path(__file__).resolve().parents[4] / "ui_web"
-_UI_EASY_DIR = Path(__file__).resolve().parents[4] / "ui_easy"
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
 _REVIEW_ENGINE = JLEngineCore()
 _BROWSER_BRIDGE = BrowserBridgeManager()
@@ -102,10 +101,15 @@ _CHAT_LOOP_THREADS: Dict[str, Thread] = {}
 _CHAT_LOOP_STOPS: Dict[str, Event] = {}
 _CHAT_LOOP_STATE: Dict[str, Dict[str, Any]] = {}
 
+
+def _public_error_detail(exc: Exception, default: str) -> str:
+    code = str(exc or "").strip().split(":", 1)[0].strip().lower()
+    if code and all(ch.isalnum() or ch == "_" for ch in code):
+        return code
+    return default
+
 if _UI_DIR.exists():
     app.mount("/ui", StaticFiles(directory=str(_UI_DIR), html=True), name="ui")
-if _UI_EASY_DIR.exists():
-    app.mount("/ui-easy", StaticFiles(directory=str(_UI_EASY_DIR), html=True), name="ui-easy")
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -366,7 +370,7 @@ def _chat_loop_worker(
                 state = _CHAT_LOOP_STATE.setdefault(agent_id, {})
                 state["turns"] = int(turns)
                 state["last_status"] = "error"
-                state["last_error"] = str(exc)
+                state["last_error"] = _public_error_detail(exc, "internal_error")
                 state["waiting_for_confirmation"] = False
                 state["last_run_at"] = run_started
                 state["last_duration_ms"] = round((time.time() - run_started) * 1000.0, 2)
@@ -421,7 +425,7 @@ def _start_chat_loop(payload: ChatLoopStartRequest) -> dict[str, Any]:
     try:
         context = _with_agentic_defaults(payload.context, channel="api_chat_loop")
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=_public_error_detail(exc, "invalid_request")) from exc
     context.setdefault("synthetic_turn", True)
     context.setdefault("suppress_memory_write", True)
     context.setdefault("suppress_feedback_log", True)
@@ -570,9 +574,9 @@ def ollama_set_model(payload: OllamaModelSelectionRequest):
     try:
         result = backend_controller.set_ollama_model(requested, persist=True)
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=404, detail=_public_error_detail(exc, "resource_not_found")) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=_public_error_detail(exc, "invalid_request")) from exc
 
     return {
         "status": "ok",
@@ -605,7 +609,7 @@ def openai_set_settings(payload: OpenAISettingsRequest):
             persist=True,
         )
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=404, detail=_public_error_detail(exc, "resource_not_found")) from exc
 
     return {
         "status": "ok",
@@ -634,7 +638,7 @@ def backend_select(payload: BackendSelectionRequest):
             persist=True,
         )
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=404, detail=_public_error_detail(exc, "resource_not_found")) from exc
 
     return {
         "status": "ok",
@@ -659,7 +663,7 @@ def runtime_mode_set(payload: RuntimeModeRequest):
     try:
         result = backend_controller.set_runtime_mode(str(payload.mode or "").strip(), persist=True)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=_public_error_detail(exc, "invalid_request")) from exc
     return {
         "status": "ok",
         "message": f"Runtime mode set to {result['configured_mode']}",
@@ -967,7 +971,7 @@ def quest_chat(payload: QuestChatRequest):
     try:
         context = _with_agentic_defaults(payload.context, channel="api_quest_chat")
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=_public_error_detail(exc, "invalid_request")) from exc
     return _QUEST_RUNTIME.chat(
         agent_id=payload.agent_id or JL_FAT_AGENT_ID,
         message=payload.message,
@@ -986,7 +990,7 @@ def quest_chat_stream(payload: QuestChatRequest):
     try:
         context = _with_agentic_defaults(payload.context, channel="api_quest_chat_stream")
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=_public_error_detail(exc, "invalid_request")) from exc
     execution_mode = _resolve_quest_execution_mode(payload.execution_mode)
 
     def _event_iterator():
@@ -1021,7 +1025,8 @@ def quest_chat_stream(payload: QuestChatRequest):
                 return_trace=bool(payload.return_trace if payload.return_trace is not None else True),
             )
         except Exception as exc:
-            yield _sse_frame({"type": "error", "agent_id": payload.agent_id or JL_FAT_AGENT_ID, "error": str(exc)})
+            logger.exception("[QuestChatStream] chat failed", exc_info=exc)
+            yield _sse_frame({"type": "error", "agent_id": payload.agent_id or JL_FAT_AGENT_ID, "error": "internal_error"})
             return
 
         result = dict(result or {})
@@ -1180,7 +1185,8 @@ def interpreter_stream(payload: InterpreterRequest):
         try:
             result = session.run(payload.message)
         except Exception as exc:
-            yield _sse_frame({"type": "error", "session_id": sid, "error": str(exc)})
+            logger.exception("[InterpreterStream] run failed", exc_info=exc)
+            yield _sse_frame({"type": "error", "session_id": sid, "error": "internal_error"})
             return
 
         result = dict(result or {})

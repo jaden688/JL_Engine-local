@@ -16,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_SEARCH_LIMIT = 25
 DEFAULT_READ_BYTES = 1_000_000
 IGNORED_DIR_NAMES = {".git", ".venv", "__pycache__", ".mypy_cache", ".pytest_cache", "node_modules"}
+DEFAULT_MAX_REGEX_QUERY_CHARS = 128
 
 
 def _normalize_command(command: Any, shell: bool) -> str | list[str]:
@@ -78,15 +79,58 @@ def _prepare_command(command: Any, shell: bool) -> tuple[str | list[str], bool]:
     return _normalize_command(command, shell=False), False
 
 
+def _env_enabled(name: str, default: bool = False) -> bool:
+    raw = str(os.getenv(name, "1" if default else "0")).strip().lower()
+    return raw not in {"0", "false", "off", "no", ""}
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _resolve_cwd(cwd: str | None = None) -> Path:
+    base = Path(cwd).expanduser() if isinstance(cwd, str) and cwd.strip() else PROJECT_ROOT
+    resolved = base.resolve()
+    if not resolved.exists() or not resolved.is_dir():
+        raise ValueError("invalid_cwd")
+    return resolved
+
+
+def _iter_allowed_roots(base: Path) -> Iterable[Path]:
+    candidates = [base, PROJECT_ROOT, PROJECT_ROOT / "artifacts"]
+    home = Path.home()
+    candidates.extend(home / folder for folder in ("Desktop", "Documents", "Downloads"))
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except Exception:
+            continue
+        key = str(resolved).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        yield resolved
+
+
+def _path_within_allowed_roots(path: Path, base: Path) -> bool:
+    return any(_is_relative_to(path, root) for root in _iter_allowed_roots(base))
+
+
 def _resolve_path(raw_path: Any, cwd: str | None = None) -> Path:
     text = str(raw_path or "").strip()
-    base = Path(cwd).expanduser() if isinstance(cwd, str) and cwd.strip() else Path.cwd()
+    base = _resolve_cwd(cwd)
     if not text:
-        return base.resolve()
+        return base
     path = Path(text).expanduser()
-    if path.is_absolute():
-        return path.resolve()
-    return (base / path).resolve()
+    resolved = path.resolve() if path.is_absolute() else (base / path).resolve()
+    if not _path_within_allowed_roots(resolved, base):
+        raise ValueError("path_outside_allowed_roots")
+    return resolved
 
 
 def _clip_text(value: Any, limit: int = 240) -> str:
@@ -131,7 +175,7 @@ def _run_subprocess(
     start = time.perf_counter()
     proc = subprocess.run(
         cmd,
-        cwd=cwd or None,
+        cwd=str(_resolve_cwd(cwd)) if cwd else None,
         capture_output=True,
         text=True,
         timeout=timeout,
@@ -240,7 +284,29 @@ def _search_files(
         }
 
     flags = 0 if case_sensitive else re.IGNORECASE
-    pattern = re.compile(query, flags) if regex else None
+    if regex and not _env_enabled("JL_CC_ENABLE_REGEX_SEARCH", default=False):
+        return {
+            "status": "error",
+            "error": "regex_search_disabled",
+            "root": str(search_root),
+            "matches": [],
+        }
+    if regex and len(query) > DEFAULT_MAX_REGEX_QUERY_CHARS:
+        return {
+            "status": "error",
+            "error": "regex_query_too_long",
+            "root": str(search_root),
+            "matches": [],
+        }
+    try:
+        pattern = re.compile(query, flags) if regex else None
+    except re.error:
+        return {
+            "status": "error",
+            "error": "invalid_regex",
+            "root": str(search_root),
+            "matches": [],
+        }
     needle = query if case_sensitive else query.lower()
 
     matches: list[dict[str, Any]] = []
@@ -370,10 +436,30 @@ class CommandCommissioner:
                 except (TypeError, ValueError):
                     timeout = None
             shell = bool(safe_payload.get("shell", True))
+            if shell:
+                command_text = str(command or "")
+                if not _env_enabled("JL_CC_ENABLE_SHELL_SYNTAX", default=False):
+                    blocked_tokens = ("|", ";", "&&", "||", ">", "<", "$(", "`")
+                    if any(token in command_text for token in blocked_tokens):
+                        return {
+                            "status": "error",
+                            "action": "run",
+                            "error": "shell_syntax_blocked",
+                            "message": "Shell metacharacters require JL_CC_ENABLE_SHELL_SYNTAX=1.",
+                        }
             normalized, shell_mode = _prepare_command(command, shell=shell)
             start = time.perf_counter()
             try:
                 result = _run_subprocess(normalized, cwd=cwd, timeout=timeout, shell=shell_mode)
+            except ValueError as exc:
+                return {
+                    "status": "error",
+                    "action": "run",
+                    "error": str(exc),
+                    "stdout": "",
+                    "stderr": "",
+                    "command": normalized,
+                }
             except subprocess.TimeoutExpired as exc:
                 duration_ms = round((time.perf_counter() - start) * 1000.0, 2)
                 return {
@@ -407,38 +493,53 @@ class CommandCommissioner:
             return result
 
         if action == "search_files":
-            return _search_files(
-                root=str(safe_payload.get("root") or safe_payload.get("path") or "."),
-                query=str(safe_payload.get("query") or safe_payload.get("pattern") or ""),
-                cwd=cwd,
-                recursive=bool(safe_payload.get("recursive", True)),
-                limit=int(safe_payload.get("limit") or DEFAULT_SEARCH_LIMIT),
-                case_sensitive=bool(safe_payload.get("case_sensitive", False)),
-                regex=bool(safe_payload.get("regex", False)),
-                max_bytes=int(safe_payload.get("max_bytes") or DEFAULT_READ_BYTES),
-            )
+            try:
+                return _search_files(
+                    root=str(safe_payload.get("root") or safe_payload.get("path") or "."),
+                    query=str(safe_payload.get("query") or safe_payload.get("pattern") or ""),
+                    cwd=cwd,
+                    recursive=bool(safe_payload.get("recursive", True)),
+                    limit=int(safe_payload.get("limit") or DEFAULT_SEARCH_LIMIT),
+                    case_sensitive=bool(safe_payload.get("case_sensitive", False)),
+                    regex=bool(safe_payload.get("regex", False)),
+                    max_bytes=int(safe_payload.get("max_bytes") or DEFAULT_READ_BYTES),
+                )
+            except ValueError as exc:
+                return {"status": "error", "action": "search_files", "error": str(exc), "matches": []}
 
         if action == "fs_list":
-            return {"status": "ok", "action": "fs_list", **_fs_list(str(safe_payload.get("path") or "."), cwd=cwd)}
+            try:
+                return {"status": "ok", "action": "fs_list", **_fs_list(str(safe_payload.get("path") or "."), cwd=cwd)}
+            except ValueError as exc:
+                return {"status": "error", "action": "fs_list", "error": str(exc), "entries": []}
 
         if action == "fs_read":
             path = str(safe_payload.get("path") or "").strip()
             if not path:
                 return {"status": "error", "error": "missing_path", "message": "Missing path"}
-            return {"status": "ok", "action": "fs_read", **_fs_read(path, cwd=cwd)}
+            try:
+                return {"status": "ok", "action": "fs_read", **_fs_read(path, cwd=cwd)}
+            except ValueError as exc:
+                return {"status": "error", "action": "fs_read", "error": str(exc), "message": "Invalid path"}
 
         if action == "fs_write":
             path = str(safe_payload.get("path") or "").strip()
             if not path:
                 return {"status": "error", "error": "missing_path", "message": "Missing path"}
             content = str(safe_payload.get("content") or "")
-            return {"status": "ok", "action": "fs_write", **_fs_write(path, content, cwd=cwd)}
+            try:
+                return {"status": "ok", "action": "fs_write", **_fs_write(path, content, cwd=cwd)}
+            except ValueError as exc:
+                return {"status": "error", "action": "fs_write", "error": str(exc), "message": "Invalid path"}
 
         if action == "fs_mkdir":
             path = str(safe_payload.get("path") or safe_payload.get("name") or "").strip()
             if not path:
                 return {"status": "error", "error": "missing_path", "message": "Missing path"}
-            return {"status": "ok", "action": "fs_mkdir", **_fs_mkdir(path, cwd=cwd)}
+            try:
+                return {"status": "ok", "action": "fs_mkdir", **_fs_mkdir(path, cwd=cwd)}
+            except ValueError as exc:
+                return {"status": "error", "action": "fs_mkdir", "error": str(exc), "message": "Invalid path"}
 
         return {
             "status": "error",

@@ -287,7 +287,7 @@ def repo_map_slide(ax):
         (0.07, 0.56, 0.26, 0.22, "jl_engine_core/", "Engine orchestration, memory, rhythm, cognitive gears, MPF loading, backends."),
         (0.36, 0.56, 0.26, 0.22, "src/jl_platform/", "FastAPI service, quest runtime, interpreter, browser bridge, local tools."),
         (0.65, 0.56, 0.28, 0.22, "src/jl_engine_cli/", "Headless CLI, slash commands, agent selection, backend toggles."),
-        (0.07, 0.25, 0.40, 0.20, "ui_web/ + ui_easy/", "The main command deck and the lighter flow deck served by the same API."),
+        (0.07, 0.25, 0.40, 0.20, "ui_web/", "The main command deck served by the platform API."),
         (0.50, 0.25, 0.43, 0.20, "docs/ + tools/ + tests/", "Docs, generators, local automation scripts, and the regression suite."),
     ]
     for x, y, w, h, title, body in boxes:
@@ -570,8 +570,8 @@ def ui_slide(ax):
         0.56,
         0.25,
         0.22,
-        "/ui-easy/",
-        "Lighter flow deck\nReduced surface area",
+        "/ui/",
+        "Main command deck\nPrimary web surface",
         facecolor=PANEL_2,
         edgecolor=ACCENT_2,
         body_size=12,

@@ -28,6 +28,8 @@ docs/REAL_RUN_*.md
 .env
 .foundry/
 .gemini/
+.claude/worktrees/
+.jl_mcp_https/
 verification.txt
 new_file
 jl_engine_core/data/agents/generated/*__main*.json
@@ -38,7 +40,6 @@ docs/human_guidance/
 
 index.html
 !ui_web/index.html
-!ui_easy/index.html
 nul
 
 # Added by the extension Better Context To AI

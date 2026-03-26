@@ -7,7 +7,6 @@ flowchart TD
 
     subgraph Surfaces["Client Surfaces"]
         UIWeb["ui_web<br/>Main Command Deck"]
-        UIEasy["ui_easy<br/>Flow Deck"]
         UIDesktop["ui<br/>PySide Desktop UI"]
         CLI["src/jl_engine_cli<br/>j-engine / j-agent"]
         MCP["JL-Engine-local<br/>MCP wrapper / HTTPS proxy"]
@@ -128,14 +127,12 @@ flowchart TD
     end
 
     User --> UIWeb
-    User --> UIEasy
     User --> UIDesktop
     User --> CLI
     User --> MCP
     User --> Compat
 
     UIWeb --> APIRoot
-    UIEasy --> APIRoot
     UIDesktop --> APIRoot
     MCP --> APIRoot
     Compat --> EngineCore
@@ -322,7 +319,6 @@ flowchart TD
     StreamEvents --> Audit
 
     UIReply --> UIWeb
-    UIReply --> UIEasy
     UIReply --> UIDesktop
     UIReply --> CLI
     UIReply --> MCP
