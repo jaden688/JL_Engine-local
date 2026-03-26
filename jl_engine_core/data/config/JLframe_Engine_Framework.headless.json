@@ -14,28 +14,24 @@
       "log_file": "logs/command_bridge.log"
     },
     "backends": {
-      "default": "google-gemini",
-      "brain_backend": "google-gemini",
-      "tool_backend": "google-gemini",
+      "default": "openai",
+      "brain_backend": "openai",
+      "tool_backend": "openai",
       "brain_config": {
-        "id": "google-gemini",
-        "label": "Google Gemini",
-        "provider": "google_gemini",
-        "google_gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-        "gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-        "gemini_model": "gemini-2.0-flash",
-        "google_gemini_timeout": 30,
-        "google_gemini_api_key": "your-google-api-key-here"
+        "id": "openai",
+        "label": "xAI / Grok",
+        "provider": "openai",
+        "openai_base_url": "https://api.x.ai/v1",
+        "openai_model": "grok-3",
+        "openai_timeout": 90
       },
       "tool_config": {
-        "id": "google-gemini",
-        "label": "Google Gemini",
-        "provider": "google_gemini",
-        "google_gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-        "gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-        "gemini_model": "gemini-2.0-flash",
-        "google_gemini_timeout": 30,
-        "google_gemini_api_key": "your-google-api-key-here"
+        "id": "openai",
+        "label": "xAI / Grok",
+        "provider": "openai",
+        "openai_base_url": "https://api.x.ai/v1",
+        "openai_model": "grok-3",
+        "openai_timeout": 90
       }
     },
     "listener_agent": {

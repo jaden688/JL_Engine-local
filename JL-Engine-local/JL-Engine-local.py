@@ -41,15 +41,34 @@ def _engine_is_up() -> bool:
         return False
 
 
+def _load_dotenv(env: dict) -> None:
+    """Load .env from ENGINE_ROOT into env dict (simple key=value parser)."""
+    dotenv_path = ENGINE_ROOT / ".env"
+    if not dotenv_path.exists():
+        return
+    for line in dotenv_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key = key.strip()
+        val = val.strip()
+        # Skip shell-substitution values like ${VAR} — already handled by literal entries
+        if val.startswith("${"):
+            continue
+        env.setdefault(key, val)  # don't override values already in the real env
+
+
 def _start_engine():
     env = os.environ.copy()
+    _load_dotenv(env)
     env["PYTHONPATH"] = f"{ENGINE_SRC}{os.pathsep}{ENGINE_ROOT}{os.pathsep}{env.get('PYTHONPATH', '')}"
     env["JL_LOCAL_UNSAFE_TOOLS"]      = "1"
     env["JL_PLATFORM_ALLOW_NETWORK"]  = "1"
     env["JL_ENGINE_CLI_AUTO_APPROVE"] = "1"
     subprocess.Popen(
         [sys.executable, "-m", "uvicorn",
-         "jl_platform.cli.services.api.main:app",
+         "jl_platform.services.api.main:app",
          "--host", "127.0.0.1", "--port", str(ENGINE_PORT)],
         cwd=str(ENGINE_ROOT), env=env,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -131,10 +150,21 @@ def chat(message: str, agent: str = "") -> str:
         message: What to say.
         agent: Optional agent name to direct the message to a specific agent.
     """
+    import json as _json
     payload: dict = {"message": message}
     if agent:
         payload["agent"] = agent
-    return _post("/quest/chat", payload)
+    raw = _post("/quest/chat", payload)
+    try:
+        data = _json.loads(raw)
+        result = data.get("result")
+        if isinstance(result, str):
+            data = _json.loads(result)
+        reply = data.get("final") or data.get("reply") or raw
+        agent_name = data.get("agent", "")
+        return f"{agent_name}: {reply}" if agent_name else reply
+    except Exception:
+        return raw
 
 
 @mcp.tool()
