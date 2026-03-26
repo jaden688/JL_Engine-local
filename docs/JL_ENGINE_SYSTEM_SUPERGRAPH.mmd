@@ -1,0 +1,328 @@
+%% JL Engine Local - System Supergraph
+%% Open in Mermaid Live or any Mermaid-compatible graph maker.
+
+flowchart TD
+
+    User["User / Operator"]
+
+    subgraph Surfaces["Client Surfaces"]
+        UIWeb["ui_web<br/>Main Command Deck"]
+        UIEasy["ui_easy<br/>Flow Deck"]
+        UIDesktop["ui<br/>PySide Desktop UI"]
+        CLI["src/jl_engine_cli<br/>j-engine / j-agent"]
+        MCP["JL-Engine-local<br/>MCP wrapper / HTTPS proxy"]
+        Compat["jl_engine_core.api_app<br/>Compatibility API"]
+    end
+
+    subgraph PlatformAPI["src/jl_platform/services/api/main.py"]
+        APIRoot["FastAPI app<br/>jl_platform.services.api.main:app"]
+        Health["/health /hosts"]
+        Settings["/settings/*<br/>ollama openai backends runtime-mode"]
+        QuestRoutes["/quest/*<br/>agents switch chat mission clone sidequest tools"]
+        ChatLoops["/quest/loops/*<br/>/chat-loop/*"]
+        InterpreterRoutes["/interpreter/run<br/>/interpreter/stream"]
+        ToolRoutes["/tools/py-exec /audit /cc-run /shell-run /bridge"]
+        ForgeRoutes["/tools/forge/*"]
+        BrowserRoutes["/browser/*<br/>/browser-bridge"]
+        WorkspaceRoutes["/workspace/list /workspace/file /workspace/file/save /workspace/review"]
+        SelfEditRoutes["/self-edit/*"]
+    end
+
+    subgraph QuestLayer["Quest and Session Runtime"]
+        QuestRuntime["FatQuestRuntime"]
+        InterpreterSession["InterpreterSession"]
+        QuestState["Quest sessions<br/>agent ids pending confirmations"]
+        StreamEvents["SSE stream events<br/>quest_chat_started model_request_started model_response turn_result"]
+        LoopRunner["Loop runner<br/>continuous chat / agent loop"]
+        ApprovalGate["Approval gating<br/>for privileged actions"]
+    end
+
+    subgraph Engine["jl_engine_core / JLEngineCore"]
+        EngineCore["JLEngineCore"]
+        EngineInit["Engine init<br/>load config registry behavior states"]
+        SetAgent["set_agent"]
+        BuildMessages["_build_messages"]
+        Generate["generate_response"]
+        DynamicAperture["_update_dynamic_aperture"]
+        TurnState["_update_state_from_interaction"]
+        TemporalProjection["_update_temporal_projection"]
+        Feedback["Engine feedback / notes"]
+        Telemetry["Telemetry output<br/>agent gait rhythm stability drift tqa_loop"]
+    end
+
+    subgraph AgentData["MPF Registry and Persona Payloads"]
+        MPFRegistry["jl_engine_core/data/agents/JL_Agents.mpf.json"]
+        FatAgents["fat_agents/*.json<br/>SparkByte Slappy The Gremlin Temporal Quantum Agent"]
+        ModularAgents["modular_fat_agent_pack / modular_agents.py"]
+        BehaviorStates["jl_engine_core/data/behavior_states.json"]
+        MasterConfig["jl_engine_core/data/config/JLframe_Engine_Framework.headless.json"]
+        AgentManager["AgentManager"]
+        Validation["agent_validation.py"]
+    end
+
+    subgraph StateStack["Identity and State Stack"]
+        BootPrompt["get_llm_boot_prompt"]
+        IdentityLock["Prompt lock<br/>ACTIVE AGENT + AGENT LOCK"]
+        Aperture["EmotionalAperture"]
+        SignalScorer["SignalScorer / TurnSignals"]
+        CognitiveModes["CognitiveModeSelector"]
+        CognitiveGears["cognitive_gears.py"]
+        Rhythm["RhythmEngine"]
+        StateManager["StateManager"]
+        HybridMemory["build_hybrid_memory"]
+        MemoryContext["Recent interactions<br/>memory context"]
+        TemporalField["Temporal field / ontology sampler"]
+    end
+
+    subgraph DriftStack["Drift and Containment"]
+        DriftInput["DriftPressureInput<br/>agent behavior safety memory coherence"]
+        DriftSystem["DriftPressureSystem"]
+        DriftCalc["calculate()<br/>weighted complement of alignment"]
+        DriftAction["get_response_action()"]
+        SoftDrift["Soft Drift<br/>temperature_delta reinforce_gait"]
+        ModerateDrift["Moderate Drift<br/>warning and slower alignment"]
+        HardDrift["Hard Drift<br/>force_gait lockstep<br/>force_rhythm strict<br/>containment warning"]
+        ModFault["modulation_fault<br/>trip when stability tanks or drift spikes"]
+    end
+
+    subgraph TemporalStack["Temporal Quantum Agent Loop"]
+        TQA["TemporalQuantumAgent"]
+        TQAPresent["update_present_state"]
+        TQAFuture["update_future_projection"]
+        TQACollapse["collapse()<br/>T+1 -> T0 -> T-1"]
+        TQASnapshot["snapshot()"]
+        TQABias["apply_biases()<br/>agent redirect under projected risk"]
+        TQALoop["internal loop<br/>autostart interval pulse"]
+        TQAMetrics["Projected metrics<br/>stability burnout failure cascade regression overwhelm"]
+    end
+
+    subgraph SupervisorBackends["Supervisor and Backend Routing"]
+        HelperSupervisor["HelperSupervisor"]
+        RouteMessage["route_message()<br/>chat -> brain / tool_use -> tool backend"]
+        BackendConfig["configure_backends / active backend selection"]
+        RuntimeMode["runtime_mode<br/>local_only or hybrid"]
+        BrainBackend["Brain backend"]
+        ToolBackend["Tool backend"]
+        Ollama["ollama-local"]
+        OpenAI["openai / xAI-compatible"]
+        OpenRouter["openrouter"]
+        Gemini["google-gemini"]
+    end
+
+    subgraph OperatorTools["Local Operator Capabilities"]
+        Builtins["register_core_tools()"]
+        Forge["Tool Forge<br/>create list run delete promote"]
+        Shell["Shell tool"]
+        Bridge["Bridge tool"]
+        CC["CC tool / command bridge"]
+        PyExec["Python exec"]
+        BrowserBridge["BrowserBridgeManager"]
+        Workspace["Workspace services"]
+        SelfEdit[".self_edit_lab<br/>self-edit runner"]
+    end
+
+    subgraph Outputs["Outputs and Product Surfaces"]
+        UIReply["UI / API reply"]
+        ToolEffects["Browser actions file changes subprocesses promoted tools"]
+        Audit["Logs feedback transcript telemetry snapshots"]
+    end
+
+    User --> UIWeb
+    User --> UIEasy
+    User --> UIDesktop
+    User --> CLI
+    User --> MCP
+    User --> Compat
+
+    UIWeb --> APIRoot
+    UIEasy --> APIRoot
+    UIDesktop --> APIRoot
+    MCP --> APIRoot
+    Compat --> EngineCore
+    CLI --> EngineCore
+
+    APIRoot --> Health
+    APIRoot --> Settings
+    APIRoot --> QuestRoutes
+    APIRoot --> ChatLoops
+    APIRoot --> InterpreterRoutes
+    APIRoot --> ToolRoutes
+    APIRoot --> ForgeRoutes
+    APIRoot --> BrowserRoutes
+    APIRoot --> WorkspaceRoutes
+    APIRoot --> SelfEditRoutes
+
+    QuestRoutes --> QuestRuntime
+    ChatLoops --> LoopRunner
+    ChatLoops --> QuestRuntime
+    InterpreterRoutes --> InterpreterSession
+    ToolRoutes --> Builtins
+    ForgeRoutes --> Forge
+    BrowserRoutes --> BrowserBridge
+    WorkspaceRoutes --> Workspace
+    SelfEditRoutes --> SelfEdit
+
+    QuestRuntime --> QuestState
+    QuestRuntime --> ApprovalGate
+    QuestRuntime --> EngineCore
+    QuestRuntime --> StreamEvents
+    LoopRunner --> QuestRuntime
+    LoopRunner --> StreamEvents
+
+    InterpreterSession --> ApprovalGate
+    InterpreterSession --> EngineCore
+    InterpreterSession --> Builtins
+
+    EngineCore --> EngineInit
+    EngineInit --> MasterConfig
+    EngineInit --> MPFRegistry
+    EngineInit --> BehaviorStates
+    EngineInit --> BackendConfig
+    EngineInit --> HybridMemory
+    EngineInit --> TQA
+    EngineInit --> StateManager
+    EngineInit --> DriftSystem
+    EngineInit --> HelperSupervisor
+    EngineInit --> AgentManager
+
+    MPFRegistry --> FatAgents
+    MPFRegistry --> ModularAgents
+    SetAgent --> MPFRegistry
+    SetAgent --> FatAgents
+    SetAgent --> ModularAgents
+    SetAgent --> Validation
+    SetAgent --> AgentManager
+    SetAgent --> Aperture
+    SetAgent --> TemporalField
+    SetAgent --> EngineCore
+
+    FatAgents --> SetAgent
+    ModularAgents --> SetAgent
+    MasterConfig --> RuntimeMode
+    MasterConfig --> BackendConfig
+    MasterConfig --> BehaviorStates
+
+    EngineCore --> SetAgent
+    EngineCore --> BuildMessages
+    EngineCore --> Generate
+    EngineCore --> DynamicAperture
+    EngineCore --> TurnState
+    EngineCore --> TemporalProjection
+    EngineCore --> Feedback
+    EngineCore --> Telemetry
+
+    BuildMessages --> BootPrompt
+    BuildMessages --> IdentityLock
+    BuildMessages --> Aperture
+    BuildMessages --> CognitiveModes
+    BuildMessages --> CognitiveGears
+    BuildMessages --> Rhythm
+    BuildMessages --> MemoryContext
+    BuildMessages --> TemporalField
+
+    HybridMemory --> MemoryContext
+    MemoryContext --> BuildMessages
+
+    Generate --> SignalScorer
+    Generate --> DriftInput
+    Generate --> HelperSupervisor
+    Generate --> TurnState
+    Generate --> Feedback
+    Generate --> Telemetry
+
+    SignalScorer --> DriftInput
+    DriftInput --> DriftSystem
+    DriftSystem --> DriftCalc
+    DriftCalc --> DriftAction
+    DriftAction --> SoftDrift
+    DriftAction --> ModerateDrift
+    DriftAction --> HardDrift
+    HardDrift --> ModFault
+
+    SoftDrift --> DynamicAperture
+    ModerateDrift --> DynamicAperture
+    HardDrift --> DynamicAperture
+    HardDrift --> IdentityLock
+
+    StateManager --> DynamicAperture
+    StateManager --> TurnState
+    TurnState --> StateManager
+    TurnState --> DynamicAperture
+    TurnState --> ModFault
+
+    CognitiveModes --> BuildMessages
+    CognitiveGears --> BuildMessages
+    Rhythm --> BuildMessages
+    Aperture --> BuildMessages
+    TemporalField --> BuildMessages
+
+    HelperSupervisor --> RouteMessage
+    RouteMessage --> BrainBackend
+    RouteMessage --> ToolBackend
+    BackendConfig --> BrainBackend
+    BackendConfig --> ToolBackend
+    RuntimeMode --> BrainBackend
+    RuntimeMode --> ToolBackend
+
+    BrainBackend --> Ollama
+    BrainBackend --> OpenAI
+    BrainBackend --> OpenRouter
+    BrainBackend --> Gemini
+
+    ToolBackend --> Ollama
+    ToolBackend --> OpenAI
+    ToolBackend --> OpenRouter
+    ToolBackend --> Gemini
+
+    Builtins --> Forge
+    Builtins --> Shell
+    Builtins --> Bridge
+    Builtins --> CC
+    Builtins --> PyExec
+
+    BrowserBridge --> Bridge
+    Workspace --> Bridge
+    Forge --> ToolEffects
+    Shell --> ToolEffects
+    Bridge --> ToolEffects
+    CC --> ToolEffects
+    PyExec --> ToolEffects
+    BrowserBridge --> ToolEffects
+    Workspace --> ToolEffects
+    SelfEdit --> ToolEffects
+
+    TQA --> TQAPresent
+    TQA --> TQAFuture
+    TQA --> TQACollapse
+    TQA --> TQASnapshot
+    TQA --> TQABias
+    TQA --> TQALoop
+
+    Generate --> TQAPresent
+    TemporalProjection --> TQAFuture
+    Generate --> TQACollapse
+    Generate --> TQASnapshot
+    TQALoop --> TQAFuture
+    TQAFuture --> TQAMetrics
+    TQAMetrics --> TQABias
+    TQABias --> SetAgent
+
+    TemporalProjection --> TQAMetrics
+    TQAMetrics --> Telemetry
+    TQASnapshot --> Telemetry
+
+    BuildMessages --> UIReply
+    Generate --> UIReply
+    Telemetry --> UIReply
+    Feedback --> UIReply
+
+    ToolEffects --> Audit
+    Telemetry --> Audit
+    Feedback --> Audit
+    StreamEvents --> Audit
+
+    UIReply --> UIWeb
+    UIReply --> UIEasy
+    UIReply --> UIDesktop
+    UIReply --> CLI
+    UIReply --> MCP

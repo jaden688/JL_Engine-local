@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo:*)",
+      "Bash(gh api:*)",
+      "Bash(gh pr:*)",
+      "Bash(python3 -c \":*)"
+    ]
+  }
+}

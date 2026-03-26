@@ -1,0 +1,6 @@
+{
+  "ollama_model": "qwen3:4b",
+  "openai_api_key": "",
+  "openai_model": "grok-3",
+  "openai_base_url": "https://api.x.ai/v1"
+}

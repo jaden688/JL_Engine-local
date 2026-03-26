@@ -1,0 +1,26 @@
+{
+  "jl_engine": {
+    "runtime_mode": "hybrid",
+    "backends": {
+      "default": "openai",
+      "brain_backend": "openai",
+      "tool_backend": "openai",
+      "brain_config": {
+        "id": "openai",
+        "label": "OpenAI",
+        "provider": "openai",
+        "openai_base_url": "https://api.x.ai/v1",
+        "openai_model": "grok-3",
+        "openai_timeout": 90
+      },
+      "tool_config": {
+        "id": "openai",
+        "label": "OpenAI",
+        "provider": "openai",
+        "openai_base_url": "https://api.x.ai/v1",
+        "openai_model": "grok-3",
+        "openai_timeout": 90
+      }
+    }
+  }
+}

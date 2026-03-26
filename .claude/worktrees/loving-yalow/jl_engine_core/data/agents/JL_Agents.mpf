@@ -1,0 +1,22 @@
+{
+  "Task Helper (jl_fat_agent)": {
+    "jl_agent_file": "generated/Task_Helper__jl_fat_agent.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "classification": "generated",
+    "tags": [
+      "generated",
+      "task",
+      "helper"
+    ],
+    "switchboard": {
+      "lane": "generated",
+      "child": "Task Helper",
+      "parent_lane": "fat_agent",
+      "parent_agent_id": "jl_fat_agent",
+      "parent_agent_name": "SparkByte",
+      "created_at": 1774480374.6609733
+    }
+  }
+}

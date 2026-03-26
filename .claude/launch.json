@@ -11,12 +11,37 @@
       "port": 8000
     },
     {
-      "name": "JL Engine MCP SSE",
+      "name": "JL Engine MCP Streamable HTTP",
       "runtimeExecutable": "python",
       "runtimeArgs": [
         "JL-Engine-local/JL-Engine-local.py"
       ],
+      "env": {
+        "JL_MCP_TRANSPORT": "streamable-http",
+        "JL_MCP_PORT": "8002",
+        "JL_MCP_HOST": "127.0.0.1"
+      },
       "port": 8002
+    },
+    {
+      "name": "JL Engine MCP HTTPS Proxy",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "JL-Engine-local/mcp_https_proxy.py"
+      ],
+      "env": {
+        "JL_MCP_PROXY_HOST": "127.0.0.1",
+        "JL_MCP_PROXY_PORT": "8443",
+        "JL_MCP_BACKEND_URL": "http://127.0.0.1:8002"
+      },
+      "port": 8443
+    },
+    {
+      "name": "Webula Dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 4000,
+      "cwd": ".claude/worktrees/priceless-faraday/webula-final-repo-Webula-Final1/webula-main--1--main/webula-main"
     }
   ]
 }

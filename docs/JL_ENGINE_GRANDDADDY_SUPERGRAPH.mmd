@@ -1,0 +1,589 @@
+%% JL Engine Local - Granddaddy Supergraph
+%% Massive Mermaid source intended for Mermaid Live or Mermaid CLI.
+%% This is a repo-scale architecture map, not just a chat loop diagram.
+
+flowchart TD
+
+    User["User / Operator / Builder"]
+
+    subgraph Launch["Launchers and Entry Control"]
+        Launcher["launcher.bat"]
+        StartPS["START_PRODUCTION.ps1"]
+        StartBAT["START_PRODUCTION.bat"]
+        LegacyStart["legacy_launchers/start.bat"]
+        LegacyDeck["legacy_launchers/run_command_deck.bat / .ps1"]
+        LegacyPySide["legacy_launchers/run_pyside_ui.bat"]
+        BrowserOpen["tools/open_command_deck_browser.ps1"]
+        LaunchTrace["ui/launch_trace.txt"]
+        Env[".env / .env.example"]
+        PyProject["pyproject.toml"]
+        Requirements["requirements.txt"]
+    end
+
+    subgraph Surfaces["Product Surfaces"]
+        UIWeb["ui_web<br/>index.html app.js styles.css sw.js manifest"]
+        UIEasy["ui_easy<br/>index.html app.js styles.css"]
+        UIDesktop["ui/pyside_ui.py<br/>desktop command deck"]
+        HealingWidget["ui/healing_bench_widget.py"]
+        CLI["src/jl_engine_cli/main.py<br/>j-engine / j-agent"]
+        HeadlessCLI["jl_engine_core/headless_cli.py / cli.py / agent_cli.py"]
+        MCPWrapper["JL-Engine-local/JL-Engine-local.py"]
+        MCPProxy["JL-Engine-local/mcp_https_proxy.py"]
+        CompatAPI["jl_engine_core/api_app.py"]
+    end
+
+    subgraph PlatformAPI["src/jl_platform/services/api/main.py"]
+        API["FastAPI app<br/>jl_platform.services.api.main:app"]
+        Health["/ /health /hosts"]
+        Settings["/settings/ollama /settings/openai /settings/backends /settings/runtime-mode"]
+        HostChat["/hosts/{host}/chat"]
+        ToolPyExec["/tools/py-exec"]
+        ToolAudit["/tools/audit"]
+        ToolForgeRoutes["/tools/forge/*"]
+        ToolBridge["/tools/bridge"]
+        BrowserBridgeRoute["/browser-bridge"]
+        BrowserRoutes["/browser/state /inspect /action /reset"]
+        ToolCC["/tools/cc-run"]
+        ToolShell["/tools/shell-run"]
+        QuestAgents["/quest/agents /switchboard /agents/mpf /personas/mpf"]
+        QuestLoops["/quest/loops/*"]
+        ChatLoop["/chat-loop*"]
+        QuestRegister["/quest/agents/register*"]
+        QuestSwitch["/quest/switch"]
+        QuestChat["/quest/chat"]
+        QuestChatStream["/quest/chat/stream"]
+        QuestConfirm["/quest/chat/confirm"]
+        QuestRun["/quest/run /quest/mission /quest/clone /quest/sidequest"]
+        QuestTools["/quest/tools/*"]
+        InterpreterRun["/interpreter/run"]
+        InterpreterStream["/interpreter/stream"]
+        SelfEdit["/self-edit/status /start /stop /shuttle/clear"]
+        Workspace["/workspace/list /workspace/file /workspace/file/save /workspace/review"]
+    end
+
+    subgraph PlatformCore["src/jl_platform/core"]
+        EngineFacade["engine.py"]
+        QuestRuntime["quest_runtime.py<br/>FatQuestRuntime"]
+        Interpreter["interpreter.py<br/>InterpreterSession"]
+        Safety["safety.py"]
+        Models["models.py"]
+        BrowserBridge["browser_bridge.py<br/>BrowserBridgeManager"]
+        GeminiLiveAudio["gemini_live_audio_bridge.py"]
+        HealingExecutor["healing_bench_executor.py"]
+        HealingPrompts["healing_bench_prompts.py"]
+        RuntimeApp["runtime/app.py"]
+        UtilBanner["util/banner.py"]
+        UtilLogging["util/logging.py"]
+        UtilValidation["util/validation.py"]
+    end
+
+    subgraph ToolSubsystem["Tool Subsystem"]
+        BuiltinTools["tools/builtin.py<br/>register_core_tools()"]
+        ToolRegistry["tools/registry.py"]
+        Forge["tools/forge.py"]
+        Shell["tools/shell.py"]
+        Bridge["tools/bridge.py"]
+        CC["tools/cc.py"]
+        AuditTool["tools/audit.py"]
+        ExecStream["tools/execution_stream.py"]
+        PrivilegedMemoryForge["tools/PrivilegedMemoryForge.py"]
+        PromotedTools["promoted tools dir"]
+        UnsafeSwitch["allow_unsafe / JL_LOCAL_UNSAFE_TOOLS"]
+    end
+
+    subgraph EngineCore["jl_engine_core"]
+        Core["engine_core.py<br/>JLEngineCore"]
+        Backends["backends.py"]
+        HelperSupervisor["helper_supervisor.py"]
+        HybridMemory["hybrid_memory.py"]
+        EmotionalAperture["emotional_aperture.py"]
+        ConversationalSignals["conversational_signals.py"]
+        CognitiveModes["cognitive_modes.py"]
+        CognitiveGears["cognitive_gears.py"]
+        Rhythm["rhythm.py"]
+        Drift["drift_pressure.py"]
+        StateManager["state_manager.py"]
+        TemporalField["temporal_field.py"]
+        TQA["temporal_quantum_agent.py"]
+        BehaviorEngine["behavior_engine.py"]
+        AgentManager["agent_manager.py"]
+        AgentValidation["agent_validation.py"]
+        ModularAgents["modular_agents.py"]
+        ConfigLoader["config_loader.py"]
+        Filters["filters.py"]
+        LoggingSetup["logging_setup.py"]
+        MainCore["__main__.py"]
+    end
+
+    subgraph RuntimeData["Runtime Data and Canonical Assets"]
+        MasterConfig["jl_engine_core/data/config/JLframe_Engine_Framework.headless.json"]
+        AgentRegistry["jl_engine_core/data/agents/JL_Agents.mpf.json"]
+        BehaviorStates["jl_engine_core/data/behavior_states.json"]
+        FatAgents["jl_engine_core/data/agents/fat_agents/*.json"]
+        JLAgents["jl_engine_core/data/agents/jl_agents/*.json"]
+        GeneratedAgents["jl_engine_core/data/agents/generated/*.json"]
+        ModularPack["modular_fat_agent_pack"]
+        MemoryDB["data/jl_engine_memory.sqlite3"]
+        GeminiConfig["jl_engine_core/gemini_config.json"]
+    end
+
+    subgraph IdentityAndPrompt["Identity, Prompt, and Turn Composition"]
+        SetAgent["set_agent()"]
+        CurrentAgent["current_agent_name / current_agent_file / current_agent_data"]
+        BootPrompt["get_llm_boot_prompt()"]
+        PromptBuild["_build_messages()"]
+        ActiveAgent["ACTIVE AGENT"]
+        AgentLock["AGENT LOCK"]
+        IdentityBlock["role archetype description tags"]
+        BehaviorBlend["behavior state + blend"]
+        MemoryCtx["memory context"]
+        TemporalCtx["temporal field + TQA state"]
+        PromptHistory["rolling chat history"]
+    end
+
+    subgraph ControlPlane["Control Plane and Self-Stabilizing Loops"]
+        DynamicAperture["dynamic aperture<br/>temp top_p respond to profile vibe stability"]
+        DriftInput["DriftPressureInput"]
+        DriftCalc["drift_system.calculate()"]
+        DriftResponse["last_drift_response"]
+        SoftDrift["Soft Drift"]
+        ModerateDrift["Moderate Drift"]
+        HardDrift["Hard Drift<br/>force_gait lockstep<br/>force_rhythm strict"]
+        DriftState["internal _drift_state"]
+        Stability["stability_score"]
+        ModFault["modulation_fault"]
+        UserTrigger["user_trigger / vibe adjustments"]
+        StateFeedback["_update_state_from_interaction()"]
+        MemoryFeedback["state_manager.update_from_output()"]
+        Advisory["state_manager.advisory_payload()"]
+        SupervisorEval["supervisor.evaluate() / arbitrate()"]
+        InvariantCheck["invariants / coherence floor / drift ceiling / overload guard"]
+        InternalRefusal["internal refusal on invariant breach"]
+    end
+
+    subgraph TemporalSystem["Temporal and Projection System"]
+        TQAPresent["update_present_state()"]
+        TQARisk["derive temporal risk + cognitive load"]
+        TQAFuture["update_future_projection()"]
+        TQABias["apply_biases()"]
+        TQACollapse["collapse()<br/>T+1 -> T0 -> T-1"]
+        TQASnapshot["snapshot()"]
+        TQALoop["internal loop / pulse / status"]
+        FutureMetrics["burnout risk / failure cascade / perf regression / operator overwhelm"]
+        ForceFutureStability["set_future_stability_index()"]
+        TemporalOntology["temporal field ontology"]
+        TemporalVisualizer["temporal_quantum_visualizer.py"]
+    end
+
+    subgraph BackendPlane["Backend and Transport Plane"]
+        BackendConfig["configure_backends()"]
+        RuntimeMode["runtime_mode<br/>local_only / hybrid"]
+        BrainBackend["brain backend"]
+        ToolBackend["tool backend"]
+        RouteMessage["HelperSupervisor.route_message()"]
+        Ollama["ollama-local"]
+        OpenAI["openai"]
+        OpenRouter["openrouter"]
+        Gemini["google-gemini"]
+        XAI["xAI-compatible via OpenAI lane"]
+    end
+
+    subgraph OperatorPlane["Operator / Workstation Plane"]
+        BrowserState["browser state / inspect / action / reset"]
+        WorkspaceList["workspace/list"]
+        WorkspaceFile["workspace/file"]
+        WorkspaceSave["workspace/file/save"]
+        WorkspaceReview["workspace/review"]
+        ForgeCreate["forge_create"]
+        ForgeRun["forge_run"]
+        ForgeDelete["forge_delete"]
+        ForgePromote["forge_promote / promote_last"]
+        ShellRun["run_shell"]
+        BridgeRun["run_bridge"]
+        CCRun["run_cc_command"]
+        PyExecRun["python exec"]
+        SelfEditLab[".self_edit_lab / engine_self_edit_loop.py"]
+        BenchManager["tools/bench_manager.py"]
+        BusinessMPF["tools/business_mpf_generator.py"]
+        ProjectOverview["tools/generate_project_overview_pdf.py"]
+    end
+
+    subgraph Ecosystem["Extra Repo Systems"]
+        GamePersonas["game_integrations/game_personas/*.mpf.json"]
+        CardConverter["modules/card2mpf.py / JL-Engine-local/card_converter.py"]
+        Foundry[".foundry / foundry resources"]
+        GeminiDir[".gemini"]
+        ClaudeDir[".claude"]
+        Logs["logs / app.log / app_backend.log / feedback logs"]
+        Tests["tests/*"]
+        Docs["docs/*.md / project overview pdf"]
+        Security["SECURITY.md / TROUBLESHOOTING.md / ONBOARDING.md"]
+    end
+
+    subgraph Outputs["Outputs and Observability"]
+        Reply["Reply"]
+        Stream["SSE stream events"]
+        Telemetry["telemetry<br/>agent state drift stability rhythm gait TQA"]
+        Feedback["feedback / notes"]
+        Audit["audit trail / transcripts / logs / snapshots"]
+        ToolEffects["browser actions file writes subprocesses promoted tools"]
+    end
+
+    User --> Launcher
+    User --> StartPS
+    User --> StartBAT
+    User --> LegacyStart
+    User --> LegacyDeck
+    User --> LegacyPySide
+    User --> UIWeb
+    User --> UIEasy
+    User --> UIDesktop
+    User --> CLI
+    User --> MCPWrapper
+
+    Env --> Launcher
+    Env --> StartPS
+    Env --> StartBAT
+    Env --> LegacyStart
+    PyProject --> Launcher
+    Requirements --> Launcher
+    BrowserOpen --> UIWeb
+    Launcher --> API
+    StartPS --> API
+    StartBAT --> API
+    LegacyDeck --> API
+    LegacyPySide --> UIDesktop
+    LaunchTrace --> UIDesktop
+
+    UIWeb --> API
+    UIEasy --> API
+    UIDesktop --> API
+    HealingWidget --> UIDesktop
+    CLI --> Core
+    HeadlessCLI --> Core
+    MCPWrapper --> MCPProxy
+    MCPProxy --> API
+    CompatAPI --> Core
+    MainCore --> Core
+
+    API --> Health
+    API --> Settings
+    API --> HostChat
+    API --> ToolPyExec
+    API --> ToolAudit
+    API --> ToolForgeRoutes
+    API --> ToolBridge
+    API --> BrowserBridgeRoute
+    API --> BrowserRoutes
+    API --> ToolCC
+    API --> ToolShell
+    API --> QuestAgents
+    API --> QuestLoops
+    API --> ChatLoop
+    API --> QuestRegister
+    API --> QuestSwitch
+    API --> QuestChat
+    API --> QuestChatStream
+    API --> QuestConfirm
+    API --> QuestRun
+    API --> QuestTools
+    API --> InterpreterRun
+    API --> InterpreterStream
+    API --> SelfEdit
+    API --> Workspace
+
+    API --> QuestRuntime
+    API --> Interpreter
+    API --> BuiltinTools
+    API --> BrowserBridge
+    API --> RuntimeApp
+    API --> EngineFacade
+    API --> Models
+    API --> Safety
+
+    QuestAgents --> QuestRuntime
+    QuestLoops --> QuestRuntime
+    ChatLoop --> QuestRuntime
+    QuestRegister --> QuestRuntime
+    QuestSwitch --> QuestRuntime
+    QuestChat --> QuestRuntime
+    QuestChatStream --> QuestRuntime
+    QuestConfirm --> QuestRuntime
+    QuestRun --> QuestRuntime
+    QuestTools --> QuestRuntime
+    InterpreterRun --> Interpreter
+    InterpreterStream --> Interpreter
+
+    ToolPyExec --> PyExecRun
+    ToolAudit --> AuditTool
+    ToolForgeRoutes --> Forge
+    ToolBridge --> Bridge
+    ToolCC --> CC
+    ToolShell --> Shell
+    BrowserBridgeRoute --> BrowserBridge
+    BrowserRoutes --> BrowserState
+    Workspace --> WorkspaceList
+    Workspace --> WorkspaceFile
+    Workspace --> WorkspaceSave
+    Workspace --> WorkspaceReview
+    SelfEdit --> SelfEditLab
+
+    BuiltinTools --> ToolRegistry
+    BuiltinTools --> Forge
+    BuiltinTools --> Shell
+    BuiltinTools --> Bridge
+    BuiltinTools --> CC
+    BuiltinTools --> AuditTool
+    BuiltinTools --> PrivilegedMemoryForge
+    BuiltinTools --> UnsafeSwitch
+    Forge --> ForgeCreate
+    Forge --> ForgeRun
+    Forge --> ForgeDelete
+    Forge --> ForgePromote
+    Forge --> PromotedTools
+    Shell --> ShellRun
+    Bridge --> BridgeRun
+    CC --> CCRun
+    AuditTool --> Audit
+    ExecStream --> Stream
+    ForgePromote --> ToolEffects
+    ForgeRun --> ToolEffects
+    ShellRun --> ToolEffects
+    BridgeRun --> ToolEffects
+    CCRun --> ToolEffects
+    PyExecRun --> ToolEffects
+    BrowserBridge --> BrowserState
+    BrowserState --> ToolEffects
+    WorkspaceSave --> ToolEffects
+    WorkspaceReview --> ToolEffects
+    SelfEditLab --> BenchManager
+    BenchManager --> ToolEffects
+    BusinessMPF --> GeneratedAgents
+    ProjectOverview --> Docs
+
+    EngineFacade --> QuestRuntime
+    EngineFacade --> Core
+    QuestRuntime --> Interpreter
+    QuestRuntime --> Safety
+    QuestRuntime --> Core
+    QuestRuntime --> Stream
+    Interpreter --> Safety
+    Interpreter --> Core
+    Interpreter --> BuiltinTools
+    BrowserBridge --> Bridge
+    GeminiLiveAudio --> API
+    GeminiLiveAudio --> Gemini
+    HealingExecutor --> Interpreter
+    HealingExecutor --> HealingPrompts
+    UtilBanner --> CLI
+    UtilLogging --> API
+    UtilValidation --> API
+
+    Core --> ConfigLoader
+    Core --> MasterConfig
+    Core --> AgentRegistry
+    Core --> BehaviorStates
+    Core --> HybridMemory
+    Core --> EmotionalAperture
+    Core --> ConversationalSignals
+    Core --> CognitiveModes
+    Core --> CognitiveGears
+    Core --> Rhythm
+    Core --> Drift
+    Core --> StateManager
+    Core --> TQA
+    Core --> TemporalField
+    Core --> BehaviorEngine
+    Core --> AgentManager
+    Core --> AgentValidation
+    Core --> HelperSupervisor
+    Core --> Backends
+    Core --> Filters
+    Core --> LoggingSetup
+
+    ConfigLoader --> MasterConfig
+    MasterConfig --> RuntimeMode
+    MasterConfig --> BackendConfig
+    MasterConfig --> BehaviorStates
+    MasterConfig --> GeminiConfig
+    AgentRegistry --> FatAgents
+    AgentRegistry --> JLAgents
+    AgentRegistry --> GeneratedAgents
+    AgentRegistry --> ModularPack
+    ModularAgents --> ModularPack
+    HybridMemory --> MemoryDB
+
+    Core --> SetAgent
+    SetAgent --> AgentRegistry
+    SetAgent --> FatAgents
+    SetAgent --> JLAgents
+    SetAgent --> GeneratedAgents
+    SetAgent --> ModularAgents
+    SetAgent --> AgentValidation
+    SetAgent --> AgentManager
+    SetAgent --> TemporalField
+    SetAgent --> EmotionalAperture
+    SetAgent --> TemporalOntology
+    SetAgent --> CurrentAgent
+
+    CurrentAgent --> BootPrompt
+    CurrentAgent --> ActiveAgent
+    CurrentAgent --> IdentityBlock
+    CurrentAgent --> MemoryCtx
+    CurrentAgent --> TQAPresent
+    CurrentAgent --> TQAFuture
+    CurrentAgent --> TQABias
+
+    Core --> PromptBuild
+    BootPrompt --> PromptBuild
+    ActiveAgent --> PromptBuild
+    AgentLock --> PromptBuild
+    IdentityBlock --> PromptBuild
+    MemoryCtx --> PromptBuild
+    TemporalCtx --> PromptBuild
+    PromptHistory --> PromptBuild
+    HybridMemory --> MemoryCtx
+    TemporalField --> TemporalCtx
+    TQA --> TemporalCtx
+    EmotionalAperture --> TemporalCtx
+    BehaviorEngine --> BehaviorBlend
+    BehaviorBlend --> PromptBuild
+
+    Core --> ConversationalSignals
+    ConversationalSignals --> DriftInput
+    StateManager --> Advisory
+    Advisory --> SupervisorEval
+    DriftInput --> DriftCalc
+    DriftCalc --> DriftPressure
+    DriftPressure --> DriftResponse
+    DriftResponse --> SoftDrift
+    DriftResponse --> ModerateDrift
+    DriftResponse --> HardDrift
+    HardDrift --> ModFault
+    HardDrift --> AgentLock
+    DriftPressure --> InvariantCheck
+    Stability --> InvariantCheck
+    InvariantCheck --> InternalRefusal
+
+    Core --> DynamicAperture
+    UserTrigger --> DynamicAperture
+    StateManager --> DynamicAperture
+    DriftState --> DynamicAperture
+    Stability --> DynamicAperture
+    DynamicAperture --> EmotionalAperture
+
+    Core --> StateFeedback
+    StateFeedback --> DriftState
+    StateFeedback --> Stability
+    StateFeedback --> ModFault
+    StateFeedback --> MemoryFeedback
+    MemoryFeedback --> StateManager
+    StateManager --> Advisory
+    Advisory --> DriftInput
+    Advisory --> SupervisorEval
+    SupervisorEval --> HelperSupervisor
+
+    HelperSupervisor --> RouteMessage
+    Backends --> BackendConfig
+    RuntimeMode --> BrainBackend
+    RuntimeMode --> ToolBackend
+    BackendConfig --> BrainBackend
+    BackendConfig --> ToolBackend
+    RouteMessage --> BrainBackend
+    RouteMessage --> ToolBackend
+    BrainBackend --> Ollama
+    BrainBackend --> OpenAI
+    BrainBackend --> OpenRouter
+    BrainBackend --> Gemini
+    OpenAI --> XAI
+    ToolBackend --> Ollama
+    ToolBackend --> OpenAI
+    ToolBackend --> OpenRouter
+    ToolBackend --> Gemini
+
+    PromptBuild --> RouteMessage
+    DynamicAperture --> RouteMessage
+    RouteMessage --> Reply
+    RouteMessage --> Feedback
+
+    Core --> TQAPresent
+    Core --> TQARisk
+    Core --> TQAFuture
+    Core --> TQACollapse
+    Core --> TQASnapshot
+    Core --> TQABias
+    Core --> TQALoop
+    TQA --> TQAPresent
+    TQA --> TQAFuture
+    TQA --> TQACollapse
+    TQA --> TQASnapshot
+    TQA --> TQABias
+    TQA --> TQALoop
+    ConversationalSignals --> TQARisk
+    DriftPressure --> TQARisk
+    TQARisk --> TQAPresent
+    TQARisk --> TQAFuture
+    TQAFuture --> FutureMetrics
+    FutureMetrics --> TQABias
+    TQABias --> SetAgent
+    Stability --> ForceFutureStability
+    ForceFutureStability --> TQAFuture
+    TQACollapse --> TQASnapshot
+    TQALoop --> TQAFuture
+    TemporalField --> TemporalOntology
+    TemporalOntology --> TQASnapshot
+    TemporalVisualizer --> TQASnapshot
+
+    Reply --> StateFeedback
+    Reply --> MemoryFeedback
+    Reply --> TQACollapse
+    Reply --> MemoryDB
+    StateFeedback --> PromptBuild
+    MemoryFeedback --> MemoryCtx
+    TQASnapshot --> TemporalCtx
+    TQASnapshot --> Telemetry
+    TQALoop --> Telemetry
+    FutureMetrics --> Telemetry
+    DriftPressure --> Telemetry
+    DriftResponse --> Telemetry
+    Stability --> Telemetry
+    Advisory --> Telemetry
+    Feedback --> Telemetry
+
+    Telemetry --> Stream
+    Telemetry --> Audit
+    Reply --> Stream
+    Feedback --> Audit
+    Logs --> Audit
+    ToolEffects --> Audit
+
+    Stream --> UIWeb
+    Stream --> UIEasy
+    Stream --> UIDesktop
+    Stream --> CLI
+    Stream --> MCPWrapper
+    Reply --> UIWeb
+    Reply --> UIEasy
+    Reply --> UIDesktop
+    Reply --> CLI
+    Reply --> MCPWrapper
+
+    GamePersonas --> ModularAgents
+    CardConverter --> ModularAgents
+    CardConverter --> AgentRegistry
+    Foundry --> Env
+    GeminiDir --> GeminiConfig
+    ClaudeDir --> Launcher
+    Docs --> Security
+    Docs --> Launcher
+    Tests --> UIWeb
+    Tests --> UIEasy
+    Tests --> UIDesktop
+    Tests --> API
+    Tests --> Forge
+    Tests --> BrowserBridge
+    Tests --> TQA
+    Tests --> AgentValidation
+    Tests --> ModularAgents
+    Tests --> Backends
+

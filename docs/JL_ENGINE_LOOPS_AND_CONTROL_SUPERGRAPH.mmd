@@ -1,0 +1,245 @@
+%% JL Engine Local - Loops and Control Supergraph
+%% Focus: identity lock, drift containment, feedback loops, TQA, supervisor, routing.
+%% Open in Mermaid Live or any Mermaid-compatible graph maker.
+
+flowchart TD
+
+    User["User"]
+
+    subgraph Entry["Turn Entry"]
+        Surface["UI / CLI / API / Quest"]
+        Session["Quest session / interpreter session"]
+        Request["generate_response(user_text, agent_name, context)"]
+    end
+
+    subgraph Identity["Identity Lock and Persona Load"]
+        SetAgent["set_agent()"]
+        Registry["MPF registry"]
+        Payload["fat-agent payload"]
+        AgentState["agent_state reset"]
+        EmotionModel["emotion_palette + emotion_wheel"]
+        AgentManager["AgentManager active agent"]
+        TemporalOntology["Temporal field ontology"]
+        CurrentAgent["current_agent_name / current_agent_file"]
+    end
+
+    subgraph PromptLoop["Prompt Assembly and Continuity"]
+        Memory["Hybrid memory context"]
+        History["recent interaction history"]
+        BootPrompt["get_llm_boot_prompt()"]
+        IdentityPrompt["ACTIVE AGENT"]
+        AgentLock["AGENT LOCK<br/>stay in this agent voice style worldview"]
+        IdentityBlock["identity role archetype description tags"]
+        ContextBlock["memory temporal behavior aperture cognitive state"]
+        BuildMessages["_build_messages()"]
+    end
+
+    subgraph SignalLoop["Turn Interpretation"]
+        Signals["SignalScorer / TurnSignals"]
+        Focus["focus_level / overload_level"]
+        RiskDerive["_derive_temporal_risk()"]
+        Advisory["state_manager.advisory_payload()"]
+        SupervisorArb["supervisor.arbitrate()"]
+    end
+
+    subgraph DriftLoop["Drift Pressure and Containment"]
+        DriftInput["DriftPressureInput<br/>agent behavior safety memory coherence"]
+        DriftCalc["drift_system.calculate()"]
+        DriftPressure["drift_pressure"]
+        DriftAction["drift_system.get_response_action()"]
+        LastDrift["last_drift_response"]
+        Soft["Soft Drift<br/>temp down reinforce gait"]
+        Moderate["Moderate Drift<br/>warning slow down re-check alignment"]
+        Hard["Hard Drift<br/>force_gait lockstep<br/>force_rhythm strict<br/>containment warning"]
+        StabilityGate["stability gating"]
+        ModFault["modulation_fault"]
+    end
+
+    subgraph ApertureLoop["Sampling and State Modulation"]
+        DynamicAperture["_update_dynamic_aperture()"]
+        Temp["temp"]
+        TopP["top_p"]
+        Gait["gait / current_gait"]
+        Rhythm["rhythm / current_rhythm_mode"]
+        Stability["stability_score"]
+        UserVibe["user_trigger adjustments"]
+        EmotionalAperture["EmotionalAperture"]
+    end
+
+    subgraph Routing["Supervisor and Backend Routing"]
+        Helper["HelperSupervisor"]
+        Intent["intent decision<br/>chat or tool_use"]
+        Route["route_message()"]
+        Brain["brain backend"]
+        Tool["tool backend"]
+        RuntimeMode["runtime_mode<br/>hybrid or local_only"]
+        BackendConfig["configure_backends()"]
+    end
+
+    subgraph Execution["Generation"]
+        ModelCall["backend.generate(messages, options={temp, top_p})"]
+        FinalOutput["final_output / supervised_output"]
+        Feedback["feedback notes"]
+    end
+
+    subgraph StateFeedback["Per-Turn State Feedback"]
+        TurnUpdate["_update_state_from_interaction()"]
+        StateMgrUpdate["state_manager.update_from_output()"]
+        DriftState["_drift_state"]
+        EmotivePush["emotive_push<br/>length + caps + exclam + user vibe"]
+        Momentum["emotional_drift / rhythm_momentum / gait_bias / attractor"]
+        MemoryWrite["memory_system.add_turn()"]
+    end
+
+    subgraph TemporalControl["Temporal Quantum Agent"]
+        TQA["tqa_layer / TemporalQuantumAgent"]
+        Present["update_present_state()"]
+        Projection["_update_temporal_projection()"]
+        Future["update_future_projection()"]
+        FutureMetrics["burnout / failure cascade / perf regression / overwhelm"]
+        Bias["apply_biases()<br/>agent redirect when projected risk is high"]
+        Collapse["collapse()<br/>T+1 -> T0 -> T-1"]
+        Snapshot["snapshot()"]
+        LoopStatus["internal loop status"]
+        ForceStability["set_future_stability_index()<br/>when stability is low"]
+    end
+
+    subgraph Telemetry["Observable Output"]
+        TelemetryOut["telemetry<br/>agent gait rhythm stability drift TQA snapshot"]
+        DriftRaw["drift raw fields<br/>force_gait force_rhythm warning"]
+        Reply["reply to surface"]
+        Logs["feedback logs / transcript / telemetry / audit"]
+    end
+
+    User --> Surface
+    Surface --> Session
+    Session --> Request
+
+    Request --> SetAgent
+    SetAgent --> Registry
+    Registry --> Payload
+    Payload --> AgentState
+    Payload --> EmotionModel
+    Payload --> AgentManager
+    Payload --> TemporalOntology
+    SetAgent --> CurrentAgent
+    AgentState --> CurrentAgent
+    EmotionModel --> EmotionalAperture
+
+    Request --> Memory
+    Memory --> History
+    Request --> BootPrompt
+    CurrentAgent --> IdentityPrompt
+    CurrentAgent --> IdentityBlock
+    Payload --> IdentityBlock
+    AgentLock --> BuildMessages
+    IdentityPrompt --> BuildMessages
+    IdentityBlock --> BuildMessages
+    BootPrompt --> BuildMessages
+    History --> BuildMessages
+    Memory --> ContextBlock
+    EmotionalAperture --> ContextBlock
+    TemporalOntology --> ContextBlock
+    ContextBlock --> BuildMessages
+
+    Request --> Signals
+    EmotionalAperture --> Focus
+    Signals --> RiskDerive
+    Focus --> RiskDerive
+    Memory --> Advisory
+    Advisory --> SupervisorArb
+    Signals --> SupervisorArb
+
+    Signals --> DriftInput
+    Advisory --> DriftInput
+    CurrentAgent --> DriftInput
+    DriftInput --> DriftCalc
+    DriftCalc --> DriftPressure
+    DriftPressure --> DriftAction
+    DriftAction --> LastDrift
+    DriftAction --> Soft
+    DriftAction --> Moderate
+    DriftAction --> Hard
+    Hard --> ModFault
+
+    DriftPressure --> StabilityGate
+    Stability --> StabilityGate
+    StabilityGate --> DynamicAperture
+
+    EmotionalAperture --> DynamicAperture
+    UserVibe --> DynamicAperture
+    DriftState --> DynamicAperture
+    Stability --> DynamicAperture
+    DynamicAperture --> Temp
+    DynamicAperture --> TopP
+
+    Request --> TQA
+    CurrentAgent --> Present
+    Signals --> RiskDerive
+    RiskDerive --> Present
+    Present --> Projection
+    DriftPressure --> Projection
+    Projection --> Future
+    Future --> FutureMetrics
+    Stability --> ForceStability
+    ForceStability --> Future
+    FutureMetrics --> Bias
+    Bias --> SetAgent
+
+    BuildMessages --> Helper
+    SupervisorArb --> Helper
+    Helper --> Intent
+    Intent --> Route
+    BackendConfig --> Brain
+    BackendConfig --> Tool
+    RuntimeMode --> Brain
+    RuntimeMode --> Tool
+    Route --> Brain
+    Route --> Tool
+    Brain --> ModelCall
+    Tool --> ModelCall
+    Temp --> ModelCall
+    TopP --> ModelCall
+    BuildMessages --> ModelCall
+    ModelCall --> FinalOutput
+    FinalOutput --> Feedback
+
+    FinalOutput --> TurnUpdate
+    TurnUpdate --> EmotivePush
+    EmotivePush --> DriftState
+    DriftState --> Gait
+    DriftState --> Rhythm
+    DriftState --> Stability
+    Stability --> ModFault
+    FinalOutput --> StateMgrUpdate
+    Gait --> StateMgrUpdate
+    Rhythm --> StateMgrUpdate
+    StateMgrUpdate --> Momentum
+    Momentum --> Advisory
+    Momentum --> DynamicAperture
+
+    FinalOutput --> Collapse
+    Collapse --> Snapshot
+    Snapshot --> LoopStatus
+    Snapshot --> TelemetryOut
+    LoopStatus --> TelemetryOut
+    FutureMetrics --> TelemetryOut
+    DriftPressure --> TelemetryOut
+    Stability --> TelemetryOut
+    Gait --> TelemetryOut
+    Rhythm --> TelemetryOut
+    LastDrift --> DriftRaw
+    DriftRaw --> TelemetryOut
+    Feedback --> TelemetryOut
+    FinalOutput --> Reply
+    TelemetryOut --> Reply
+
+    FinalOutput --> MemoryWrite
+    TelemetryOut --> MemoryWrite
+    MemoryWrite --> Memory
+
+    Reply --> Surface
+    Reply --> Logs
+    TelemetryOut --> Logs
+    Feedback --> Logs
+
