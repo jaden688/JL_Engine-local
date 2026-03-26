@@ -28,7 +28,19 @@ ENGINE_PORT = 8000
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 ENGINE_SRC  = ENGINE_ROOT / "src"
 
-mcp = FastMCP("JL Engine")
+MCP_HOST = os.getenv("JL_MCP_HOST", "127.0.0.1")
+try:
+    MCP_PORT = int(os.getenv("JL_MCP_PORT", "8002"))
+except (TypeError, ValueError):
+    MCP_PORT = 8002
+_requested_transport = os.getenv("JL_MCP_TRANSPORT", "auto").strip().lower() or "auto"
+if _requested_transport == "auto":
+    MCP_TRANSPORT = "stdio" if sys.stdin.isatty() and sys.stdout.isatty() else "streamable-http"
+else:
+    MCP_TRANSPORT = _requested_transport
+MCP_MOUNT_PATH = os.getenv("JL_MCP_MOUNT_PATH", "/").strip() or "/"
+
+mcp = FastMCP("JL Engine", host=MCP_HOST, port=MCP_PORT)
 
 
 # ── Engine auto-start ────────────────────────────────────────────────────────
@@ -1059,4 +1071,4 @@ print(json.dumps({{
 # ── Entry Point ──────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(transport=MCP_TRANSPORT, mount_path=MCP_MOUNT_PATH)

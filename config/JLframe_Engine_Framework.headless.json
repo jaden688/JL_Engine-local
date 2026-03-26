@@ -12,7 +12,7 @@
         "gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         "gemini_model": "gemini-2.0-flash",
         "google_gemini_timeout": 30,
-        "google_gemini_api_key": "AIzaSyAdTjAkoBAKlcmeGidRFiG1wqgNRCGrU5o"
+        "google_gemini_api_key": ""
       },
       "tool_config": {
         "id": "google-gemini",
@@ -22,7 +22,7 @@
         "gemini_endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         "gemini_model": "gemini-2.0-flash",
         "google_gemini_timeout": 30,
-        "google_gemini_api_key": "AIzaSyAdTjAkoBAKlcmeGidRFiG1wqgNRCGrU5o"
+        "google_gemini_api_key": ""
       }
     },
     "runtime_mode": "hybrid"
