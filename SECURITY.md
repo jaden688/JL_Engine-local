@@ -18,8 +18,9 @@ JL Engine Local includes a **shell command execution tool** (`src/jl_platform/co
 
 **This is opt-in and user-controlled:**
 
+- `JL_LOCAL_UNSAFE_TOOLS` defaults to **`0` (OFF)** — shell execution is disabled unless explicitly enabled
 - The launcher (`launcher.bat`) exposes an **"Unsafe Tools"** toggle (`JL_LOCAL_UNSAFE_TOOLS`)
-- When `OFF`, shell execution routes are disabled
+- When `OFF`, shell execution routes are disabled and safe stubs are registered in their place
 - When `ON`, the user has explicitly consented to agent-driven shell access
 - The engine's built-in **Safety Gate** and **Supervisor Gate** still filter commands at runtime
 
@@ -41,3 +42,17 @@ File paths supplied to `load_card()` and `register_mpf_agent()` are:
 API keys are **never committed** to the repository.  
 Copy `.env.example` to `.env` and fill in your own keys.  
 `.env` is listed in `.gitignore` and will never be tracked.
+
+---
+
+## CORS Policy
+
+- The core API (`jl_engine_core/api_app.py`) restricts CORS origins to `localhost` and `127.0.0.1` by default. Override with the `JL_CORS_ORIGINS` environment variable (comma-separated list).
+- The MCP HTTPS proxy (`JL-Engine-local/mcp_https_proxy.py`) validates the `Origin` header against a built-in allowlist of local origins; arbitrary origins are **not** reflected.
+- `allow_methods` and `allow_headers` are restricted to the methods and headers actually used by the application.
+
+---
+
+## Error Handling
+
+Proxy and API error responses return generic error messages. Internal exception details are logged server-side only and are **never** included in client-facing responses.

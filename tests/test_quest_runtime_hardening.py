@@ -21,6 +21,7 @@ def test_quest_runtime_uses_safe_interpreter_defaults(monkeypatch):
             self.history = []
 
     monkeypatch.delenv("JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK", raising=False)
+    monkeypatch.delenv("JL_LOCAL_UNSAFE_TOOLS", raising=False)
     monkeypatch.setattr(quest_runtime_module, "JLEngineCore", FakeEngine)
     monkeypatch.setattr(quest_runtime_module, "PrivilegedMemoryForge", FakeForge)
     monkeypatch.setattr(quest_runtime_module, "InterpreterSession", FakeInterpreterSession)
@@ -43,5 +44,5 @@ def test_quest_runtime_uses_safe_interpreter_defaults(monkeypatch):
     print(f"\n\nCAPTURED IS: {captured}\n\n")
 
     assert agent.agent == "SparkByte"
-    assert captured["allow_unsafe_tools"] is True
+    assert captured["allow_unsafe_tools"] is False
     assert captured["allow_direct_action_fallback"] is False
