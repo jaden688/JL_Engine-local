@@ -27,4 +27,4 @@ def register_local_tools(registry) -> None:
     )
 
 
-register_npc_tools = register_local_tools
+register_jl_agent_tools = register_local_tools

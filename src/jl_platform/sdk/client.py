@@ -16,7 +16,10 @@ HOST_REGISTRY = {
 HOST_ALIASES = {
     "computercontrol": "my-computer",
     "mycomputer": "my-computer",
-    "npc": "my-computer",
+    "jl-agent": "my-computer",
+    "jlagent": "my-computer",
+    "jl_agents": "my-computer",
+    "jlagents": "my-computer",
 }
 
 
