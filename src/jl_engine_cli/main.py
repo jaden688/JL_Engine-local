@@ -8,7 +8,13 @@ import json
 import logging
 import os
 import re
+import subprocess
 import sys
+import threading
+import time
+import urllib.error
+import urllib.request
+import webbrowser
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -35,6 +41,217 @@ def _merge_config_overrides(overrides: Dict[str, Any]) -> EngineConfig:
 def _build_engine(config_path: str | None) -> JLEngineCore:
     overrides = load_config(config_path) if config_path else {}
     return JLEngineCore(_merge_config_overrides(overrides))
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = str(os.getenv(name, "1" if default else "0")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _standard_ui_path(raw: str | None) -> str:
+    value = str(raw or "/ui/").strip() or "/ui/"
+    if not value.startswith("/"):
+        value = f"/{value}"
+    return value.rstrip("/") or "/ui"
+
+
+def _platform_urls(host: str, port: int, ui_path: str) -> tuple[str, str, str]:
+    normalized_ui_path = _standard_ui_path(ui_path)
+    base_url = f"http://{host}:{int(port)}"
+    return base_url, f"{base_url}/health", f"{base_url}{normalized_ui_path}"
+
+
+def _default_platform_port() -> int:
+    try:
+        return int(str(os.getenv("JL_PLATFORM_PORT") or "8000"))
+    except (TypeError, ValueError):
+        return 8000
+
+
+def _default_startup_timeout() -> float:
+    try:
+        return float(str(os.getenv("JL_PLATFORM_STARTUP_TIMEOUT_SECONDS") or "30"))
+    except (TypeError, ValueError):
+        return 30.0
+
+
+def _default_launch_mode() -> str:
+    value = str(os.getenv("JL_PLATFORM_LAUNCH_MODE") or "standalone").strip().lower()
+    return value if value in {"standalone", "browser"} else "standalone"
+
+
+def _standalone_browser_candidates() -> list[str]:
+    if os.name != "nt":
+        return []
+    candidates = [
+        os.path.join(os.getenv("ProgramFiles(x86)", ""), "Microsoft", "Edge", "Application", "msedge.exe"),
+        os.path.join(os.getenv("ProgramFiles", ""), "Microsoft", "Edge", "Application", "msedge.exe"),
+        os.path.join(os.getenv("ProgramFiles", ""), "Google", "Chrome", "Application", "chrome.exe"),
+        os.path.join(os.getenv("ProgramFiles(x86)", ""), "Google", "Chrome", "Application", "chrome.exe"),
+    ]
+    return [candidate for candidate in candidates if candidate and Path(candidate).exists()]
+
+
+def _open_platform_ui(url: str, *, launch_mode: str) -> None:
+    normalized_mode = str(launch_mode or "browser").strip().lower()
+    if normalized_mode == "standalone":
+        for browser_path in _standalone_browser_candidates():
+            try:
+                subprocess.Popen([browser_path, f"--app={url}"])
+                return
+            except Exception:
+                continue
+    webbrowser.open(url)
+
+
+def _open_platform_ui_when_ready(
+    *,
+    health_url: str,
+    ui_url: str,
+    startup_timeout: float,
+    launch_mode: str,
+) -> None:
+    timeout_seconds = max(5.0, float(startup_timeout))
+
+    def _wait_then_open() -> None:
+        deadline = time.time() + timeout_seconds
+        while time.time() < deadline:
+            try:
+                with urllib.request.urlopen(health_url, timeout=2):
+                    break
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError):
+                time.sleep(0.5)
+        _open_platform_ui(ui_url, launch_mode=launch_mode)
+
+    threading.Thread(target=_wait_then_open, name="jl-engine-ui-open", daemon=True).start()
+
+
+def _launch_platform_api(
+    *,
+    host: str,
+    port: int,
+    ui_path: str,
+    open_browser: bool,
+    launch_mode: str,
+    startup_timeout: float,
+    reload: bool,
+) -> int:
+    import uvicorn
+
+    _base_url, health_url, ui_url = _platform_urls(host, port, ui_path)
+    if open_browser:
+        _open_platform_ui_when_ready(
+            health_url=health_url,
+            ui_url=ui_url,
+            startup_timeout=startup_timeout,
+            launch_mode=launch_mode,
+        )
+    uvicorn.run(
+        "jl_platform.services.api.main:app",
+        host=host,
+        port=int(port),
+        reload=bool(reload),
+        log_level="warning",
+    )
+    return 0
+
+
+def _launch_desktop_ui(*, chat_only_mode: bool | None = None) -> int:
+    import ui.pyside_ui as pyside_ui
+
+    original_argv = list(sys.argv)
+    launch_argv = [original_argv[0] if original_argv else "j-engine"]
+    if chat_only_mode is True:
+        launch_argv.append("--chat-window")
+    elif chat_only_mode is False:
+        launch_argv.append("--full-window")
+    try:
+        sys.argv = launch_argv
+        pyside_ui.main()
+    finally:
+        sys.argv = original_argv
+    return 0
+
+
+def _launch_entry(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="j-engine launch",
+        description="Standard JL Engine launcher for web, desktop, CLI, or API surfaces.",
+    )
+    parser.add_argument(
+        "--ui",
+        choices=("web", "desktop", "cli", "api"),
+        default="web",
+        help="Which surface to launch.",
+    )
+    parser.add_argument(
+        "--host",
+        default=str(os.getenv("JL_PLATFORM_HOST") or "127.0.0.1"),
+        help="Host for the platform API when launching web/api.",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=_default_platform_port(),
+        help="Port for the platform API when launching web/api.",
+    )
+    parser.add_argument(
+        "--ui-path",
+        default=str(os.getenv("JL_PLATFORM_UI_PATH") or "/ui/"),
+        help="UI route to open for web launch mode.",
+    )
+    parser.add_argument(
+        "--launch-mode",
+        choices=("standalone", "browser"),
+        default=_default_launch_mode(),
+        help="How to open the web UI when using --ui web.",
+    )
+    parser.add_argument(
+        "--startup-timeout",
+        type=float,
+        default=_default_startup_timeout(),
+        help="Seconds to wait for /health before opening the web UI.",
+    )
+    parser.add_argument("--reload", action="store_true", help="Run the platform API with auto-reload.")
+    parser.add_argument(
+        "--no-open-browser",
+        action="store_true",
+        help="Do not open the browser automatically when launching the web UI.",
+    )
+    parser.add_argument(
+        "--chat-window",
+        action="store_true",
+        help="Launch the PySide UI in chat-only mode.",
+    )
+    parser.add_argument(
+        "--full-window",
+        action="store_true",
+        help="Force the full PySide workspace window.",
+    )
+    args, forwarded = parser.parse_known_args(argv)
+
+    if args.chat_window and args.full_window:
+        parser.error("--chat-window and --full-window are mutually exclusive.")
+
+    if args.ui == "cli":
+        return _main_cli(forwarded)
+
+    if forwarded:
+        parser.error(f"unrecognized arguments: {' '.join(forwarded)}")
+
+    if args.ui == "desktop":
+        chat_only_mode = True if args.chat_window else False if args.full_window else None
+        return _launch_desktop_ui(chat_only_mode=chat_only_mode)
+
+    return _launch_platform_api(
+        host=str(args.host).strip() or "127.0.0.1",
+        port=int(args.port),
+        ui_path=args.ui_path,
+        open_browser=(args.ui == "web" and not args.no_open_browser),
+        launch_mode=args.launch_mode,
+        startup_timeout=float(args.startup_timeout),
+        reload=bool(args.reload),
+    )
 
 
 def _print_agents(engine: JLEngineCore) -> None:
@@ -1230,7 +1447,7 @@ def _set_ollama_model(model_name: str) -> None:
         print(f"Failed to set Ollama model: {e}")
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def _main_cli(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="j-engine",
         description="Agentic CLI on top of J_engine Core (agents + tool-calling).",
@@ -1305,6 +1522,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         allow_bias_redirect=bool(args.allow_bias_redirect),
         auto_approve=bool(args.auto_approve),
     )
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args and args[0] == "launch":
+        return _launch_entry(args[1:])
+    return _main_cli(args)
 
 
 if __name__ == "__main__":

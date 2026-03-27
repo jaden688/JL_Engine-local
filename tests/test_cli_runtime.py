@@ -264,6 +264,82 @@ def test_modern_cli_engine_first_keeps_task_requests_in_main_session(monkeypatch
     assert "Task detected. Handing execution" not in output
 
 
+def test_modern_cli_launch_forwards_cli_surface_args(monkeypatch):
+    calls: list[list[str]] = []
+
+    def fake_main_cli(argv=None):
+        calls.append(list(argv or []))
+        return 41
+
+    monkeypatch.setattr(modern_cli, "_main_cli", fake_main_cli)
+
+    result = modern_cli.main(["launch", "--ui", "cli", "--agent", "Slappy", "--trace"])
+
+    assert result == 41
+    assert calls == [["--agent", "Slappy", "--trace"]]
+
+
+def test_modern_cli_launch_web_dispatches_platform_api(monkeypatch):
+    captured: dict[str, object] = {}
+
+    def fake_launch_platform_api(**kwargs):
+        captured.update(kwargs)
+        return 11
+
+    monkeypatch.setattr(modern_cli, "_launch_platform_api", fake_launch_platform_api)
+
+    result = modern_cli.main(
+        [
+            "launch",
+            "--ui",
+            "web",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8123",
+            "--ui-path",
+            "/ui/",
+            "--no-open-browser",
+        ]
+    )
+
+    assert result == 11
+    assert captured["host"] == "127.0.0.1"
+    assert captured["port"] == 8123
+    assert captured["ui_path"] == "/ui/"
+    assert captured["open_browser"] is False
+
+
+def test_modern_cli_launch_desktop_dispatches_pyside(monkeypatch):
+    calls: list[bool | None] = []
+
+    monkeypatch.setattr(
+        modern_cli,
+        "_launch_desktop_ui",
+        lambda *, chat_only_mode=None: calls.append(chat_only_mode) or 7,
+    )
+
+    result = modern_cli.main(["launch", "--ui", "desktop", "--chat-window"])
+
+    assert result == 7
+    assert calls == [True]
+
+
+def test_modern_cli_launch_api_skips_browser_open(monkeypatch):
+    captured: dict[str, object] = {}
+
+    def fake_launch_platform_api(**kwargs):
+        captured.update(kwargs)
+        return 19
+
+    monkeypatch.setattr(modern_cli, "_launch_platform_api", fake_launch_platform_api)
+
+    result = modern_cli.main(["launch", "--ui", "api"])
+
+    assert result == 19
+    assert captured["open_browser"] is False
+
+
 def test_worker_task_detection_uses_real_word_boundaries() -> None:
     assert modern_cli._looks_like_worker_task("list the files on my desktop") is True
     assert (

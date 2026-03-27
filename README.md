@@ -50,6 +50,24 @@ This repository is open source under the Apache License, Version 2.0 (see `LICEN
 - `tools/`: shared utility scripts
 - `docs/`: architecture notes, MPF standard, tool forge guide, and error-handling reference
 
+### Standard launcher
+
+If you want a more standard cross-platform entrypoint than the Windows batch launcher, use:
+
+```bash
+j-engine launch --ui web
+```
+
+Other surfaces:
+
+```bash
+j-engine launch --ui desktop
+j-engine launch --ui cli --agent SparkByte
+j-engine launch --ui api --host 127.0.0.1 --port 8000
+```
+
+This is additive. `launcher.bat` remains the friendly Windows front door.
+
 ## Quick start
 
 ### Windows front door
