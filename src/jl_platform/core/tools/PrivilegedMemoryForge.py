@@ -170,9 +170,15 @@ class PrivilegedMemoryForge:
 
         try:
             # Prepare a dedicated context for exec to run in.
-            # This captures the newly defined function.
-            exec_context: Dict[str, Any] = {}
-            exec(code, exec_context)
+            # Block dangerous builtins to limit attack surface.
+            import builtins as _builtins
+
+            _BLOCKED_BUILTINS = {"__import__", "compile", "breakpoint", "open", "input"}
+            safe_builtins = {
+                k: v for k, v in vars(_builtins).items() if k not in _BLOCKED_BUILTINS
+            }
+            exec_context: Dict[str, Any] = {"__builtins__": safe_builtins}
+            exec(code, exec_context)  # noqa: S102 — intentional; guarded by safe_builtins + session scope
 
             # The code MUST define a 'run' function.
             if "run" not in exec_context or not isinstance(exec_context["run"], Callable):
