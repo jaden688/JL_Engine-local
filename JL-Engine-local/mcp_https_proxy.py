@@ -245,10 +245,23 @@ def _ensure_tls_assets() -> tuple[Path, Path]:
     return server_key_path, server_cert_path
 
 
+_ALLOWED_CORS_ORIGINS: set[str] = {
+    "http://localhost",
+    "http://localhost:8000",
+    "http://localhost:8080",
+    "http://127.0.0.1",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8080",
+    f"https://{DEFAULT_PUBLIC_HOST}:{DEFAULT_PORT}",
+    f"https://localhost:{DEFAULT_PORT}",
+    f"https://127.0.0.1:{DEFAULT_PORT}",
+}
+
+
 def _cors_origin(origin: str | None) -> str:
-    if origin:
+    if origin and origin in _ALLOWED_CORS_ORIGINS:
         return origin
-    return "*"
+    return "http://localhost"
 
 
 def _copy_request_headers(source) -> dict[str, str]:
@@ -338,9 +351,8 @@ class ProxyHandler(BaseHTTPRequestHandler):
                         self.wfile.write(response_body)
                         self.wfile.flush()
         except Exception as exc:
-            payload = f'{{"error":"proxy_failed","detail":"{str(exc).replace(chr(34), chr(39))}"}}'.encode(
-                "utf-8"
-            )
+            _log(f"Proxy error: {exc}")
+            payload = b'{"error":"proxy_failed","detail":"An internal proxy error occurred."}'
             self.send_response(HTTPStatus.BAD_GATEWAY)
             _emit_cors_headers(self)
             self.send_header("Content-Type", "application/json")

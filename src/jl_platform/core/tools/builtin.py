@@ -23,8 +23,8 @@ from jl_platform.core.models import ToolSpec
 
 
 def default_allow_unsafe_tools() -> bool:
-    raw = str(os.getenv("JL_LOCAL_UNSAFE_TOOLS", "1")).strip().lower()
-    return raw not in {"0", "false", "off", "no"}
+    raw = str(os.getenv("JL_LOCAL_UNSAFE_TOOLS", "0")).strip().lower()
+    return raw not in {"0", "false", "off", "no", ""}
 
 
 def register_core_tools(registry, allow_unsafe: bool | None = None) -> None:

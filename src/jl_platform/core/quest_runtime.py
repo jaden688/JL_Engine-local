@@ -17,6 +17,7 @@ from jl_engine_core.engine_core import JLEngineCore
 from jl_engine_core.modular_agents import get_modular_agent_summary, is_modular_agent_payload, resolve_modular_agent_payload
 from jl_platform.controllers import backend_controller
 from jl_platform.core.interpreter import InterpreterSession
+from jl_platform.core.tools.builtin import default_allow_unsafe_tools
 from jl_platform.core.tools.PrivilegedMemoryForge import PrivilegedMemoryForge
 from modules import card2mpf
 from tools.business_mpf_generator import generate_business_mpf
@@ -429,7 +430,7 @@ class FatQuestRuntime:
                 raw_external_fallback,
                 raw_tool_mode in {"forge_first", "external_first"},
             ),
-            "allow_unsafe_tools": _as_bool(agentic_source.get("allow_unsafe_tools"), True),
+            "allow_unsafe_tools": _as_bool(agentic_source.get("allow_unsafe_tools"), default_allow_unsafe_tools()),
             "allow_direct_action_fallback": _as_bool(
                 agentic_source.get("allow_direct_action_fallback"),
                 _env_bool("JL_INTERPRETER_ALLOW_DIRECT_ACTION_FALLBACK", False),
@@ -459,7 +460,7 @@ class FatQuestRuntime:
         except Exception:
             pass
         try:
-            session.allow_unsafe_tools = bool(profile.get("allow_unsafe_tools", True))
+            session.allow_unsafe_tools = bool(profile.get("allow_unsafe_tools", default_allow_unsafe_tools()))
         except Exception:
             pass
 
@@ -811,7 +812,7 @@ class FatQuestRuntime:
                 session = InterpreterSession(
                     engine=engine,
                     memory_forge=forge,
-                    allow_unsafe_tools=bool(profile.get("allow_unsafe_tools", True)),
+                    allow_unsafe_tools=bool(profile.get("allow_unsafe_tools", default_allow_unsafe_tools())),
                     allow_direct_action_fallback=bool(profile.get("allow_direct_action_fallback", False)),
                 )
                 agent_obj = QuestAgent(agent_id=agent_id, agent=agent_name, session=session, forge=forge)
