@@ -208,3 +208,82 @@ def test_save_service_config_omits_default_ollama_base_url(tmp_path, monkeypatch
     saved = json.loads(service_path.read_text(encoding="utf-8"))
     assert saved["ollama_model"] == "gemma3:4b"
     assert "ollama_base_url" not in saved
+
+
+def test_apply_workspace_dock_preset_uses_ide_lanes() -> None:
+    class _FakeDock:
+        def __init__(self, name: str) -> None:
+            self.name = name
+            self.visible = True
+            self.min_width: int | None = None
+            self.min_height: int | None = None
+            self.raised = False
+
+        def setVisible(self, value: bool) -> None:
+            self.visible = value
+
+        def isVisible(self) -> bool:
+            return self.visible
+
+        def setMinimumWidth(self, value: int) -> None:
+            self.min_width = value
+
+        def setMinimumHeight(self, value: int) -> None:
+            self.min_height = value
+
+        def raise_(self) -> None:
+            self.raised = True
+
+    main = Main.__new__(Main)
+    main.dock_explorer = _FakeDock("Explorer")
+    main.dock_ops = _FakeDock("Ops")
+    main.dock_supervisor = _FakeDock("Supervisor")
+    main.dock_monitor = _FakeDock("Monitor")
+    main.dock_hud = _FakeDock("Command")
+    main.dock_engine = _FakeDock("Engine")
+    main.dock_cnc = _FakeDock("CNC")
+    main.dock_services = _FakeDock("Services")
+    main.dock_business = _FakeDock("Builder")
+    main.dock_commander = _FakeDock("Commander")
+    main.dock_terminal = _FakeDock("Terminal")
+    main.dock_diagnostics = _FakeDock("Diagnostics")
+    main.dock_benchmarks = _FakeDock("Benchmarks")
+    main.dock_construction = _FakeDock("Construction")
+    main._layout_metrics = {
+        "left_min": 140,
+        "right_min": 190,
+        "bottom_min": 120,
+        "left_size": 170,
+        "right_size": 240,
+        "bottom_size": 180,
+    }
+
+    calls: dict[str, list[object]] = {
+        "add": [],
+        "tabify": [],
+        "resize": [],
+        "tabs": [],
+        "corners": [],
+    }
+
+    main.addDockWidget = lambda area, dock: calls["add"].append((area, dock.name))
+    main.tabifyDockWidget = lambda left, right: calls["tabify"].append((left.name, right.name))
+    main.resizeDocks = lambda docks, sizes, orientation: calls["resize"].append(
+        ([dock.name for dock in docks], list(sizes), orientation)
+    )
+    main.setTabPosition = lambda area, position: calls["tabs"].append((area, position))
+    main.setCorner = lambda corner, area: calls["corners"].append((corner, area))
+    main._polish_tab_bars = lambda: None
+
+    Main._apply_workspace_dock_preset(main)
+
+    assert any(name == "Explorer" for _area, name in calls["add"])
+    assert any(name == "Command" for _area, name in calls["add"])
+    assert any(name == "Terminal" for _area, name in calls["add"])
+    assert ("Explorer", "Ops") in calls["tabify"]
+    assert ("Command", "Engine") in calls["tabify"]
+    assert ("Terminal", "Diagnostics") in calls["tabify"]
+    assert main.dock_explorer.min_width == 140
+    assert main.dock_hud.min_width == 190
+    assert main.dock_terminal.min_height == 120
+    assert any(docks == ["Explorer", "Command"] for docks, _sizes, _orientation in calls["resize"])

@@ -45,6 +45,20 @@
       "hillbilly"
     ]
   },
+  "Temporal Quantum Agent": {
+    "jl_agent_file": "fat_agents/Temporal_Quantum_Agent_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "classification": "fat_agent",
+    "tags": [
+      "temporal",
+      "analysis",
+      "projection",
+      "stability",
+      "precision"
+    ]
+  },
   "Supervisor": {
     "jl_agent_file": "fat_agents/SparkByte_Full.json",
     "default_memory_mode": "HYBRID",
@@ -217,6 +231,18 @@
       "generated",
       "support",
       "triage"
+    ]
+  },
+  "Specialist Builder (jl_fat_agent)": {
+    "jl_agent_file": "generated/Specialist_Builder__jl_fat_agent.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "classification": "generated",
+    "tags": [
+      "generated",
+      "specialist",
+      "builder"
     ]
   }
 }

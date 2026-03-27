@@ -19,7 +19,7 @@
       "tool_backend": "openai",
       "brain_config": {
         "id": "openai",
-        "label": "xAI / Grok",
+        "label": "OpenAI",
         "provider": "openai",
         "openai_base_url": "https://api.x.ai/v1",
         "openai_model": "grok-3",
@@ -27,7 +27,7 @@
       },
       "tool_config": {
         "id": "openai",
-        "label": "xAI / Grok",
+        "label": "OpenAI",
         "provider": "openai",
         "openai_base_url": "https://api.x.ai/v1",
         "openai_model": "grok-3",

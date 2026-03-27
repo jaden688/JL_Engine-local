@@ -91,6 +91,7 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QTabBar,
     QTextEdit,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
     QTreeView,
@@ -472,14 +473,23 @@ def save_service_config(config: dict) -> None:
     SERVICE_CONFIG_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def _allow_horizontal_compaction(widget: QWidget) -> None:
+    widget.setMinimumWidth(0)
+    policy = widget.sizePolicy()
+    policy.setHorizontalPolicy(QSizePolicy.Ignored)
+    widget.setSizePolicy(policy)
+
+
 def panel(title: str, tip_text: str = "") -> tuple[QFrame, QVBoxLayout]:
     outer = QFrame()
     outer.setObjectName("PanelOuter")
+    _allow_horizontal_compaction(outer)
     outer_l = QVBoxLayout(outer)
     outer_l.setContentsMargins(2, 2, 2, 2)
 
     inner = QFrame()
     inner.setObjectName("PanelInner")
+    _allow_horizontal_compaction(inner)
     inner_l = QVBoxLayout(inner)
     inner_l.setContentsMargins(12, 12, 12, 12)
     inner_l.setSpacing(10)
@@ -634,6 +644,16 @@ class ChatPromptEdit(QTextEdit):
         super().resizeEvent(event)
         self._sync_height()
 
+    def minimumSizeHint(self):
+        hint = super().minimumSizeHint()
+        hint.setHeight(max(hint.height(), self._min_height))
+        return hint
+
+    def sizeHint(self):
+        hint = super().sizeHint()
+        hint.setHeight(max(hint.height(), self._min_height))
+        return hint
+
     def _sync_height(self) -> None:
         document = self.document()
         document.setTextWidth(max(0, self.viewport().width() - 4))
@@ -699,13 +719,14 @@ class Main(QMainWindow):
         self.chat_only_mode = bool(chat_only_mode)
         self.preferred_chat_agent = DEFAULT_CHAT_AGENT
         self.preferred_ollama_model = DEFAULT_CHAT_OLLAMA_MODEL
+        self._layout_metrics = self._workspace_layout_metrics()
         self.setWindowTitle("JL Engine Chat")
         if self.chat_only_mode:
-            self.resize(980, 760)
-            self.setMinimumSize(640, 480)
+            self.resize(self._layout_metrics["chat_width"], self._layout_metrics["chat_height"])
+            self.setMinimumSize(self._layout_metrics["chat_min_width"], self._layout_metrics["chat_min_height"])
         else:
-            self.resize(1360, 820)
-            self.setMinimumSize(760, 560)
+            self.resize(self._layout_metrics["main_width"], self._layout_metrics["main_height"])
+            self.setMinimumSize(self._layout_metrics["main_min_width"], self._layout_metrics["main_min_height"])
 
         self.service_config = load_service_config()
         self._configure_local_chat_defaults()
@@ -771,13 +792,15 @@ class Main(QMainWindow):
         root = QWidget()
         self.setCentralWidget(root)
         layout = QVBoxLayout(root)
-        layout.setContentsMargins(14, 14, 14, 14)
+        root_margin = self._layout_metrics["root_margin"]
+        header_margin = self._layout_metrics["header_margin"]
+        layout.setContentsMargins(root_margin, root_margin, root_margin, root_margin)
         layout.setSpacing(10)
 
         header = QFrame()
         header.setObjectName("Header")
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(14, 12, 14, 12)
+        hl.setContentsMargins(root_margin, header_margin, root_margin, header_margin)
         hl.setSpacing(12)
 
         title = QLabel("JL Engine Chat" if self.chat_only_mode else "JL Engine - Supervisor")
@@ -789,6 +812,7 @@ class Main(QMainWindow):
         else:
             header_text = "Safety: OFF   |   Tools: OFF   |   Latency(ms): 0"
         self.header_status = QLabel(header_text)
+        self._set_compactable_label(self.header_status)
         hl.addWidget(self.header_status)
 
         hl.addStretch(1)
@@ -798,6 +822,7 @@ class Main(QMainWindow):
             f"{'Persona' if self.chat_only_mode else 'Agent'}: {badge_agent_label}"
         )
         self.badge_agent.setObjectName("Chip")
+        self._set_compactable_label(self.badge_agent)
         hl.addWidget(self.badge_agent)
 
         if self.chat_only_mode:
@@ -808,10 +833,12 @@ class Main(QMainWindow):
             memory_badge = "Memory: HYBRID"
         self.badge_backend = QLabel(backend_badge)
         self.badge_backend.setObjectName("Chip")
+        self._set_compactable_label(self.badge_backend)
         hl.addWidget(self.badge_backend)
 
         self.badge_memory = QLabel(memory_badge)
         self.badge_memory.setObjectName("Chip")
+        self._set_compactable_label(self.badge_memory)
         hl.addWidget(self.badge_memory)
 
         layout.addWidget(header)
@@ -819,22 +846,27 @@ class Main(QMainWindow):
         strip = QFrame()
         strip.setObjectName("TopStrip")
         sl = QHBoxLayout(strip)
-        sl.setContentsMargins(12, 8, 12, 8)
+        sl.setContentsMargins(root_margin, 8, root_margin, 8)
         sl.setSpacing(12)
         sl.addWidget(QLabel("[JL]"))
-        sl.addWidget(QLabel("JL Engine Chat" if self.chat_only_mode else "JL Engine~local"))
+        strip_title = QLabel("JL Engine Chat" if self.chat_only_mode else "JL Engine~local")
+        self._set_compactable_label(strip_title)
+        sl.addWidget(strip_title)
         self.strip_safety = QLabel("Mode: CHAT" if self.chat_only_mode else "Safety: OFF")
         self.strip_tools = QLabel("Tools: READY" if self.chat_only_mode else "Tools: OFF")
         self.strip_latency = QLabel("Latency(ms): 0")
+        self._set_compactable_label(self.strip_safety)
+        self._set_compactable_label(self.strip_tools)
+        self._set_compactable_label(self.strip_latency)
         sl.addWidget(self.strip_safety)
         sl.addWidget(self.strip_tools)
         sl.addWidget(self.strip_latency)
 
         # THEME SWITCHER
-        sl.addSpacing(20)
+        sl.addSpacing(8)
         for t_name in THEMES.keys():
             t_btn = QPushButton(t_name)
-            t_btn.setFixedWidth(80)
+            t_btn.setFixedWidth(self._layout_metrics["theme_button_width"])
             t_btn.clicked.connect(lambda checked=False, name=t_name: self._set_theme(name))
             sl.addWidget(t_btn)
 
@@ -889,6 +921,7 @@ class Main(QMainWindow):
         if not self.chat_only_mode:
             self._setup_ide_docks()
             self._setup_dock_controls()  # New side docks
+        self._compact_combo_boxes()
         self._setup_terminal_logging()
         self._announce_agent_registry()
         self._interpreter_session = InterpreterSession(
@@ -1296,6 +1329,46 @@ class Main(QMainWindow):
         new_qss = base_qss.replace("10pt", f"{self.current_font_size}pt")
         QApplication.instance().setStyleSheet(new_qss)
 
+    def _workspace_layout_metrics(self) -> dict[str, int]:
+        screen = None
+        try:
+            screen = self.screen() or QApplication.primaryScreen()
+        except Exception:
+            screen = QApplication.primaryScreen()
+        if screen is not None:
+            rect = screen.availableGeometry()
+            screen_width = max(1, rect.width())
+            screen_height = max(1, rect.height())
+        else:
+            screen_width = 1360
+            screen_height = 820
+
+        compact = screen_width <= 1440 or screen_height <= 900
+        tight = screen_width <= 1180 or screen_height <= 820
+        return {
+            "screen_width": screen_width,
+            "screen_height": screen_height,
+            "compact": int(compact),
+            "tight": int(tight),
+            "left_min": 140 if tight else 170 if compact else 220,
+            "right_min": 190 if tight else 230 if compact else 320,
+            "bottom_min": 120 if tight else 140 if compact else 170,
+            "left_size": 170 if tight else 210 if compact else 260,
+            "right_size": 240 if tight else 290 if compact else 340,
+            "bottom_size": 180 if tight else 210 if compact else 240,
+            "main_width": min(1360, max(900 if compact else 1100, screen_width - 60)),
+            "main_height": min(820, max(620, screen_height - 70)),
+            "main_min_width": 560 if tight else 640,
+            "main_min_height": 460 if tight else 520,
+            "chat_width": min(980, max(760, screen_width - 60)),
+            "chat_height": min(760, max(560, screen_height - 70)),
+            "chat_min_width": 520 if tight else 600,
+            "chat_min_height": 420 if tight else 480,
+            "theme_button_width": 56 if tight else 64 if compact else 80,
+            "header_margin": 8 if compact else 12,
+            "root_margin": 10 if compact else 14,
+        }
+
     def _configure_tab_widget(self, tabs: QTabWidget, *, movable: bool = False) -> None:
         tabs.setDocumentMode(True)
         tabs.setUsesScrollButtons(True)
@@ -1306,11 +1379,106 @@ class Main(QMainWindow):
         bar.setExpanding(False)
         bar.setElideMode(Qt.ElideRight)
 
+    def _set_compactable_label(self, label: QLabel) -> None:
+        label.setMinimumWidth(0)
+        policy = label.sizePolicy()
+        policy.setHorizontalPolicy(QSizePolicy.Ignored)
+        label.setSizePolicy(policy)
+
+    def _compact_combo_boxes(self) -> None:
+        minimum_contents = 8 if self._layout_metrics["tight"] else 12
+        for combo in self.findChildren(QComboBox):
+            combo.setMinimumWidth(0)
+            combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(minimum_contents)
+            policy = combo.sizePolicy()
+            policy.setHorizontalPolicy(QSizePolicy.MinimumExpanding)
+            combo.setSizePolicy(policy)
+
     def _polish_tab_bars(self) -> None:
         for tab_bar in self.findChildren(QTabBar):
             tab_bar.setDrawBase(False)
             tab_bar.setExpanding(False)
             tab_bar.setElideMode(Qt.ElideRight)
+
+    def _workspace_dock_groups(self) -> dict[str, list[QDockWidget]]:
+        groups = {
+            "left": [
+                getattr(self, "dock_explorer", None),
+                getattr(self, "dock_ops", None),
+                getattr(self, "dock_supervisor", None),
+                getattr(self, "dock_monitor", None),
+            ],
+            "right": [
+                getattr(self, "dock_hud", None),
+                getattr(self, "dock_engine", None),
+                getattr(self, "dock_cnc", None),
+                getattr(self, "dock_services", None),
+                getattr(self, "dock_business", None),
+                getattr(self, "dock_commander", None),
+            ],
+            "bottom": [
+                getattr(self, "dock_terminal", None),
+                getattr(self, "dock_diagnostics", None),
+                getattr(self, "dock_benchmarks", None),
+                getattr(self, "dock_construction", None),
+            ],
+        }
+        return {name: [dock for dock in docks if dock is not None] for name, docks in groups.items()}
+
+    def _tabify_dock_group(self, docks: list[QDockWidget]) -> None:
+        if not docks:
+            return
+        anchor = docks[0]
+        for dock in docks[1:]:
+            self.tabifyDockWidget(anchor, dock)
+            anchor = dock
+
+    def _set_workspace_group_visible(self, group: str, visible: bool) -> None:
+        for dock in self._workspace_dock_groups().get(group, []):
+            dock.setVisible(visible)
+
+    def _apply_workspace_dock_preset(self) -> None:
+        """Restore an IDE-style workspace with left, right, and bottom lanes."""
+        for area in (Qt.LeftDockWidgetArea, Qt.RightDockWidgetArea, Qt.BottomDockWidgetArea):
+            self.setTabPosition(area, QTabWidget.North)
+
+        self.setCorner(Qt.BottomLeftCorner, Qt.BottomDockWidgetArea)
+        self.setCorner(Qt.BottomRightCorner, Qt.BottomDockWidgetArea)
+
+        groups = self._workspace_dock_groups()
+        area_map = {
+            "left": Qt.LeftDockWidgetArea,
+            "right": Qt.RightDockWidgetArea,
+            "bottom": Qt.BottomDockWidgetArea,
+        }
+        for group_name, docks in groups.items():
+            area = area_map[group_name]
+            for dock in docks:
+                self.addDockWidget(area, dock)
+            self._tabify_dock_group(docks)
+
+        metrics = self._layout_metrics
+        if groups["left"]:
+            groups["left"][0].setMinimumWidth(metrics["left_min"])
+            groups["left"][0].raise_()
+        if groups["right"]:
+            groups["right"][0].setMinimumWidth(metrics["right_min"])
+            groups["right"][0].raise_()
+        if groups["bottom"]:
+            for dock in groups["bottom"]:
+                dock.setMinimumHeight(metrics["bottom_min"])
+            groups["bottom"][0].raise_()
+
+        if groups["left"] and groups["right"]:
+            self.resizeDocks(
+                [groups["left"][0], groups["right"][0]],
+                [metrics["left_size"], metrics["right_size"]],
+                Qt.Horizontal,
+            )
+        if groups["bottom"]:
+            self.resizeDocks([groups["bottom"][0]], [metrics["bottom_size"]], Qt.Vertical)
+        self._polish_tab_bars()
 
     def _setup_ide_docks(self) -> None:
         """Initialize global IDE-style docks (Explorer, HUD, Terminal, and all Tools)."""
@@ -1321,7 +1489,8 @@ class Main(QMainWindow):
             | QMainWindow.GroupedDragging
         )
         self.setDockNestingEnabled(True)
-        self.setTabPosition(Qt.RightDockWidgetArea, QTabWidget.North)
+        for area in (Qt.LeftDockWidgetArea, Qt.RightDockWidgetArea, Qt.BottomDockWidgetArea):
+            self.setTabPosition(area, QTabWidget.North)
 
         # --- Helper to create a dock from a builder method ---
         def create_dock(name: str, build_fn, area: Qt.DockWidgetArea):
@@ -1338,8 +1507,10 @@ class Main(QMainWindow):
             scroll = QScrollArea()
             scroll.setWidgetResizable(True)
             scroll.setFrameShape(QFrame.NoFrame)
+            _allow_horizontal_compaction(scroll)
 
             content = QWidget()
+            _allow_horizontal_compaction(content)
             # If the build_fn expects a widget to add a layout to, we pass 'content'
             # Some build functions (like _build_console_tab) add a layout to the parent.
             # We assume standard behavior: build_fn(content) -> populates content.
@@ -1354,16 +1525,16 @@ class Main(QMainWindow):
         self.dock_explorer = create_dock(
             "Explorer", lambda w: self._build_explorer_content(w), Qt.LeftDockWidgetArea
         )
-        self.dock_explorer.setMinimumWidth(180)
+        self.dock_explorer.setMinimumWidth(self._layout_metrics["left_min"])
 
         # 2. Command Center (Right - Primary)
         self.dock_hud = create_dock(
-            "Command Center",
+            "Command",
             lambda w: self._build_command_center_content(w),
             Qt.RightDockWidgetArea,
         )
 
-        # 3. Terminal (Right - Primary)
+        # 3. Terminal (Bottom - Primary)
         self.dock_terminal = QDockWidget("Terminal", self)
         self.dock_terminal.setObjectName("Dock_Terminal")
         self.dock_terminal.setAllowedAreas(Qt.AllDockWidgetAreas)
@@ -1383,47 +1554,32 @@ class Main(QMainWindow):
         self.terminal_log.setPlainText("JL Engine Terminal initialized...\n")
         term_layout.addWidget(self.terminal_log)
         self.dock_terminal.setWidget(term_content)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_terminal)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.dock_terminal)
 
         # --- Tool Docks (Tabified with Command Center on Right) ---
         self.dock_engine = create_dock("Engine", self._build_engine_tab, Qt.RightDockWidgetArea)
-        self.dock_cnc = create_dock("CNC Control", self._build_cnc_tab, Qt.RightDockWidgetArea)
+        self.dock_cnc = create_dock("CNC", self._build_cnc_tab, Qt.RightDockWidgetArea)
         self.dock_services = create_dock(
             "Services", self._build_services_tab, Qt.RightDockWidgetArea
         )
         self.dock_business = create_dock(
-            "Business Builder", self._build_business_tab, Qt.RightDockWidgetArea
+            "Builder", self._build_business_tab, Qt.RightDockWidgetArea
         )
         self.dock_commander = create_dock(
-            "Commander Hub", self._build_commander_tab, Qt.RightDockWidgetArea
+            "Commander", self._build_commander_tab, Qt.RightDockWidgetArea
         )
 
-        # --- Log/Analysis Docks (Tabified with Terminal on Right) ---
+        # --- Log/Analysis Docks (Bottom strip) ---
         self.dock_diagnostics = create_dock(
-            "Diagnostics", self._build_diagnostics_tab, Qt.RightDockWidgetArea
+            "Diagnostics", self._build_diagnostics_tab, Qt.BottomDockWidgetArea
         )
         self.dock_benchmarks = create_dock(
-            "Benchmarks", self._build_benchmarks_tab, Qt.RightDockWidgetArea
+            "Benchmarks", self._build_benchmarks_tab, Qt.BottomDockWidgetArea
         )
         self.dock_construction = create_dock(
-            "Construction", self._build_construction_tab, Qt.RightDockWidgetArea
+            "Construction", self._build_construction_tab, Qt.BottomDockWidgetArea
         )
-
-        # Split the runtime workspace into two stable stacks so tabs stay readable:
-        # feature/control docks up top and diagnostics/logging docks below.
-        self.splitDockWidget(self.dock_hud, self.dock_terminal, Qt.Vertical)
-        self.tabifyDockWidget(self.dock_hud, self.dock_engine)
-        self.tabifyDockWidget(self.dock_engine, self.dock_cnc)
-        self.tabifyDockWidget(self.dock_cnc, self.dock_services)
-        self.tabifyDockWidget(self.dock_services, self.dock_business)
-        self.tabifyDockWidget(self.dock_business, self.dock_commander)
-        self.tabifyDockWidget(self.dock_terminal, self.dock_diagnostics)
-        self.tabifyDockWidget(self.dock_diagnostics, self.dock_benchmarks)
-        self.tabifyDockWidget(self.dock_benchmarks, self.dock_construction)
-        self.resizeDocks([self.dock_hud, self.dock_terminal], [360, 260], Qt.Vertical)
-        self.dock_hud.raise_()
-        self.dock_terminal.raise_()
-        self._polish_tab_bars()
+        self._apply_workspace_dock_preset()
 
     # --- Content Helpers for Docks that were inline before ---
 
@@ -1682,7 +1838,7 @@ class Main(QMainWindow):
 
             chat_row = QHBoxLayout()
             chat_row.setSpacing(10)
-            self.chat_input = ChatPromptEdit(min_height=84, max_height=164)
+            self.chat_input = ChatPromptEdit(min_height=96, max_height=208)
             self.chat_input.setPlaceholderText(
                 "Tell the agent what you want done. Press Enter to send, Shift+Enter for a newline."
             )
@@ -1715,14 +1871,17 @@ class Main(QMainWindow):
 
         self.hero_agent_chip = QLabel(self.badge_agent.text())
         self.hero_agent_chip.setObjectName("Chip")
+        self._set_compactable_label(self.hero_agent_chip)
         hero_layout.addWidget(self.hero_agent_chip)
 
         self.hero_backend_chip = QLabel(self.badge_backend.text())
         self.hero_backend_chip.setObjectName("Chip")
+        self._set_compactable_label(self.hero_backend_chip)
         hero_layout.addWidget(self.hero_backend_chip)
 
         self.hero_memory_chip = QLabel(self.badge_memory.text())
         self.hero_memory_chip.setObjectName("Chip")
+        self._set_compactable_label(self.hero_memory_chip)
         hero_layout.addWidget(self.hero_memory_chip)
 
         layout.addWidget(hero_frame)
@@ -1769,13 +1928,13 @@ class Main(QMainWindow):
         # Chat Input Row
         chat_row = QHBoxLayout()
         chat_row.setSpacing(10)
-        self.chat_input = ChatPromptEdit(min_height=88, max_height=168)
+        self.chat_input = ChatPromptEdit(min_height=104, max_height=220)
         self.chat_input.setPlaceholderText(
             "Transmission prompt (auto-attaches focused code/selection). Enter sends, Shift+Enter adds a new line."
         )
 
         self.chat_send_btn = QPushButton("SEND")
-        self.chat_send_btn.setMinimumHeight(48)
+        self.chat_send_btn.setMinimumHeight(56)
         self.chat_send_btn.setFixedWidth(88)
 
         self.chat_all_workers_toggle = QCheckBox("All Workers")
@@ -1790,11 +1949,15 @@ class Main(QMainWindow):
 
         self.controls_btn = QPushButton("≡")
         self.controls_btn.setFixedSize(40, 40)
-        self.controls_btn.setToolTip("Toggle Control Docks (Side)")
+        self.controls_btn.setToolTip("Toggle left sidebar")
 
         self.expand_btn = QPushButton("□")
         self.expand_btn.setFixedSize(40, 40)
-        self.expand_btn.setToolTip("Toggle Right Sidebar Docks")
+        self.expand_btn.setToolTip("Toggle tool and log panes")
+
+        self.reset_docks_btn = QPushButton("IDE")
+        self.reset_docks_btn.setFixedHeight(40)
+        self.reset_docks_btn.setToolTip("Restore the IDE workspace layout")
 
         chat_row.addWidget(self.chat_input, 1)
         chat_row.addWidget(self.chat_send_btn)
@@ -1810,6 +1973,7 @@ class Main(QMainWindow):
         quick_actions_row.addWidget(self.chat_input_hint)
         quick_actions_row.addWidget(self.controls_btn)
         quick_actions_row.addWidget(self.expand_btn)
+        quick_actions_row.addWidget(self.reset_docks_btn)
         input_panel_layout.addLayout(quick_actions_row)
 
         # CNC / Command Row
@@ -1830,33 +1994,21 @@ class Main(QMainWindow):
 
         self.controls_btn.clicked.connect(self._toggle_side_docks)
         self.expand_btn.clicked.connect(self._toggle_feature_sidebar)
+        self.reset_docks_btn.clicked.connect(self._apply_workspace_dock_preset)
 
     def _toggle_side_docks(self) -> None:
-        """Toggle the visibility of the new side control docks."""
-        visible = not self.dock_ops.isVisible()
-        self.dock_ops.setVisible(visible)
-        self.dock_supervisor.setVisible(visible)
-        self.dock_monitor.setVisible(visible)
+        """Toggle the visibility of the left workspace sidebar."""
+        left_docks = self._workspace_dock_groups().get("left", [])
+        visible = not any(dock.isVisible() for dock in left_docks)
+        self._set_workspace_group_visible("left", visible)
 
     def _toggle_feature_sidebar(self) -> None:
-        """Toggle the visibility of the right-side feature dock area."""
-        # We check one of them to decide state
-        visible = not self.dock_terminal.isVisible()
-
-        docks = [
-            self.dock_terminal,
-            self.dock_hud,
-            self.dock_engine,
-            self.dock_cnc,
-            self.dock_services,
-            self.dock_business,
-            self.dock_commander,
-            self.dock_diagnostics,
-            self.dock_benchmarks,
-            self.dock_construction,
-        ]
-        for dock in docks:
-            dock.setVisible(visible)
+        """Toggle the visibility of the tool and log lanes."""
+        right_docks = self._workspace_dock_groups().get("right", [])
+        bottom_docks = self._workspace_dock_groups().get("bottom", [])
+        visible = not any(dock.isVisible() for dock in [*right_docks, *bottom_docks])
+        self._set_workspace_group_visible("right", visible)
+        self._set_workspace_group_visible("bottom", visible)
 
     def _close_console_tab(self, index):
         if index > 0:  # Protect Chat tab
@@ -2010,7 +2162,7 @@ class Main(QMainWindow):
                 | QDockWidget.DockWidgetMovable
                 | QDockWidget.DockWidgetFloatable
             )
-            dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
+            dock.setAllowedAreas(Qt.AllDockWidgetAreas)
             return dock
 
         def make_card(title: str, tip_text: str = "") -> QFrame:
@@ -2036,7 +2188,7 @@ class Main(QMainWindow):
             return card
 
         # 1. OPS CENTER (Safety, Tools, Backoff, Profile)
-        self.dock_ops = create_dock("Op-Center")
+        self.dock_ops = create_dock("Ops")
         ops_content = QWidget()
         ops_layout = QVBoxLayout(ops_content)
         ops_layout.setContentsMargins(10, 10, 10, 10)
@@ -2174,17 +2326,7 @@ class Main(QMainWindow):
         self.dock_monitor.setWidget(mon_content)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_monitor)
 
-        # Tabify
-        self.tabifyDockWidget(self.dock_ops, self.dock_supervisor)
-        self.tabifyDockWidget(self.dock_supervisor, self.dock_monitor)
-
-        # Keep operator controls in their own left-side stack so the main runtime
-        # docks on the right have cleaner snap lanes.
-        if hasattr(self, "dock_explorer"):
-            self.splitDockWidget(self.dock_explorer, self.dock_ops, Qt.Vertical)
-            self.resizeDocks([self.dock_explorer, self.dock_ops], [280, 220], Qt.Vertical)
-        self.dock_ops.raise_()
-        self._polish_tab_bars()
+        self._apply_workspace_dock_preset()
 
         # Connect signals
         self.agent_combo.currentTextChanged.connect(self._on_agent_change)
@@ -2555,7 +2697,9 @@ class Main(QMainWindow):
         ctrl_row = QHBoxLayout()
         self.diag_log_enabled = QCheckBox("Save diagnostics to file")
         self.diag_log_path = str(BASE_DIR / "logs" / "diagnostics.log")
-        self.diag_log_label = QLabel(self.diag_log_path)
+        self.diag_log_label = QLabel(Path(self.diag_log_path).name)
+        self.diag_log_label.setToolTip(self.diag_log_path)
+        self._set_compactable_label(self.diag_log_label)
         self.diag_clear_btn = QPushButton("Clear Log File")
         ctrl_row.addWidget(self.diag_log_enabled)
         ctrl_row.addWidget(self.diag_log_label, 1)
@@ -2604,12 +2748,23 @@ class Main(QMainWindow):
         stress_btn = QPushButton("Stress x5 (longer prompt)")
         marathon_btn = QPushButton("Marathon x150 (cycle models)")
         clear_btn = QPushButton("Clear Log")
-        controls.addWidget(ping_btn)
-        controls.addWidget(stress_btn)
-        controls.addWidget(marathon_btn)
-        controls.addWidget(clear_btn)
-        controls.addWidget(self.bench_status_label, 1)
-        inner.addLayout(controls)
+        if self._layout_metrics["compact"]:
+            controls_top = QHBoxLayout()
+            controls_bottom = QHBoxLayout()
+            controls_top.addWidget(ping_btn)
+            controls_top.addWidget(stress_btn)
+            controls_bottom.addWidget(marathon_btn)
+            controls_bottom.addWidget(clear_btn)
+            controls_bottom.addWidget(self.bench_status_label, 1)
+            inner.addLayout(controls_top)
+            inner.addLayout(controls_bottom)
+        else:
+            controls.addWidget(ping_btn)
+            controls.addWidget(stress_btn)
+            controls.addWidget(marathon_btn)
+            controls.addWidget(clear_btn)
+            controls.addWidget(self.bench_status_label, 1)
+            inner.addLayout(controls)
 
         agent_row = QHBoxLayout()
         agent_row.addWidget(QLabel("Runs:"))
@@ -2621,17 +2776,21 @@ class Main(QMainWindow):
         self.bench_agent_combo = QComboBox()
         self.bench_agent_combo.addItems(self._agent_options())
         agent_row.addWidget(self.bench_agent_combo)
+        inner.addLayout(agent_row)
+
+        agent_flags_row = QHBoxLayout()
         self.bench_alt_check = QCheckBox("Alternate per run")
         self.bench_random_check = QCheckBox("Randomize hard prompts")
         self.bench_full_check = QCheckBox("Log full I/O")
         self.bench_direct_check = QCheckBox("Direct backend (skip agent context)")
-        agent_row.addWidget(self.bench_alt_check)
-        agent_row.addWidget(self.bench_random_check)
-        agent_row.addWidget(self.bench_full_check)
-        agent_row.addWidget(self.bench_direct_check)
+        agent_flags_row.addWidget(self.bench_alt_check)
+        agent_flags_row.addWidget(self.bench_random_check)
+        agent_flags_row.addWidget(self.bench_full_check)
+        agent_flags_row.addWidget(self.bench_direct_check)
         self.bench_token_label = QLabel("Tokens In/Out: 0/0")
-        agent_row.addWidget(self.bench_token_label)
-        inner.addLayout(agent_row)
+        self._set_compactable_label(self.bench_token_label)
+        agent_flags_row.addWidget(self.bench_token_label, 1)
+        inner.addLayout(agent_flags_row)
 
         backend_row = QHBoxLayout()
         backend_row.addWidget(QLabel("Backend:"))
@@ -2641,12 +2800,20 @@ class Main(QMainWindow):
             self._backend_label_for(backends.get_brain_backend_id())
         )
         backend_row.addWidget(self.bench_backend_combo)
-        backend_row.addWidget(QLabel("Models (comma-separated):"))
         self.bench_model_input = QLineEdit()
-        backend_row.addWidget(self.bench_model_input, 1)
         self.bench_cycle_check = QCheckBox("Cycle models per run")
-        backend_row.addWidget(self.bench_cycle_check)
-        inner.addLayout(backend_row)
+        if self._layout_metrics["compact"]:
+            inner.addLayout(backend_row)
+            backend_models_row = QHBoxLayout()
+            backend_models_row.addWidget(QLabel("Models:"))
+            backend_models_row.addWidget(self.bench_model_input, 1)
+            backend_models_row.addWidget(self.bench_cycle_check)
+            inner.addLayout(backend_models_row)
+        else:
+            backend_row.addWidget(QLabel("Models (comma-separated):"))
+            backend_row.addWidget(self.bench_model_input, 1)
+            backend_row.addWidget(self.bench_cycle_check)
+            inner.addLayout(backend_row)
 
         score_outer, score_layout = panel("Quick Scores (0-100)")
         score_row = QHBoxLayout()
@@ -2655,12 +2822,24 @@ class Main(QMainWindow):
         safety_btn = QPushButton("Safety Brake Score")
         drift_btn = QPushButton("Drift Score")
         health_btn = QPushButton("Backend Health")
-        score_row.addWidget(stability_btn)
-        score_row.addWidget(safety_btn)
-        score_row.addWidget(drift_btn)
-        score_row.addWidget(health_btn)
-        score_row.addWidget(self.bench_score_label, 1)
-        score_layout.addLayout(score_row)
+        self._set_compactable_label(self.bench_score_label)
+        if self._layout_metrics["compact"]:
+            score_top = QHBoxLayout()
+            score_bottom = QHBoxLayout()
+            score_top.addWidget(stability_btn)
+            score_top.addWidget(safety_btn)
+            score_bottom.addWidget(drift_btn)
+            score_bottom.addWidget(health_btn)
+            score_bottom.addWidget(self.bench_score_label, 1)
+            score_layout.addLayout(score_top)
+            score_layout.addLayout(score_bottom)
+        else:
+            score_row.addWidget(stability_btn)
+            score_row.addWidget(safety_btn)
+            score_row.addWidget(drift_btn)
+            score_row.addWidget(health_btn)
+            score_row.addWidget(self.bench_score_label, 1)
+            score_layout.addLayout(score_row)
         inner.addWidget(score_outer)
 
         self._build_stress_dashboard(inner)
@@ -5911,7 +6090,6 @@ class Main(QMainWindow):
 
         api_outer, api_layout = panel("API Control")
         layout.addWidget(api_outer)
-        row_api = QHBoxLayout()
         self.start_engine_api_btn = QPushButton("Start Engine API")
         self.stop_engine_api_btn = QPushButton("Stop Engine API")
         self.start_platform_api_btn = QPushButton("Start Platform API")
@@ -5919,16 +6097,32 @@ class Main(QMainWindow):
         self.open_platform_ui_btn = QPushButton("Open Web UI")
         self.open_engine_docs_btn = QPushButton("Engine Swagger")
         self.open_platform_docs_btn = QPushButton("Platform Swagger")
-        row_api.addWidget(self.start_engine_api_btn)
-        row_api.addWidget(self.stop_engine_api_btn)
-        row_api.addWidget(self.start_platform_api_btn)
-        row_api.addWidget(self.stop_platform_api_btn)
-        api_layout.addLayout(row_api)
-        docs_row = QHBoxLayout()
-        docs_row.addWidget(self.open_platform_ui_btn)
-        docs_row.addWidget(self.open_engine_docs_btn)
-        docs_row.addWidget(self.open_platform_docs_btn)
-        api_layout.addLayout(docs_row)
+        if self._layout_metrics["compact"]:
+            api_row_one = QHBoxLayout()
+            api_row_two = QHBoxLayout()
+            api_row_one.addWidget(self.start_engine_api_btn)
+            api_row_one.addWidget(self.stop_engine_api_btn)
+            api_row_two.addWidget(self.start_platform_api_btn)
+            api_row_two.addWidget(self.stop_platform_api_btn)
+            api_layout.addLayout(api_row_one)
+            api_layout.addLayout(api_row_two)
+            docs_row = QHBoxLayout()
+            docs_row.addWidget(self.open_platform_ui_btn)
+            docs_row.addWidget(self.open_engine_docs_btn)
+            docs_row.addWidget(self.open_platform_docs_btn)
+            api_layout.addLayout(docs_row)
+        else:
+            row_api = QHBoxLayout()
+            row_api.addWidget(self.start_engine_api_btn)
+            row_api.addWidget(self.stop_engine_api_btn)
+            row_api.addWidget(self.start_platform_api_btn)
+            row_api.addWidget(self.stop_platform_api_btn)
+            api_layout.addLayout(row_api)
+            docs_row = QHBoxLayout()
+            docs_row.addWidget(self.open_platform_ui_btn)
+            docs_row.addWidget(self.open_engine_docs_btn)
+            docs_row.addWidget(self.open_platform_docs_btn)
+            api_layout.addLayout(docs_row)
 
         action_outer, action_layout = panel("Actions")
         layout.addWidget(action_outer)

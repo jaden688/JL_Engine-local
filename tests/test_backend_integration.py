@@ -67,7 +67,8 @@ def test_set_active_backends_persists_selection_without_secrets(tmp_path, monkey
     }
 
     monkeypatch.setattr(backend_controller, "BACKEND_REGISTRY", registry)
-    monkeypatch.setattr(backend_controller, "_HEADLESS_CONFIG_PATHS", [config_path])
+    monkeypatch.setattr(backend_controller, "_CANONICAL_HEADLESS_CONFIG_PATH", config_path)
+    monkeypatch.setattr(backend_controller, "_LEGACY_HEADLESS_CONFIG_PATH", tmp_path / "legacy.json")
 
     def fake_configure_backends(brain_id=None, tool_id=None):
         if brain_id:
@@ -113,7 +114,8 @@ def test_set_ollama_model_persists_service_and_headless_config(tmp_path, monkeyp
     }
 
     monkeypatch.setattr(backend_controller, "BACKEND_REGISTRY", registry)
-    monkeypatch.setattr(backend_controller, "_HEADLESS_CONFIG_PATHS", [config_path])
+    monkeypatch.setattr(backend_controller, "_CANONICAL_HEADLESS_CONFIG_PATH", config_path)
+    monkeypatch.setattr(backend_controller, "_LEGACY_HEADLESS_CONFIG_PATH", tmp_path / "legacy.json")
     monkeypatch.setattr(backend_controller, "_SERVICE_CONFIG_PATH", service_path)
 
     def fake_configure_backends(brain_id=None, tool_id=None):
@@ -232,7 +234,8 @@ def test_runtime_mode_defaults_to_local_only(tmp_path, monkeypatch):
     config_path = tmp_path / "JLframe_Engine_Framework.headless.json"
     config_path.write_text("{}", encoding="utf-8")
 
-    monkeypatch.setattr(backend_controller, "_HEADLESS_CONFIG_PATHS", [config_path])
+    monkeypatch.setattr(backend_controller, "_CANONICAL_HEADLESS_CONFIG_PATH", config_path)
+    monkeypatch.setattr(backend_controller, "_LEGACY_HEADLESS_CONFIG_PATH", tmp_path / "legacy.json")
     monkeypatch.delenv("JL_RUNTIME_MODE", raising=False)
 
     status = backend_controller.get_runtime_mode_status()
@@ -264,7 +267,8 @@ def test_runtime_mode_hybrid_without_provider_falls_back_to_local(tmp_path, monk
     }
 
     monkeypatch.setattr(backend_controller, "BACKEND_REGISTRY", registry)
-    monkeypatch.setattr(backend_controller, "_HEADLESS_CONFIG_PATHS", [config_path])
+    monkeypatch.setattr(backend_controller, "_CANONICAL_HEADLESS_CONFIG_PATH", config_path)
+    monkeypatch.setattr(backend_controller, "_LEGACY_HEADLESS_CONFIG_PATH", tmp_path / "legacy.json")
     monkeypatch.setattr(backend_controller.core_backends, "brain_backend_id", "openai")
     monkeypatch.setattr(backend_controller.core_backends, "tool_backend_id", "ollama-local")
 
@@ -287,6 +291,58 @@ def test_runtime_mode_hybrid_without_provider_falls_back_to_local(tmp_path, monk
     assert result["fallback_reason"] == "missing_external_provider_config"
     assert recorded == {"brain_backend_id": "ollama-local", "tool_backend_id": "ollama-local"}
     assert saved["jl_engine"]["runtime_mode"] == "hybrid"
+
+
+def test_runtime_mode_uses_persisted_backend_selection_when_provider_available(tmp_path, monkeypatch):
+    config_path = tmp_path / "JLframe_Engine_Framework.headless.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "jl_engine": {
+                    "runtime_mode": "hybrid",
+                    "backends": {
+                        "default": "openai",
+                        "brain_backend": "openai",
+                        "tool_backend": "openai",
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = {
+        "ollama-local": {
+            "id": "ollama-local",
+            "provider": "ollama",
+            "baseUrl": "http://127.0.0.1:11434",
+            "modelName": "qwen3:4b",
+            "model_name": "qwen3:4b",
+        },
+        "openai": {
+            "id": "openai",
+            "provider": "openai",
+            "openai_model": "grok-3",
+            "openai_base_url": "https://api.x.ai/v1",
+            "openai_api_key": "xai-test",
+        },
+    }
+
+    monkeypatch.setattr(backend_controller, "BACKEND_REGISTRY", registry)
+    monkeypatch.setattr(backend_controller, "_CANONICAL_HEADLESS_CONFIG_PATH", config_path)
+    monkeypatch.setattr(backend_controller, "_LEGACY_HEADLESS_CONFIG_PATH", tmp_path / "legacy.json")
+    monkeypatch.delenv("JL_RUNTIME_MODE", raising=False)
+    monkeypatch.delenv("JL_ENGINE_BRAIN_BACKEND", raising=False)
+    monkeypatch.delenv("JL_ENGINE_TOOL_BACKEND", raising=False)
+    monkeypatch.setattr(backend_controller.core_backends, "brain_backend_id", "ollama-local")
+    monkeypatch.setattr(backend_controller.core_backends, "tool_backend_id", "ollama-local")
+
+    status = backend_controller.get_runtime_mode_status()
+
+    assert status["configured_mode"] == "hybrid"
+    assert status["effective_mode"] == "hybrid"
+    assert status["brain_backend_id"] == "openai"
+    assert status["tool_backend_id"] == "openai"
 
 
 def test_ollama_model_allowed_filters_large_models():

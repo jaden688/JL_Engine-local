@@ -21,10 +21,10 @@ BACKEND_REGISTRY = core_backends.BACKEND_REGISTRY
 OLLAMA_CONNECT_TIMEOUT = core_backends.OLLAMA_CONNECT_TIMEOUT
 OLLAMA_READ_TIMEOUT = core_backends.OLLAMA_READ_TIMEOUT
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_HEADLESS_CONFIG_PATHS = [
-    _REPO_ROOT / "jl_engine_core" / "data" / "config" / "JLframe_Engine_Framework.headless.json",
-    _REPO_ROOT / "config" / "JLframe_Engine_Framework.headless.json",
-]
+_CANONICAL_HEADLESS_CONFIG_PATH = (
+    _REPO_ROOT / "jl_engine_core" / "data" / "config" / "JLframe_Engine_Framework.headless.json"
+)
+_LEGACY_HEADLESS_CONFIG_PATH = _REPO_ROOT / "config" / "JLframe_Engine_Framework.headless.json"
 _SERVICE_CONFIG_PATH = _REPO_ROOT / "jl_engine_core" / "gemini_config.json"
 _SENSITIVE_KEYS = {
     "apikey",
@@ -113,6 +113,20 @@ def _write_json_dict(path: Path, data: dict) -> bool:
     except Exception as exc:
         logger.exception("[BackendController] Failed to write config '%s': %s", path, exc)
         return False
+
+
+def _headless_config_read_paths() -> tuple[Path, ...]:
+    # The runtime data tree is the source of truth. Keep the legacy root config
+    # as a read-only fallback so older local checkouts do not lose settings.
+    paths: list[Path] = []
+    for path in (_CANONICAL_HEADLESS_CONFIG_PATH, _LEGACY_HEADLESS_CONFIG_PATH):
+        if path not in paths:
+            paths.append(path)
+    return tuple(paths)
+
+
+def _headless_config_write_path() -> Path:
+    return _CANONICAL_HEADLESS_CONFIG_PATH
 
 
 def _sanitize_backend_config(config: dict | None) -> dict:
@@ -230,11 +244,46 @@ def _persist_runtime_mode_to_path(path: Path, mode: str) -> bool:
     return _write_json_dict(path, data)
 
 
+def _normalize_backend_id(value: str | None) -> str | None:
+    candidate = str(value or "").strip()
+    if not candidate or candidate not in BACKEND_REGISTRY:
+        return None
+    return candidate
+
+
+def _read_backend_selection_from_path(path: Path) -> tuple[str | None, str | None]:
+    data = _load_json_dict(path)
+    jl_engine = data.get("jl_engine") if isinstance(data, dict) else None
+    if not isinstance(jl_engine, dict):
+        return None, None
+    backends_cfg = jl_engine.get("backends")
+    if not isinstance(backends_cfg, dict):
+        return None, None
+
+    default_backend = _normalize_backend_id(backends_cfg.get("default"))
+    brain_backend = _normalize_backend_id(backends_cfg.get("brain_backend")) or default_backend
+    tool_backend = _normalize_backend_id(backends_cfg.get("tool_backend")) or default_backend
+    return brain_backend, tool_backend
+
+
+def _configured_backend_selection() -> tuple[str | None, str | None]:
+    env_brain = _normalize_backend_id(os.getenv("JL_ENGINE_BRAIN_BACKEND"))
+    env_tool = _normalize_backend_id(os.getenv("JL_ENGINE_TOOL_BACKEND"))
+    if env_brain or env_tool:
+        return env_brain, env_tool
+
+    for path in _headless_config_read_paths():
+        brain_backend, tool_backend = _read_backend_selection_from_path(path)
+        if brain_backend or tool_backend:
+            return brain_backend, tool_backend
+    return None, None
+
+
 def get_runtime_mode() -> str:
     env_mode = str(os.getenv("JL_RUNTIME_MODE") or "").strip().lower()
     if env_mode in _VALID_RUNTIME_MODES:
         return env_mode
-    for path in _HEADLESS_CONFIG_PATHS:
+    for path in _headless_config_read_paths():
         mode = _read_runtime_mode_from_path(path)
         if mode:
             return mode
@@ -272,8 +321,13 @@ def get_runtime_mode_status() -> dict:
     effective_mode = configured_mode
     fallback_reason: str | None = None
 
-    resolved_brain = str(core_backends.brain_backend_id or _LOCAL_BACKEND_ID).strip() or _LOCAL_BACKEND_ID
-    resolved_tool = str(core_backends.tool_backend_id or _LOCAL_BACKEND_ID).strip() or _LOCAL_BACKEND_ID
+    configured_brain, configured_tool = _configured_backend_selection()
+    resolved_brain = str(
+        configured_brain or core_backends.brain_backend_id or _LOCAL_BACKEND_ID
+    ).strip() or _LOCAL_BACKEND_ID
+    resolved_tool = str(
+        configured_tool or core_backends.tool_backend_id or _LOCAL_BACKEND_ID
+    ).strip() or _LOCAL_BACKEND_ID
 
     if configured_mode == "local_only":
         resolved_brain = _LOCAL_BACKEND_ID
@@ -385,9 +439,9 @@ def set_ollama_model(model_name: str, persist: bool = True) -> dict:
 
     persisted_paths: list[str] = []
     if persist:
-        for path in _HEADLESS_CONFIG_PATHS:
-            if _persist_ollama_model_to_path(path, model):
-                persisted_paths.append(str(path))
+        config_path = _headless_config_write_path()
+        if _persist_ollama_model_to_path(config_path, model):
+            persisted_paths.append(str(config_path))
         for path in _persist_service_config_updates({"ollama_model": model}):
             if path not in persisted_paths:
                 persisted_paths.append(path)
@@ -474,13 +528,13 @@ def set_active_backends(
 
     persisted_paths: list[str] = []
     if persist:
-        for path in _HEADLESS_CONFIG_PATHS:
-            if _persist_backend_selection_to_path(
-                path,
-                brain_backend_id=resolved_brain,
-                tool_backend_id=resolved_tool,
-            ):
-                persisted_paths.append(str(path))
+        config_path = _headless_config_write_path()
+        if _persist_backend_selection_to_path(
+            config_path,
+            brain_backend_id=resolved_brain,
+            tool_backend_id=resolved_tool,
+        ):
+            persisted_paths.append(str(config_path))
 
     return {
         "brain_backend_id": core_backends.brain_backend_id,
@@ -497,9 +551,9 @@ def set_runtime_mode(mode: str, persist: bool = True) -> dict:
     os.environ["JL_RUNTIME_MODE"] = normalized
     persisted_paths: list[str] = []
     if persist:
-        for path in _HEADLESS_CONFIG_PATHS:
-            if _persist_runtime_mode_to_path(path, normalized):
-                persisted_paths.append(str(path))
+        config_path = _headless_config_write_path()
+        if _persist_runtime_mode_to_path(config_path, normalized):
+            persisted_paths.append(str(config_path))
 
     if normalized == "local_only":
         set_active_backends(
@@ -565,3 +619,9 @@ def get_brain_backend():
 
 def get_backend(backend_id: str | None = None, overrides: dict | None = None):
     return core_backends.get_backend(backend_id=backend_id, overrides=overrides)
+
+
+try:
+    apply_runtime_mode()
+except Exception as exc:  # pragma: no cover - defensive import-time sync
+    logger.exception("[BackendController] Failed to apply runtime mode on import: %s", exc)

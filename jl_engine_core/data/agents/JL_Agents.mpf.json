@@ -232,5 +232,17 @@
       "support",
       "triage"
     ]
+  },
+  "Specialist Builder (jl_fat_agent)": {
+    "jl_agent_file": "generated/Specialist_Builder__jl_fat_agent.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "ollama-local",
+    "drive_type": null,
+    "classification": "generated",
+    "tags": [
+      "generated",
+      "specialist",
+      "builder"
+    ]
   }
 }

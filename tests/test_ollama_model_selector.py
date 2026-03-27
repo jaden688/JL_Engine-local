@@ -9,7 +9,7 @@ from jl_platform.controllers import backend_controller
 from jl_platform.services.api import main as api_main
 
 
-def test_set_ollama_model_updates_registry_and_persists_headless_configs(tmp_path, monkeypatch):
+def test_set_ollama_model_updates_registry_and_persists_canonical_headless_config(tmp_path, monkeypatch):
     path_one = tmp_path / "JLframe_Engine_Framework.headless.json"
     path_two = tmp_path / "config" / "JLframe_Engine_Framework.headless.json"
     service_path = tmp_path / "gemini_config.json"
@@ -41,7 +41,8 @@ def test_set_ollama_model_updates_registry_and_persists_headless_configs(tmp_pat
     configure_calls: list[tuple[str, str]] = []
 
     monkeypatch.setattr(backend_controller, "BACKEND_REGISTRY", registry)
-    monkeypatch.setattr(backend_controller, "_HEADLESS_CONFIG_PATHS", [path_one, path_two])
+    monkeypatch.setattr(backend_controller, "_CANONICAL_HEADLESS_CONFIG_PATH", path_one)
+    monkeypatch.setattr(backend_controller, "_LEGACY_HEADLESS_CONFIG_PATH", path_two)
     monkeypatch.setattr(backend_controller, "_SERVICE_CONFIG_PATH", service_path)
     monkeypatch.setattr(backend_controller.core_backends, "brain_backend_id", "ollama-local")
     monkeypatch.setattr(backend_controller.core_backends, "tool_backend_id", "ollama-local")
@@ -57,14 +58,17 @@ def test_set_ollama_model_updates_registry_and_persists_headless_configs(tmp_pat
     assert registry["ollama-local"]["model_name"] == "qwen3-vl:4b"
     assert configure_calls == [("ollama-local", "ollama-local")]
     assert result["model_name"] == "qwen3-vl:4b"
-    assert set(result["persisted_paths"]) == {str(path_one), str(path_two), str(service_path)}
+    assert set(result["persisted_paths"]) == {str(path_one), str(service_path)}
 
     saved_one = json.loads(path_one.read_text(encoding="utf-8"))
+    brain_config = saved_one["jl_engine"]["backends"]["brain_config"]
+    assert brain_config["modelName"] == "qwen3-vl:4b"
+    assert brain_config["model_name"] == "qwen3-vl:4b"
+
     saved_two = json.loads(path_two.read_text(encoding="utf-8"))
-    for saved in (saved_one, saved_two):
-        brain_config = saved["jl_engine"]["backends"]["brain_config"]
-        assert brain_config["modelName"] == "qwen3-vl:4b"
-        assert brain_config["model_name"] == "qwen3-vl:4b"
+    legacy_brain_config = saved_two["jl_engine"]["backends"]["brain_config"]
+    assert legacy_brain_config["modelName"] == "dolphin3:latest"
+    assert legacy_brain_config["model_name"] == "dolphin3:latest"
 
     service_saved = json.loads(service_path.read_text(encoding="utf-8"))
     assert service_saved["ollama_model"] == "qwen3-vl:4b"
@@ -117,7 +121,7 @@ def test_ollama_set_model_returns_updated_selection(monkeypatch):
             "tool_backend_id": "ollama-local",
             "model_name": model_name,
             "base_url": "http://127.0.0.1:11434",
-            "persisted_paths": ["config/JLframe_Engine_Framework.headless.json"],
+            "persisted_paths": ["jl_engine_core/data/config/JLframe_Engine_Framework.headless.json"],
         },
     )
 
