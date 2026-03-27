@@ -28,7 +28,7 @@ docs/REAL_RUN_*.md
 .env
 .foundry/
 .gemini/
-.claude/worktrees/
+.claude/
 .jl_mcp_https/
 verification.txt
 new_file

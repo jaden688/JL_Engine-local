@@ -19,6 +19,13 @@ def test_root_personas_mirror_is_gone():
     assert not root_personas.exists()
 
 
+def test_root_gremlin_payload_strays_are_gone():
+    repo_root = Path(__file__).resolve().parents[1]
+
+    assert not (repo_root / "jl_engine_core" / "data" / "agents" / "The_Gremlin_Full.json").exists()
+    assert not (repo_root / "jl_engine_core" / "data" / "personas" / "The_Gremlin_Full.json").exists()
+
+
 def test_registry_marks_mothership_agents_as_fat_agents():
     registry_path = (
         Path(__file__).resolve().parents[1]
