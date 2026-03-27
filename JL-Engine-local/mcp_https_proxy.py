@@ -245,6 +245,7 @@ def _ensure_tls_assets() -> tuple[Path, Path]:
     return server_key_path, server_cert_path
 
 
+# Allowed CORS origins — restricted to local addresses (DEFAULT_PUBLIC_HOST=localhost, DEFAULT_PORT=8443).
 _ALLOWED_CORS_ORIGINS: set[str] = {
     "http://localhost",
     "http://localhost:8000",
