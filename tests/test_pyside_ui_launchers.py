@@ -103,6 +103,42 @@ def test_launch_engine_cli_uses_current_interpreter(monkeypatch) -> None:
     assert captured["cmd"] == [sys.executable, "-m", "jl_engine_cli.main"]
 
 
+def test_open_platform_web_ui_opens_ui_route(monkeypatch) -> None:
+    import ui.pyside_ui as pyside_ui
+
+    main = _make_main()
+    opened: list[str] = []
+    main._platform_api_url = lambda: "http://127.0.0.1:8000"
+    main._platform_api_health_url = lambda: "http://127.0.0.1:8000/health"
+    main._is_http_ready = lambda _url: True
+
+    monkeypatch.setattr(pyside_ui.webbrowser, "open", lambda url: opened.append(url))
+
+    Main._open_platform_web_ui(main)
+
+    assert opened == ["http://127.0.0.1:8000/ui"]
+
+
+def test_open_platform_web_ui_starts_api_before_opening(monkeypatch) -> None:
+    import ui.pyside_ui as pyside_ui
+
+    main = _make_main()
+    opened: list[str] = []
+    started: list[bool] = []
+    main._platform_api_url = lambda: "http://127.0.0.1:8000"
+    main._platform_api_health_url = lambda: "http://127.0.0.1:8000/health"
+    main._is_http_ready = lambda _url: False
+    main._start_platform_api = lambda: started.append(True)
+
+    monkeypatch.setattr(pyside_ui.webbrowser, "open", lambda url: opened.append(url))
+    monkeypatch.setattr(pyside_ui.QTimer, "singleShot", lambda _delay, callback: callback())
+
+    Main._open_platform_web_ui(main)
+
+    assert started == [True]
+    assert opened == ["http://127.0.0.1:8000/ui"]
+
+
 def test_runtime_env_strips_conda_state(monkeypatch) -> None:
     monkeypatch.setenv("CONDA_PREFIX", r"C:\Users\J_lin\miniconda3")
     monkeypatch.setenv("CONDA_DEFAULT_ENV", "base")

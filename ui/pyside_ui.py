@@ -375,10 +375,15 @@ QSS_PHOSPHOR = """
 QMainWindow, QWidget { background: #000000; color: #00FF41; }
 #Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #004D12; background: #000802; }
 #Header QLabel#Title { color: #D2FFD2; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
-QTabWidget::pane { border: 1px solid #00FF41; }
-QTabBar::tab { background: #001A06; border: 1px solid #004D12; padding: 8px 20px; color: #00FF41; }
-QTabBar::tab:selected { background: #00FF41; color: #000000; }
-QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #004D12; color: #00FF41; }
+QTabWidget::pane { border: 1px solid #00FF41; margin-top: 6px; }
+QTabBar::tab { background: #001A06; border: 1px solid #004D12; border-top-left-radius: 4px; border-top-right-radius: 4px; min-width: 110px; padding: 8px 14px; margin-right: 6px; color: #00FF41; }
+QTabBar::tab:selected { background: #00FF41; color: #000000; margin-top: 0px; }
+QTabBar::tab:!selected { margin-top: 4px; }
+QDockWidget { border: 1px solid #004D12; }
+QDockWidget::title { background: #001A06; color: #D2FFD2; padding: 6px 10px; text-align: left; font-weight: 900; }
+QMainWindow::separator { background: #004D12; width: 8px; height: 8px; margin: 2px; }
+QMainWindow::separator:hover { background: #00FF41; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #004D12; color: #00FF41; padding: 4px 6px; }
 QPushButton { background: #001A06; border: 1px solid #00FF41; color: #00FF41; font-weight: 900; }
 QPushButton:hover { background: #00FF41; color: #000000; }
 #Chip { background: #000000; border: 1px solid #00FF41; color: #00FF41; font-weight: 900; }
@@ -395,10 +400,15 @@ QSS_SASSY = """
 QMainWindow, QWidget { background: #120008; color: #FF007F; }
 #Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #4D0026; background: #1A000D; }
 #Header QLabel#Title { color: #FFB3D9; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
-QTabWidget::pane { border: 1px solid #FF007F; }
-QTabBar::tab { background: #330019; border: 1px solid #4D0026; padding: 8px 20px; color: #FF007F; }
-QTabBar::tab:selected { background: #FF007F; color: #000000; }
-QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #4D0026; color: #FF007F; }
+QTabWidget::pane { border: 1px solid #FF007F; margin-top: 6px; }
+QTabBar::tab { background: #330019; border: 1px solid #4D0026; border-top-left-radius: 4px; border-top-right-radius: 4px; min-width: 110px; padding: 8px 14px; margin-right: 6px; color: #FF007F; }
+QTabBar::tab:selected { background: #FF007F; color: #000000; margin-top: 0px; }
+QTabBar::tab:!selected { margin-top: 4px; }
+QDockWidget { border: 1px solid #4D0026; }
+QDockWidget::title { background: #330019; color: #FFB3D9; padding: 6px 10px; text-align: left; font-weight: 900; }
+QMainWindow::separator { background: #4D0026; width: 8px; height: 8px; margin: 2px; }
+QMainWindow::separator:hover { background: #FF007F; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #4D0026; color: #FF007F; padding: 4px 6px; }
 QPushButton { background: #330019; border: 1px solid #FF007F; color: #FF007F; font-weight: 900; }
 QPushButton:hover { background: #FF007F; color: #FFFFFF; }
 #Chip { background: #000000; border: 1px solid #FF007F; color: #FF007F; font-weight: 900; }
@@ -415,10 +425,15 @@ QSS_VOLT = """
 QMainWindow, QWidget { background: #050505; color: #00E5FF; }
 #Header, #TopStrip, #Footer, #PanelInner { border: 1px solid #00334D; background: #000D1A; }
 #Header QLabel#Title { color: #B3F5FF; font-size: 18pt; font-weight: 900; letter-spacing: 4px; }
-QTabWidget::pane { border: 1px solid #00E5FF; }
-QTabBar::tab { background: #001F33; border: 1px solid #00334D; padding: 8px 20px; color: #00E5FF; }
-QTabBar::tab:selected { background: #00E5FF; color: #000000; }
-QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #00334D; color: #00E5FF; }
+QTabWidget::pane { border: 1px solid #00E5FF; margin-top: 6px; }
+QTabBar::tab { background: #001F33; border: 1px solid #00334D; border-top-left-radius: 4px; border-top-right-radius: 4px; min-width: 110px; padding: 8px 14px; margin-right: 6px; color: #00E5FF; }
+QTabBar::tab:selected { background: #00E5FF; color: #000000; margin-top: 0px; }
+QTabBar::tab:!selected { margin-top: 4px; }
+QDockWidget { border: 1px solid #00334D; }
+QDockWidget::title { background: #001F33; color: #B3F5FF; padding: 6px 10px; text-align: left; font-weight: 900; }
+QMainWindow::separator { background: #00334D; width: 8px; height: 8px; margin: 2px; }
+QMainWindow::separator:hover { background: #00E5FF; }
+QTextEdit, QLineEdit, QComboBox, QSpinBox { background: #000000; border: 1px solid #00334D; color: #00E5FF; padding: 4px 6px; }
 QPushButton { background: #001F33; border: 1px solid #00E5FF; color: #00E5FF; font-weight: 900; }
 QPushButton:hover { background: #00E5FF; color: #000000; }
 #Chip { background: #000000; border: 1px solid #00E5FF; color: #00E5FF; font-weight: 900; }
@@ -579,6 +594,55 @@ class DropLineEdit(QLineEdit):
             event.acceptProposedAction()
         else:
             super().dropEvent(event)
+
+
+class ChatPromptEdit(QTextEdit):
+    returnPressed = Signal()
+
+    def __init__(self, min_height: int = 72, max_height: int = 156, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._min_height = int(min_height)
+        self._max_height = int(max_height)
+        self.setAcceptRichText(False)
+        self.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.textChanged.connect(self._sync_height)
+        self._sync_height()
+
+    def text(self) -> str:
+        return self.toPlainText()
+
+    def setText(self, value: str) -> None:
+        self.setPlainText(str(value or ""))
+        self._sync_height()
+
+    def clear(self) -> None:
+        super().clear()
+        self._sync_height()
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter) and not (
+            event.modifiers() & (Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier)
+        ):
+            self.returnPressed.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._sync_height()
+
+    def _sync_height(self) -> None:
+        document = self.document()
+        document.setTextWidth(max(0, self.viewport().width() - 4))
+        doc_height = document.documentLayout().documentSize().height()
+        frame = self.frameWidth() * 2
+        vertical_margins = self.contentsMargins().top() + self.contentsMargins().bottom()
+        target_height = int(doc_height + frame + vertical_margins + 12)
+        target_height = max(self._min_height, min(target_height, self._max_height))
+        self.setFixedHeight(target_height)
 
 
 class ThoughtStreamHandler(logging.Handler, QObject):
@@ -1232,6 +1296,22 @@ class Main(QMainWindow):
         new_qss = base_qss.replace("10pt", f"{self.current_font_size}pt")
         QApplication.instance().setStyleSheet(new_qss)
 
+    def _configure_tab_widget(self, tabs: QTabWidget, *, movable: bool = False) -> None:
+        tabs.setDocumentMode(True)
+        tabs.setUsesScrollButtons(True)
+        tabs.setMovable(movable)
+        tabs.setElideMode(Qt.ElideRight)
+        bar = tabs.tabBar()
+        bar.setDrawBase(False)
+        bar.setExpanding(False)
+        bar.setElideMode(Qt.ElideRight)
+
+    def _polish_tab_bars(self) -> None:
+        for tab_bar in self.findChildren(QTabBar):
+            tab_bar.setDrawBase(False)
+            tab_bar.setExpanding(False)
+            tab_bar.setElideMode(Qt.ElideRight)
+
     def _setup_ide_docks(self) -> None:
         """Initialize global IDE-style docks (Explorer, HUD, Terminal, and all Tools)."""
         self.setDockOptions(
@@ -1329,17 +1409,21 @@ class Main(QMainWindow):
             "Construction", self._build_construction_tab, Qt.RightDockWidgetArea
         )
 
-        # Tabify All Right-Side Feature Docks
-        self.tabifyDockWidget(self.dock_terminal, self.dock_hud)
+        # Split the runtime workspace into two stable stacks so tabs stay readable:
+        # feature/control docks up top and diagnostics/logging docks below.
+        self.splitDockWidget(self.dock_hud, self.dock_terminal, Qt.Vertical)
         self.tabifyDockWidget(self.dock_hud, self.dock_engine)
         self.tabifyDockWidget(self.dock_engine, self.dock_cnc)
         self.tabifyDockWidget(self.dock_cnc, self.dock_services)
         self.tabifyDockWidget(self.dock_services, self.dock_business)
         self.tabifyDockWidget(self.dock_business, self.dock_commander)
-        self.tabifyDockWidget(self.dock_commander, self.dock_diagnostics)
+        self.tabifyDockWidget(self.dock_terminal, self.dock_diagnostics)
         self.tabifyDockWidget(self.dock_diagnostics, self.dock_benchmarks)
         self.tabifyDockWidget(self.dock_benchmarks, self.dock_construction)
-        self.dock_hud.raise_()  # Bring HUD to front
+        self.resizeDocks([self.dock_hud, self.dock_terminal], [360, 260], Qt.Vertical)
+        self.dock_hud.raise_()
+        self.dock_terminal.raise_()
+        self._polish_tab_bars()
 
     # --- Content Helpers for Docks that were inline before ---
 
@@ -1510,6 +1594,7 @@ class Main(QMainWindow):
 
         if self.chat_only_mode:
             self.console_tabs = QTabWidget()
+            self._configure_tab_widget(self.console_tabs)
             self.console_tabs.currentChanged.connect(self._on_tab_changed)
             self.console_tabs.tabBar().hide()
             layout.addWidget(self.console_tabs, 1)
@@ -1596,14 +1681,14 @@ class Main(QMainWindow):
             input_panel_layout.addLayout(attachment_row)
 
             chat_row = QHBoxLayout()
-            self.chat_input = QLineEdit()
+            chat_row.setSpacing(10)
+            self.chat_input = ChatPromptEdit(min_height=84, max_height=164)
             self.chat_input.setPlaceholderText(
-                "Tell the agent what you want done. File selection and runtime choices stay in this bar."
+                "Tell the agent what you want done. Press Enter to send, Shift+Enter for a newline."
             )
-            self.chat_input.setMinimumHeight(44)
 
             self.chat_send_btn = QPushButton("Send")
-            self.chat_send_btn.setMinimumHeight(44)
+            self.chat_send_btn.setMinimumHeight(48)
             self.chat_send_btn.setFixedWidth(96)
 
             chat_row.addWidget(self.chat_input, 1)
@@ -1644,6 +1729,7 @@ class Main(QMainWindow):
 
         # Central Workspace - Tabbed Interface
         self.console_tabs = QTabWidget()
+        self._configure_tab_widget(self.console_tabs, movable=True)
         self.console_tabs.setTabsClosable(True)
         self.console_tabs.tabCloseRequested.connect(self._close_console_tab)
         self.console_tabs.currentChanged.connect(self._on_tab_changed)
@@ -1682,15 +1768,15 @@ class Main(QMainWindow):
 
         # Chat Input Row
         chat_row = QHBoxLayout()
-        self.chat_input = QLineEdit()
+        chat_row.setSpacing(10)
+        self.chat_input = ChatPromptEdit(min_height=88, max_height=168)
         self.chat_input.setPlaceholderText(
-            "Transmission prompt (auto-attaches focused code/selection)..."
+            "Transmission prompt (auto-attaches focused code/selection). Enter sends, Shift+Enter adds a new line."
         )
-        self.chat_input.setMinimumHeight(40)
 
         self.chat_send_btn = QPushButton("SEND")
-        self.chat_send_btn.setMinimumHeight(40)
-        self.chat_send_btn.setFixedWidth(80)
+        self.chat_send_btn.setMinimumHeight(48)
+        self.chat_send_btn.setFixedWidth(88)
 
         self.chat_all_workers_toggle = QCheckBox("All Workers")
         self.chat_all_workers_toggle.setChecked(self._env_flag("JL_UI_ALL_WORKERS", False))
@@ -1711,12 +1797,20 @@ class Main(QMainWindow):
         self.expand_btn.setToolTip("Toggle Right Sidebar Docks")
 
         chat_row.addWidget(self.chat_input, 1)
-        chat_row.addWidget(self.chat_all_workers_toggle)
-        chat_row.addWidget(self.live_voice_toggle)
         chat_row.addWidget(self.chat_send_btn)
-        chat_row.addWidget(self.controls_btn)
-        chat_row.addWidget(self.expand_btn)
         input_panel_layout.addLayout(chat_row)
+
+        quick_actions_row = QHBoxLayout()
+        quick_actions_row.setSpacing(10)
+        quick_actions_row.addWidget(self.chat_all_workers_toggle)
+        quick_actions_row.addWidget(self.live_voice_toggle)
+        quick_actions_row.addStretch(1)
+        self.chat_input_hint = QLabel("Enter to send. Shift+Enter adds a new line.")
+        self.chat_input_hint.setStyleSheet("color: #80CBC4; font-size: 9pt;")
+        quick_actions_row.addWidget(self.chat_input_hint)
+        quick_actions_row.addWidget(self.controls_btn)
+        quick_actions_row.addWidget(self.expand_btn)
+        input_panel_layout.addLayout(quick_actions_row)
 
         # CNC / Command Row
         cnc_row = QHBoxLayout()
@@ -1986,7 +2080,7 @@ class Main(QMainWindow):
 
         ops_layout.addStretch(1)
         self.dock_ops.setWidget(ops_content)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_ops)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_ops)
 
         # 2. SUPERVISOR (Flags, Gain, Emo)
         self.dock_supervisor = create_dock("Supervisor")
@@ -2032,7 +2126,7 @@ class Main(QMainWindow):
 
         sup_layout.addStretch(1)
         self.dock_supervisor.setWidget(sup_content)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_supervisor)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_supervisor)
 
         # 3. MONITOR (Hardware, Overrides)
         self.dock_monitor = create_dock("Monitor")
@@ -2078,15 +2172,19 @@ class Main(QMainWindow):
 
         mon_layout.addStretch(1)
         self.dock_monitor.setWidget(mon_content)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_monitor)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_monitor)
 
         # Tabify
         self.tabifyDockWidget(self.dock_ops, self.dock_supervisor)
         self.tabifyDockWidget(self.dock_supervisor, self.dock_monitor)
 
-        # Place the feature stack under the supervisor stack on the right side.
-        if hasattr(self, "dock_terminal"):
-            self.splitDockWidget(self.dock_monitor, self.dock_terminal, Qt.Vertical)
+        # Keep operator controls in their own left-side stack so the main runtime
+        # docks on the right have cleaner snap lanes.
+        if hasattr(self, "dock_explorer"):
+            self.splitDockWidget(self.dock_explorer, self.dock_ops, Qt.Vertical)
+            self.resizeDocks([self.dock_explorer, self.dock_ops], [280, 220], Qt.Vertical)
+        self.dock_ops.raise_()
+        self._polish_tab_bars()
 
         # Connect signals
         self.agent_combo.currentTextChanged.connect(self._on_agent_change)
@@ -5818,6 +5916,7 @@ class Main(QMainWindow):
         self.stop_engine_api_btn = QPushButton("Stop Engine API")
         self.start_platform_api_btn = QPushButton("Start Platform API")
         self.stop_platform_api_btn = QPushButton("Stop Platform API")
+        self.open_platform_ui_btn = QPushButton("Open Web UI")
         self.open_engine_docs_btn = QPushButton("Engine Swagger")
         self.open_platform_docs_btn = QPushButton("Platform Swagger")
         row_api.addWidget(self.start_engine_api_btn)
@@ -5826,6 +5925,7 @@ class Main(QMainWindow):
         row_api.addWidget(self.stop_platform_api_btn)
         api_layout.addLayout(row_api)
         docs_row = QHBoxLayout()
+        docs_row.addWidget(self.open_platform_ui_btn)
         docs_row.addWidget(self.open_engine_docs_btn)
         docs_row.addWidget(self.open_platform_docs_btn)
         api_layout.addLayout(docs_row)
@@ -5846,6 +5946,7 @@ class Main(QMainWindow):
         self.stop_engine_api_btn.clicked.connect(self._stop_engine_api)
         self.start_platform_api_btn.clicked.connect(self._start_platform_api)
         self.stop_platform_api_btn.clicked.connect(self._stop_platform_api)
+        self.open_platform_ui_btn.clicked.connect(self._open_platform_web_ui)
         self.open_engine_docs_btn.clicked.connect(self._open_engine_api_docs)
         self.open_platform_docs_btn.clicked.connect(self._open_platform_api_docs)
         self.launch_cli_btn.clicked.connect(self._launch_engine_cli)
@@ -5981,6 +6082,19 @@ class Main(QMainWindow):
 
     def _open_platform_api_docs(self) -> None:
         webbrowser.open(f"{self._platform_api_url()}/docs")
+
+    def _open_platform_web_ui(self) -> None:
+        url = f"{self._platform_api_url()}/ui"
+        health_url = self._platform_api_health_url()
+        try:
+            if not self._is_http_ready(health_url):
+                self._append_chat("SYSTEM", "Platform API offline. Starting it before opening the Web UI...")
+                self._start_platform_api()
+                QTimer.singleShot(1200, lambda: webbrowser.open(url))
+                return
+            webbrowser.open(url)
+        except Exception as e:
+            self._append_chat("SYSTEM", f"Open Web UI failed: {e}")
 
     def _refresh_api_control_labels(self) -> None:
         if hasattr(self, "start_engine_api_btn"):
