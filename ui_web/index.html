@@ -37,22 +37,43 @@
     </header>
 
     <section class="panel top-strip reveal" style="--delay: 0.03s">
-      <span id="stripSafety">Core: BOOTING</span>
-      <span id="stripTools">Tools: BOOTING</span>
-      <span id="stripLatency">Latency(ms): -</span>
-      <span id="browserSessionChip">Browser Session: IDLE</span>
-      <span id="chatLoopChip">Loop: STOPPED</span>
-      <span class="spacer"></span>
-      <button id="browserSessionBtn" class="ghost">Open Session Window</button>
-      <button id="toggleAgentControlBtn" class="ghost">Total Agent Control: OFF</button>
-      <button id="toggleChatLoopBtn" class="ghost">Start Agent Loop</button>
+      <div class="top-strip-status">
+        <span id="stripSafety">Core: BOOTING</span>
+        <span id="stripTools">Tools: BOOTING</span>
+        <span id="stripLatency">Latency(ms): -</span>
+        <span id="browserSessionChip">Browser Session: IDLE</span>
+        <span id="chatLoopChip">Loop: STOPPED</span>
+      </div>
+      <div class="top-strip-actions">
+        <button id="browserSessionBtn" class="ghost">Open Session Window</button>
+        <button id="toggleAgentControlBtn" class="ghost">Total Agent Control: OFF</button>
+        <button id="toggleChatLoopBtn" class="ghost">Start Agent Loop</button>
+      </div>
     </section>
 
     <section class="panel tab-strip reveal" style="--delay: 0.05s">
-      <button class="tab-btn active" id="chatTabBtn" type="button">JL Engine</button>
-      <button class="tab-btn ghost" id="buildersTabBtn" type="button">Studio</button>
-      <button class="tab-btn ghost" id="filesTabBtn" type="button">Files</button>
-      <button class="tab-btn ghost" id="selfEditTabBtn" type="button">Lab</button>
+      <div class="tab-strip-copy">
+        <span class="tab-kicker">Deck Views</span>
+        <p>Keep the engine readable while you move between chat, building, files, and self-edit loops.</p>
+      </div>
+      <div class="tab-strip-buttons">
+        <button class="tab-btn active" id="chatTabBtn" type="button">
+          <span class="tab-label">JL Engine</span>
+          <span class="tab-meta">chat + live control</span>
+        </button>
+        <button class="tab-btn ghost" id="buildersTabBtn" type="button">
+          <span class="tab-label">Studio</span>
+          <span class="tab-meta">build + switchboard</span>
+        </button>
+        <button class="tab-btn ghost" id="filesTabBtn" type="button">
+          <span class="tab-label">Files</span>
+          <span class="tab-meta">workspace + review</span>
+        </button>
+        <button class="tab-btn ghost" id="selfEditTabBtn" type="button">
+          <span class="tab-label">Lab</span>
+          <span class="tab-meta">self-edit loop</span>
+        </button>
+      </div>
     </section>
 
     <main class="layout chat-mode" id="layoutRoot">
@@ -87,122 +108,124 @@
         <div class="chatlog" id="missionLog"></div>
       </section>
 
-      <section class="panel chat-only chat-secondary reveal" style="--delay: 0.09s">
-        <h2>JL Engine Controls</h2>
-        <p class="muted-note">Switch lanes, swap personalities, and steer browser/runtime behavior when you want to reach deeper into the engine.</p>
+      <div class="chat-only chat-sidebar">
+        <section class="panel chat-secondary reveal" style="--delay: 0.09s">
+          <h2>JL Engine Controls</h2>
+          <p class="muted-note">Switch lanes, swap personalities, and steer browser/runtime behavior when you want to reach deeper into the engine.</p>
 
-        <details class="advanced-drawer" id="advancedSwitchboardDrawer">
-          <summary>Open engine controls</summary>
-          <div class="advanced-drawer-body">
-            <div class="field">
-              <label for="agentId">Agent ID</label>
-              <input id="agentId" type="text" value="jl_fat_agent" />
-            </div>
-
-            <div class="field">
-              <label for="laneSelect">Lane</label>
-              <select id="laneSelect">
-                <option value="fat_agent">fat_agent</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="childSelect">Child</label>
-              <select id="childSelect">
-                <option value="SparkByte">SparkByte</option>
-              </select>
-            </div>
-
-            <label class="inline-check hidden" id="newGeneratedInstanceWrap">
-              <input id="newGeneratedInstanceCheck" type="checkbox" />
-              Force fresh generated instance
-            </label>
-
-            <div class="row">
-              <button id="switchAgentBtn" type="button">Switch Lane</button>
-              <button class="ghost" id="refreshSwitchboardBtn" type="button">Refresh Matrix</button>
-            </div>
-
-            <div class="muted-note" id="switchboardDescription">Switchboard data loading...</div>
-            <div class="matrix-grid" id="switchboardMatrix"></div>
-
-            <h3>Other Personas</h3>
-            <div class="row">
-              <button id="chatSparkByteBtn" type="button">SparkByte</button>
-              <button class="ghost" id="chatGremlenBtn" type="button">The Gremlin</button>
-              <button class="ghost" id="chatSlappyBtn" type="button">Slappy</button>
-            </div>
-
-            <h3>Chat Persona Override</h3>
-            <div class="field">
-              <label for="chatPersonaSelect">MPF Persona</label>
-              <select id="chatPersonaSelect">
-                <option value="">Loading personas...</option>
-              </select>
-            </div>
-            <div class="row">
-              <button id="activateChatPersonaBtn" type="button">Activate Persona</button>
-              <button class="ghost" id="refreshMpfPersonasBtn" type="button">Refresh Personas</button>
-            </div>
-
-            <h3>Browser Surface</h3>
-            <div class="muted-note" id="browserSurfaceHint">Browser bridge loading...</div>
-          </div>
-        </details>
-      </section>
-
-      <section class="panel chat-only chat-tertiary reveal" style="--delay: 0.11s">
-        <h2>Engine Ops</h2>
-        <p class="muted-note">Tools, registry state, and local command execution live here so JL Engine can stay visible without drowning the chat.</p>
-        <details class="advanced-drawer" id="advancedOpsDrawer">
-          <summary>Open tools and terminal</summary>
-          <div class="advanced-drawer-body">
-            <div class="field">
-              <label for="toolName">RAM Tool Name</label>
-              <input id="toolName" type="text" placeholder="spark_blitz" />
-            </div>
-            <div class="field">
-              <label for="toolCode">RAM Tool Code</label>
-              <textarea class="mono" id="toolCode" placeholder="def run(payload):&#10;    return {'status': 'ok', 'payload': payload}"></textarea>
-            </div>
-            <div class="field">
-              <label for="toolPayload">Run Payload (JSON)</label>
-              <textarea class="mono" id="toolPayload">{}</textarea>
-            </div>
-            <div class="row">
-              <button id="createToolBtn" type="button">Create Tool</button>
-              <button class="ghost" id="promoteToolNameBtn" type="button">Promote Named Tool</button>
-              <button class="ghost" id="refreshToolsBtn" type="button">Refresh Tools</button>
-            </div>
-            <div class="stack small" id="toolList"></div>
-
-            <h3>Agents On Deck</h3>
-            <div class="row">
-              <button class="ghost" id="refreshAgentsBtn" type="button">Refresh Agents</button>
-            </div>
-            <div class="stack small" id="agentList"></div>
-
-            <h3>Local CC</h3>
-            <div class="field">
-              <label for="ccCommand">Command</label>
-              <input class="mono" id="ccCommand" type="text" placeholder="dir" />
-            </div>
-            <div class="row">
-              <button id="runCcBtn" type="button">Run Command Commissioner</button>
-            </div>
-
-            <div class="terminal">
-              <div class="terminal-head">
-                <h3>Ops Feed</h3>
-                <button class="ghost tiny" id="clearFeedBtn" type="button">Clear</button>
+          <details class="advanced-drawer" id="advancedSwitchboardDrawer" open>
+            <summary>Open engine controls</summary>
+            <div class="advanced-drawer-body">
+              <div class="field">
+                <label for="agentId">Agent ID</label>
+                <input id="agentId" type="text" value="jl_fat_agent" />
               </div>
-              <pre id="opsFeed"></pre>
-            </div>
-          </div>
-        </details>
-      </section>
 
-      <section class="panel builders-only reveal" style="--delay: 0.07s">
+              <div class="field">
+                <label for="laneSelect">Lane</label>
+                <select id="laneSelect">
+                  <option value="fat_agent">fat_agent</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="childSelect">Child</label>
+                <select id="childSelect">
+                  <option value="SparkByte">SparkByte</option>
+                </select>
+              </div>
+
+              <label class="inline-check hidden" id="newGeneratedInstanceWrap">
+                <input id="newGeneratedInstanceCheck" type="checkbox" />
+                Force fresh generated instance
+              </label>
+
+              <div class="row">
+                <button id="switchAgentBtn" type="button">Switch Lane</button>
+                <button class="ghost" id="refreshSwitchboardBtn" type="button">Refresh Matrix</button>
+              </div>
+
+              <div class="muted-note" id="switchboardDescription">Switchboard data loading...</div>
+              <div class="matrix-grid" id="switchboardMatrix"></div>
+
+              <h3>Other Personas</h3>
+              <div class="row">
+                <button id="chatSparkByteBtn" type="button">SparkByte</button>
+                <button class="ghost" id="chatGremlenBtn" type="button">The Gremlin</button>
+                <button class="ghost" id="chatSlappyBtn" type="button">Slappy</button>
+              </div>
+
+              <h3>Chat Persona Override</h3>
+              <div class="field">
+                <label for="chatPersonaSelect">MPF Persona</label>
+                <select id="chatPersonaSelect">
+                  <option value="">Loading personas...</option>
+                </select>
+              </div>
+              <div class="row">
+                <button id="activateChatPersonaBtn" type="button">Activate Persona</button>
+                <button class="ghost" id="refreshMpfPersonasBtn" type="button">Refresh Personas</button>
+              </div>
+
+              <h3>Browser Surface</h3>
+              <div class="muted-note" id="browserSurfaceHint">Browser bridge loading...</div>
+            </div>
+          </details>
+        </section>
+
+        <section class="panel chat-tertiary reveal" style="--delay: 0.11s">
+          <h2>Engine Ops</h2>
+          <p class="muted-note">Tools, registry state, and local command execution live here so JL Engine can stay visible without drowning the chat.</p>
+          <details class="advanced-drawer" id="advancedOpsDrawer" open>
+            <summary>Open tools and terminal</summary>
+            <div class="advanced-drawer-body">
+              <div class="field">
+                <label for="toolName">RAM Tool Name</label>
+                <input id="toolName" type="text" placeholder="spark_blitz" />
+              </div>
+              <div class="field">
+                <label for="toolCode">RAM Tool Code</label>
+                <textarea class="mono" id="toolCode" placeholder="def run(payload):&#10;    return {'status': 'ok', 'payload': payload}"></textarea>
+              </div>
+              <div class="field">
+                <label for="toolPayload">Run Payload (JSON)</label>
+                <textarea class="mono" id="toolPayload">{}</textarea>
+              </div>
+              <div class="row">
+                <button id="createToolBtn" type="button">Create Tool</button>
+                <button class="ghost" id="promoteToolNameBtn" type="button">Promote Named Tool</button>
+                <button class="ghost" id="refreshToolsBtn" type="button">Refresh Tools</button>
+              </div>
+              <div class="stack small" id="toolList"></div>
+
+              <h3>Agents On Deck</h3>
+              <div class="row">
+                <button class="ghost" id="refreshAgentsBtn" type="button">Refresh Agents</button>
+              </div>
+              <div class="stack small" id="agentList"></div>
+
+              <h3>Local CC</h3>
+              <div class="field">
+                <label for="ccCommand">Command</label>
+                <input class="mono" id="ccCommand" type="text" placeholder="dir" />
+              </div>
+              <div class="row">
+                <button id="runCcBtn" type="button">Run Command Commissioner</button>
+              </div>
+
+              <div class="terminal">
+                <div class="terminal-head">
+                  <h3>Ops Feed</h3>
+                  <button class="ghost tiny" id="clearFeedBtn" type="button">Clear</button>
+                </div>
+                <pre id="opsFeed"></pre>
+              </div>
+            </div>
+          </details>
+        </section>
+      </div>
+
+      <section class="panel builders-only builder-primary reveal" style="--delay: 0.07s">
         <h2>Switchboard Builder</h2>
         <p class="muted-note">Use the same switch matrix here while shaping what lives beneath it.</p>
 
@@ -236,7 +259,7 @@
         </div>
       </section>
 
-      <section class="panel builders-only reveal" style="--delay: 0.09s">
+      <section class="panel builders-only builder-secondary reveal" style="--delay: 0.09s">
         <h2>Business Builder</h2>
         <div class="field">
           <label for="bName">Name</label>
@@ -272,7 +295,7 @@
         </div>
       </section>
 
-      <section class="panel builders-only reveal" style="--delay: 0.11s">
+      <section class="panel builders-only builder-wide reveal" style="--delay: 0.11s">
         <h2>Registry Snapshot</h2>
         <p class="muted-note">The live agent list and ops feed stay on the chat deck so the runtime has one canonical surface instead of duplicate mirrors fighting each other.</p>
         <div class="matrix-grid">

@@ -99,6 +99,25 @@ function bindEvent(id, eventName, handler) {
   return el;
 }
 
+function autoSizeTextarea(el) {
+  if (!(el instanceof HTMLTextAreaElement)) return;
+  const computed = window.getComputedStyle(el);
+  const minHeight = parseFloat(computed.minHeight || "0") || 0;
+  const maxHeight = 320;
+  el.style.height = "auto";
+  el.style.height = `${Math.min(Math.max(el.scrollHeight, minHeight), maxHeight)}px`;
+}
+
+function wireAutoSizeTextareas(ids) {
+  for (const id of ids) {
+    const el = $(id);
+    if (!(el instanceof HTMLTextAreaElement)) continue;
+    const resize = () => autoSizeTextarea(el);
+    el.addEventListener("input", resize);
+    resize();
+  }
+}
+
 function decodeEscapedText(value) {
   const raw = String(value ?? "");
   if (!raw.includes("\\n") && !/\\u[0-9a-fA-F]{4}/.test(raw)) {
@@ -1905,6 +1924,7 @@ async function sendChat() {
   }
   appendMessage("user", message, "chatLog");
   $("chatInput").value = "";
+  autoSizeTextarea($("chatInput"));
   const startedAt = Date.now();
   const pendingMsg = appendMessage("system", buildPendingChatLabel(startedAt), "chatLog");
   let pendingTimer = null;
@@ -2042,6 +2062,7 @@ async function runMission() {
 
   appendMessage("user", task, "missionLog");
   $("missionInput").value = "";
+  autoSizeTextarea($("missionInput"));
 
   if (!state.activeAgentId) {
     try {
@@ -2632,6 +2653,7 @@ function wireTabs() {
 
 function wireEvents() {
   wireTabs();
+  wireAutoSizeTextareas(["chatInput", "missionInput", "toolCode", "toolPayload", "bValues"]);
   bindEvent("laneSelect", "change", () => {
     renderSwitchboardChildren();
   });
