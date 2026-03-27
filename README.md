@@ -2,12 +2,12 @@
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-blue)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)
 
 JL Engine Local is the local-first JL Engine runtime and UI stack. The engine is the product surface, and `SparkByte` is the default active fat-agent voice loaded on top of it.
 
-This repository is open source under the MIT License (see `LICENSE.md`).
+This repository is open source under the Apache License, Version 2.0 (see `LICENSE.md` and `NOTICE`).
 
 > **New here?** Start with [`ONBOARDING.md`](ONBOARDING.md) for a step-by-step first-run guide, then return here for a reference overview.
 
@@ -246,4 +246,4 @@ python -m uvicorn jl_platform.services.api.main:app --host 127.0.0.1 --port 8000
 
 ## License
 
-See [`LICENSE.md`](LICENSE.md).
+JL Engine Local is distributed under the Apache License, Version 2.0. See [`LICENSE.md`](LICENSE.md) and [`NOTICE`](NOTICE).

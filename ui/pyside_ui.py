@@ -752,6 +752,7 @@ class Main(QMainWindow):
         self.proc_engine_api = ProcessHandle()
         self.proc_platform_api = ProcessHandle()
         self.chat_history: List[Dict[str, str]] = []
+        self._chat_attachment_path: Path | None = None
         self.safety_enabled = False
         self.tools_enabled = True if self.chat_only_mode else False
         self.engine_backoff_enabled = False
@@ -3557,11 +3558,14 @@ class Main(QMainWindow):
         )
         if not file_path:
             return
+        attachment_path = Path(file_path)
+        self._chat_attachment_path = attachment_path
         if hasattr(self, "chat_attachment_input"):
-            self.chat_attachment_input.setText(file_path)
-        self._append_chat("SYSTEM", f"Selected attachment: {Path(file_path).name}")
+            self.chat_attachment_input.setText(self._chat_attachment_label(attachment_path))
+        self._append_chat("SYSTEM", f"Selected attachment: {attachment_path.name}")
 
     def _clear_chat_attachment(self) -> None:
+        self._chat_attachment_path = None
         if hasattr(self, "chat_attachment_input"):
             self.chat_attachment_input.clear()
         self._append_chat("SYSTEM", "Cleared attached file.")
@@ -3590,29 +3594,36 @@ class Main(QMainWindow):
             context["delegate_max_workers"] = 6
         return context
 
+    def _chat_attachment_label(self, path: Path) -> str:
+        try:
+            return str(path.resolve().relative_to(REPO_ROOT.resolve()))
+        except Exception:
+            return f"external/{path.name}"
+
     def _chat_attachment_context(self) -> str:
-        attachment_widget = getattr(self, "chat_attachment_input", None)
-        if attachment_widget is None:
+        path = getattr(self, "_chat_attachment_path", None)
+        if path is None:
+            attachment_widget = getattr(self, "chat_attachment_input", None)
+            if attachment_widget is None:
+                return ""
+            path_text = attachment_widget.text().strip()
+            if not path_text:
+                return ""
+            path = Path(path_text)
+        if not str(path).strip():
             return ""
-        path_text = attachment_widget.text().strip()
-        if not path_text:
-            return ""
-        path = Path(path_text)
         if not path.exists():
-            return f"\n\n[Attached File: {path_text}]\n[ERROR] File not found."
+            return f"\n\n[Attached File: {self._chat_attachment_label(path)}]\n[ERROR] File not found."
         if path.is_dir():
-            return f"\n\n[Attached File: {path_text}]\n[ERROR] Directories cannot be attached."
+            return f"\n\n[Attached File: {self._chat_attachment_label(path)}]\n[ERROR] Directories cannot be attached."
         try:
             content = path.read_text(encoding="utf-8", errors="replace")
         except Exception as exc:
-            return f"\n\n[Attached File: {path_text}]\n[ERROR] Could not read file: {exc}"
+            return f"\n\n[Attached File: {self._chat_attachment_label(path)}]\n[ERROR] Could not read file: {exc}"
         max_chars = 80_000
         truncated = len(content) > max_chars
         snippet = content[:max_chars]
-        try:
-            display_path = str(path.relative_to(REPO_ROOT))
-        except Exception:
-            display_path = str(path)
+        display_path = self._chat_attachment_label(path)
         suffix = "\n[... truncated ...]" if truncated else ""
         return f"\n\n[Attached File: {display_path}]\n{snippet}{suffix}"
 

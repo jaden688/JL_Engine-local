@@ -193,7 +193,7 @@ def cover_slide(ax):
         va="top",
         linespacing=1.15,
     )
-    draw_chip(ax, 0.08, 0.48, 0.12, "MIT", ACCENT)
+    draw_chip(ax, 0.08, 0.48, 0.18, "Apache 2.0", ACCENT)
     draw_chip(ax, 0.21, 0.48, 0.18, "Python 3.10+", ACCENT_2)
     draw_chip(ax, 0.40, 0.48, 0.26, "Windows / macOS / Linux", "#22c55e")
 

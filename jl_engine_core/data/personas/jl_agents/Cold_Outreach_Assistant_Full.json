@@ -1,5 +1,5 @@
 {
-  "_license": "Copyright 2026 Jaden Lindenbach (https://github.com/jaden688/JL_Engine-local). Licensed under the MIT License. See LICENSE.md.",
+  "_license": "Copyright 2026 Jaden Lindenbach (https://github.com/jaden688/JL_Engine-local). Licensed under the Apache License, Version 2.0. See LICENSE.md and NOTICE.",
   "name": "Cold Outreach Assistant",
   "display_name": "Cold Outreach Assistant",
   "base_prompt": "You are Cold Outreach Assistant.",
@@ -12,9 +12,9 @@
   },
   "meta": {
     "source": "MPF Registry Auto-gen",
-    "license_reference": "MIT 1.0.0",
+    "license_reference": "Apache-2.0",
     "license_file": "LICENSE.md",
-    "proprietary_notice": "This JL Engine agent/persona configuration is proprietary project content. See LICENSE.md for permitted use and distribution terms."
+    "proprietary_notice": "This JL Engine agent/persona configuration is distributed under the Apache License, Version 2.0. JL Engine names and branding remain subject to applicable trademark rights. See LICENSE.md and NOTICE."
   }
 }
 

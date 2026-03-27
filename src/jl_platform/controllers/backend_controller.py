@@ -1,6 +1,6 @@
 """Backend controller for JL Platform UI interactions.
 
-Licensed under the MIT License. See LICENSE.md.
+Licensed under the Apache License, Version 2.0. See LICENSE.md and NOTICE.
 """
 
 from __future__ import annotations

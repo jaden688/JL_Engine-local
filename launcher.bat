@@ -1,5 +1,5 @@
 @echo off
-rem Licensed under the MIT License. See LICENSE.md.
+rem Licensed under the Apache License, Version 2.0. See LICENSE.md and NOTICE.
 setlocal enableextensions
 pushd "%~dp0"
 

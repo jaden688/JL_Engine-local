@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-
 from ui.pyside_ui import Main
 
 
@@ -148,13 +147,26 @@ def test_chat_attachment_context_reads_file(tmp_path):
     sample.write_text("hello from file", encoding="utf-8")
 
     main = Main.__new__(Main)
-    main.chat_attachment_input = SimpleNamespace(text=lambda: str(sample))
+    main._chat_attachment_path = sample
+    main.chat_attachment_input = SimpleNamespace(text=lambda: "external/notes.txt")
 
     context = Main._chat_attachment_context(main)
 
     assert "hello from file" in context
     assert "Attached File:" in context
     assert "notes.txt" in context
+    assert str(sample) not in context
+
+
+def test_chat_attachment_label_hides_absolute_external_path(tmp_path):
+    sample = tmp_path / "notes.txt"
+
+    main = Main.__new__(Main)
+
+    label = Main._chat_attachment_label(main, sample)
+
+    assert label == "external/notes.txt"
+    assert str(sample) != label
 
 
 def test_apply_ollama_model_selection_updates_chat_controls(monkeypatch):
@@ -209,7 +221,8 @@ def test_on_send_includes_attached_file_context(monkeypatch, tmp_path):
     main = Main.__new__(Main)
     main._response_inflight = False
     main.chat_input = FakeLineEdit("Do the thing")
-    main.chat_attachment_input = FakeLineEdit(str(attachment))
+    main._chat_attachment_path = attachment
+    main.chat_attachment_input = FakeLineEdit("external/draft.txt")
     main.chat_history = []
     main.engine = SimpleNamespace(current_agent_name="SparkByte")
     main.console_tabs = SimpleNamespace(currentIndex=lambda: 0, tabText=lambda _index: "CHAT")
@@ -224,6 +237,8 @@ def test_on_send_includes_attached_file_context(monkeypatch, tmp_path):
     assert "Do the thing" in prompt
     assert "Active Context" in prompt
     assert "alpha beta gamma" in prompt
+    assert str(attachment) not in prompt
+    assert "external/draft.txt" in prompt
     assert main.chat_input.cleared is True
 
 

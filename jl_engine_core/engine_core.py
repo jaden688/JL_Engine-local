@@ -1,7 +1,7 @@
 """
 engine_core.py - JL Engine Core Orchestrator
 
-Licensed under the MIT License. See LICENSE.md.
+Licensed under the Apache License, Version 2.0. See LICENSE.md and NOTICE.
 
 This module provides a *unified, headless* orchestration layer for the JL Engine.
 
