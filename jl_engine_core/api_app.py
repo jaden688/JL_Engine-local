@@ -1,15 +1,32 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from pydantic import BaseModel
 
 from . import __version__
 from .engine_core import EngineConfig, JLEngineCore
+
+
+def _allowed_origins() -> list[str]:
+    """Return CORS origins from env or default to localhost-only."""
+    env_val = os.getenv("JL_CORS_ORIGINS", "").strip()
+    if env_val:
+        return [o.strip() for o in env_val.split(",") if o.strip()]
+    return [
+        "http://localhost",
+        "http://localhost:8000",
+        "http://localhost:8080",
+        "http://127.0.0.1",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8080",
+    ]
 
 
 class ChatRequest(BaseModel):
@@ -38,13 +55,22 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> FastAPI:
 
     app = FastAPI(title="J_engine Core API", version=__version__)
 
-    # Allow browser requests from any origin (file://, localhost, etc.)
+    # Restrict CORS to known local origins; override via JL_CORS_ORIGINS env var.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=_allowed_origins(),
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def _security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+        return response
 
     # Serve the web UI at /ui  (optional — works even without this)
     _ui_dir = Path(__file__).resolve().parent.parent.parent / "ui_web"
@@ -69,7 +95,7 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> FastAPI:
             )
             return {"reply": reply, "telemetry": telemetry, "feedback": feedback}
         except Exception as exc:  # pragma: no cover - runtime safeguard
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            raise HTTPException(status_code=500, detail="internal_error") from exc
 
     @app.post("/agent-chat")
     async def agent_chat(request: ChatRequest) -> Dict[str, Any]:
@@ -92,7 +118,7 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> FastAPI:
                 "modulation_fault": status.get("modulation_fault", False),
             }
         except Exception as exc:  # pragma: no cover - runtime safeguard
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            raise HTTPException(status_code=500, detail="internal_error") from exc
 
     return app
 

@@ -33,6 +33,14 @@ def run_py_exec_stream(payload: Dict[str, Any]) -> Dict[str, Any]:
             "message": "Payload requires a non-empty 'code' field.",
         }
 
+    # Block dangerous builtins to reduce attack surface of exec().
+    _BLOCKED_BUILTINS = {"__import__", "compile", "breakpoint", "open", "input"}
+    import builtins as _builtins
+
+    safe_builtins = {
+        k: v for k, v in vars(_builtins).items() if k not in _BLOCKED_BUILTINS
+    }
+
     stdout_buf = io.StringIO()
     stderr_buf = io.StringIO()
 
@@ -48,12 +56,12 @@ def run_py_exec_stream(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     # Use a single execution namespace so imports are visible to functions/classes
     # defined in the executed code (avoids NameError for imported symbols).
-    exec_namespace: Dict[str, Any] = {}
+    exec_namespace: Dict[str, Any] = {"__builtins__": safe_builtins}
     try:
         with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
             if profile:
                 profile.enable()
-            exec(code, exec_namespace, exec_namespace)
+            exec(code, exec_namespace, exec_namespace)  # noqa: S102 — intentional; guarded by safe_builtins + env toggle
     except Exception as exc:
         error = str(exc)
         tb = traceback.format_exc()
@@ -81,13 +89,15 @@ def run_py_exec_stream(payload: Dict[str, Any]) -> Dict[str, Any]:
             call_graph = ""
 
     output_text = (stdout_val + ("\n" if stderr_val else "") + stderr_val).strip()
+    # Only expose the final error line, not the full traceback (avoids leaking code paths).
+    sanitized_tb = tb.strip().rsplit("\n", 1)[-1] if tb else None
     response = {
         "status": "ok" if error is None else "error",
         "stdout": stdout_val,
         "stderr": stderr_val,
         "output": output_text,
         "error": error,
-        "traceback": tb,
+        "traceback": sanitized_tb,
         "metrics": {
             "duration_ms": round(duration_ms, 2),
             "memory_current_kb": round(current / 1024.0, 2),

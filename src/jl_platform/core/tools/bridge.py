@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import os
 import json
 import subprocess
@@ -19,6 +20,7 @@ from jl_platform.core.tools.audit import run_audit_tool
 _BROWSER_BRIDGE_ENV = "JL_BROWSER_BRIDGE_URL"
 _BROWSER_CAPABILITY_TIER = "session_attach_accessibility"
 _LOCAL_BROWSER_BRIDGE: BrowserBridgeManager | None = None
+_FS_LIST_MAX_ENTRIES = 500
 _BRIDGE_MODE_ALIASES = {
     "ui_info": "browser_inspect",
     "browser_info": "browser_inspect",
