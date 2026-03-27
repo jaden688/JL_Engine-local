@@ -17,6 +17,25 @@ def _sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _validate_payload(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any] | None]:
+    code = str(payload.get("code", "") or "")
+    if not code.strip():
+        return "", {
+            "status": "error",
+            "error": "missing_code",
+            "message": "Payload requires a non-empty 'code' field.",
+        }
+    return code, None
+
+
+def _get_safe_builtins() -> dict[str, Any]:
+    _BLOCKED_BUILTINS = {"__import__", "compile", "breakpoint", "open", "input"}
+    import builtins as _builtins
+    return {
+        k: v for k, v in vars(_builtins).items() if k not in _BLOCKED_BUILTINS
+    }
+
+
 def run_py_exec_stream(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
     Execute Python code in-process with telemetry:
@@ -25,21 +44,11 @@ def run_py_exec_stream(payload: Dict[str, Any]) -> Dict[str, Any]:
     - call graph summary (cProfile)
     - stdout/stderr capture
     """
-    code = str(payload.get("code", "") or "")
-    if not code.strip():
-        return {
-            "status": "error",
-            "error": "missing_code",
-            "message": "Payload requires a non-empty 'code' field.",
-        }
+    code, error_response = _validate_payload(payload)
+    if error_response:
+        return error_response
 
-    # Block dangerous builtins to reduce attack surface of exec().
-    _BLOCKED_BUILTINS = {"__import__", "compile", "breakpoint", "open", "input"}
-    import builtins as _builtins
-
-    safe_builtins = {
-        k: v for k, v in vars(_builtins).items() if k not in _BLOCKED_BUILTINS
-    }
+    safe_builtins = _get_safe_builtins()
 
     stdout_buf = io.StringIO()
     stderr_buf = io.StringIO()
