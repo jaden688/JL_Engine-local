@@ -999,7 +999,7 @@ class FatQuestRuntime:
                 "name": name.strip() or agent_id,
                 "role": role.strip() or "Agent",
                 "description": description.strip()
-                or f"{name.strip() or agent_id} is a agentlized questing agent.",
+                or f"{name.strip() or agent_id} is an agentlized questing agent.",
                 "tags": ["agentlized", "fat-agent"],
             },
             "behavior": {

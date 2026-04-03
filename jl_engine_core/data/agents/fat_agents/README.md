@@ -4,6 +4,7 @@ Current intent:
 - `SparkByte`
 - `The Gremlin`
 - `Slappy`
+- `Temporal Quantum Agent`
 - aliases that intentionally point at those same payloads, like `Supervisor`
 
 Rules:
