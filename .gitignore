@@ -139,3 +139,9 @@ logs/
 /data/dynamic_tools.jl
 /data/dynamic_tools_registry.json
 /data/webula_manual_links.json
+
+# Never publish browser captures or runtime scratch data
+**/.playwright-cli/
+**/data/live/
+readthis.txt
+**/e2e/results/
