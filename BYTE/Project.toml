@@ -1,0 +1,17 @@
+name = "BYTE"
+uuid = "7dd7ddd1-b483-4a1d-83a1-165dbb11be83"
+version = "0.2.0"
+authors = ["J_LINDENBACH688@HOTMAIL.COM"]
+
+[deps]
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates     = "ade2ca70-3891-5945-98fb-dc099432e06a"
+HTTP      = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON      = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+SQLite    = "0aa819cd-b072-5ff4-a722-6bc24af294d9"
+UUIDs     = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+
+[compat]
+julia = "1.10"

@@ -1,0 +1,20 @@
+{
+  "jl_engine": {
+    "backends": {
+      "default": "openrouter",
+      "brain_backend": "openrouter",
+      "tool_backend": "open_interpreter"
+    },
+    "listener_agent": {
+      "enabled": false,
+      "role": "LISTENER",
+      "name": "Listener",
+      "include_in_prompt": false,
+      "inject_via_bridge": false
+    },
+    "core_rules": [
+      "Stay truthful.",
+      "Respect agent boundaries."
+    ]
+  }
+}

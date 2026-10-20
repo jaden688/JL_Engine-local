@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Splash Garden Bench</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111a;
+      --panel: rgba(11, 24, 37, 0.88);
+      --line: rgba(133, 197, 255, 0.18);
+      --text: #eff7ff;
+      --muted: #9bb7c9;
+      --hot: #ffb44c;
+      --aqua: #67e8f9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(63, 116, 165, 0.35), transparent 42%),
+        linear-gradient(180deg, #071019 0%, #0d1721 48%, #091019 100%);
+      color: var(--text);
+    }
+    main {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(18px);
+    }
+    h1, h2 { margin: 0 0 8px; }
+    p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .highlight-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 14px;
+    }
+    .pill strong {
+      display: block;
+      color: var(--hot);
+      margin-bottom: 4px;
+    }
+    .case-stack {
+      display: grid;
+      gap: 20px;
+    }
+    .case-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 22px;
+    }
+    .hero-grid, .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    figure {
+      margin: 0;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    img {
+      display: block;
+      width: 100%;
+      image-rendering: pixelated;
+      background: #05080d;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+    }
+    figcaption {
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin: 18px 0 0;
+    }
+    .stat-grid div {
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    dt {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+    dd {
+      margin: 6px 0 0;
+      font-size: 1.05rem;
+      color: var(--aqua);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Splash Garden Bench</h1>
+      <p>Prompt: <strong>unseen vision radar, emotional weather, hidden causality, ripples in the glass</strong></p>
+      <div class="highlight-row">
+        <div class="pill"><strong>Most Delay-Driven</strong>delay-oracle</div>
+        <div class="pill"><strong>Most Structural</strong>structure-lock</div>
+        <div class="pill"><strong>Most Spectral</strong>spectral-echo</div>
+      </div>
+    </section>
+    <section class="case-stack">
+      
+            <article class="case-card">
+              <header>
+                <h2>Balanced Field</h2>
+                <p>Baseline unseen-vision render with the hub and ring held in balance.</p>
+              </header>
+              <div class="hero-grid">
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-balanced-field.png" alt="Balanced Field RGB render">
+                  <figcaption>RGB field</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-balanced-field-delay.png" alt="Balanced Field delay map">
+                  <figcaption>Delay field</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-balanced-field-sources.png" alt="Balanced Field source map">
+                  <figcaption>Source map</figcaption>
+                </figure>
+              </div>
+              <div class="channel-grid">
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-balanced-field-red.png" alt="Balanced Field red channel">
+                  <figcaption>Red</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-balanced-field-green.png" alt="Balanced Field green channel">
+                  <figcaption>Green</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-balanced-field-blue.png" alt="Balanced Field blue channel">
+                  <figcaption>Blue</figcaption>
+                </figure>
+              </div>
+              <dl class="stat-grid">
+                <div><dt>Delay mean</dt><dd>0.590</dd></div>
+                <div><dt>Brightness</dt><dd>0.498</dd></div>
+                <div><dt>Spectral split</dt><dd>0.051</dd></div>
+                <div><dt>Structure gain</dt><dd>1.00</dd></div>
+                <div><dt>Delay gain</dt><dd>1.00</dd></div>
+                <div><dt>Spectral tilt</dt><dd>0.00</dd></div>
+              </dl>
+            </article>
+            
+            <article class="case-card">
+              <header>
+                <h2>Delay Oracle</h2>
+                <p>Pushes the hidden delay layer harder so arrival-order starts steering the scene.</p>
+              </header>
+              <div class="hero-grid">
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-delay-oracle.png" alt="Delay Oracle RGB render">
+                  <figcaption>RGB field</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-delay-oracle-delay.png" alt="Delay Oracle delay map">
+                  <figcaption>Delay field</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-delay-oracle-sources.png" alt="Delay Oracle source map">
+                  <figcaption>Source map</figcaption>
+                </figure>
+              </div>
+              <div class="channel-grid">
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-delay-oracle-red.png" alt="Delay Oracle red channel">
+                  <figcaption>Red</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-delay-oracle-green.png" alt="Delay Oracle green channel">
+                  <figcaption>Green</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-delay-oracle-blue.png" alt="Delay Oracle blue channel">
+                  <figcaption>Blue</figcaption>
+                </figure>
+              </div>
+              <dl class="stat-grid">
+                <div><dt>Delay mean</dt><dd>0.670</dd></div>
+                <div><dt>Brightness</dt><dd>0.504</dd></div>
+                <div><dt>Spectral split</dt><dd>0.067</dd></div>
+                <div><dt>Structure gain</dt><dd>0.92</dd></div>
+                <div><dt>Delay gain</dt><dd>1.80</dd></div>
+                <div><dt>Spectral tilt</dt><dd>0.18</dd></div>
+              </dl>
+            </article>
+            
+            <article class="case-card">
+              <header>
+                <h2>Structure Lock</h2>
+                <p>Leans into lensing and composition to see whether the form stabilizes first.</p>
+              </header>
+              <div class="hero-grid">
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-structure-lock.png" alt="Structure Lock RGB render">
+                  <figcaption>RGB field</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-structure-lock-delay.png" alt="Structure Lock delay map">
+                  <figcaption>Delay field</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-structure-lock-sources.png" alt="Structure Lock source map">
+                  <figcaption>Source map</figcaption>
+                </figure>
+              </div>
+              <div class="channel-grid">
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-structure-lock-red.png" alt="Structure Lock red channel">
+                  <figcaption>Red</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-structure-lock-green.png" alt="Structure Lock green channel">
+                  <figcaption>Green</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-structure-lock-blue.png" alt="Structure Lock blue channel">
+                  <figcaption>Blue</figcaption>
+                </figure>
+              </div>
+              <dl class="stat-grid">
+                <div><dt>Delay mean</dt><dd>0.606</dd></div>
+                <div><dt>Brightness</dt><dd>0.526</dd></div>
+                <div><dt>Spectral split</dt><dd>0.043</dd></div>
+                <div><dt>Structure gain</dt><dd>1.65</dd></div>
+                <div><dt>Delay gain</dt><dd>0.82</dd></div>
+                <div><dt>Spectral tilt</dt><dd>-0.12</dd></div>
+              </dl>
+            </article>
+            
+            <article class="case-card">
+              <header>
+                <h2>Spectral Echo</h2>
+                <p>Separates channel personalities so the field reveals color-phase drift.</p>
+              </header>
+              <div class="hero-grid">
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-spectral-echo.png" alt="Spectral Echo RGB render">
+                  <figcaption>RGB field</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-spectral-echo-delay.png" alt="Spectral Echo delay map">
+                  <figcaption>Delay field</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-spectral-echo-sources.png" alt="Spectral Echo source map">
+                  <figcaption>Source map</figcaption>
+                </figure>
+              </div>
+              <div class="channel-grid">
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-spectral-echo-red.png" alt="Spectral Echo red channel">
+                  <figcaption>Red</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-spectral-echo-green.png" alt="Spectral Echo green channel">
+                  <figcaption>Green</figcaption>
+                </figure>
+                <figure>
+                  <img src="unseen-vision-radar-emotional-weather-hidden-causality-ripples-in-the-glass-spectral-echo-blue.png" alt="Spectral Echo blue channel">
+                  <figcaption>Blue</figcaption>
+                </figure>
+              </div>
+              <dl class="stat-grid">
+                <div><dt>Delay mean</dt><dd>0.637</dd></div>
+                <div><dt>Brightness</dt><dd>0.478</dd></div>
+                <div><dt>Spectral split</dt><dd>0.175</dd></div>
+                <div><dt>Structure gain</dt><dd>1.00</dd></div>
+                <div><dt>Delay gain</dt><dd>1.08</dd></div>
+                <div><dt>Spectral tilt</dt><dd>0.78</dd></div>
+              </dl>
+            </article>
+            
+    </section>
+  </main>
+</body>
+</html>

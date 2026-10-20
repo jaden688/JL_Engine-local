@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Julian MetaMorph</title>
+<!-- Syntax highlighting -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07070f;--glass:rgba(12,12,28,0.85);--border:rgba(80,80,160,0.28);
+  --green:#00ff99;--blue:#4fc3f7;--pink:#ff4fa0;--orange:#ff9500;
+  --purple:#b060ff;--dim:#555;--text:#c8c8e0;--red:#f44;
+  --yellow:#ffd54f;
+}
+body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;font-size:12px;min-height:100vh;display:flex;flex-direction:column;}
+
+/* ── HEADER ── */
+#header{display:flex;align-items:center;gap:14px;padding:9px 18px;background:rgba(8,8,20,0.97);border-bottom:1px solid var(--border);flex-shrink:0;}
+#logo{font-size:14px;font-weight:bold;color:var(--purple);letter-spacing:3px;}
+#logo span{color:var(--pink);}
+#status-dot{width:8px;height:8px;border-radius:50%;background:#333;flex-shrink:0;transition:0.3s;}
+#status-dot.up{background:var(--green);box-shadow:0 0 6px var(--green);}
+#status-dot.down{background:var(--red);box-shadow:0 0 6px var(--red);}
+#status-txt{font-size:10px;color:var(--dim);letter-spacing:1px;}
+#quarry-stat{margin-left:auto;font-size:10px;color:var(--dim);letter-spacing:1px;}
+#quarry-stat b{color:var(--blue);}
+.hdr-btn{cursor:pointer;font-size:10px;color:var(--dim);padding:2px 8px;border:1px solid #282838;border-radius:3px;background:none;transition:0.15s;font-family:inherit;letter-spacing:1px;}
+.hdr-btn:hover{color:var(--blue);border-color:var(--blue);}
+
+/* ── LAYOUT ── */
+#main{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+#sidebar{width:160px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:rgba(6,6,18,0.7);}
+.nav-item{padding:10px 14px;cursor:pointer;font-size:10px;letter-spacing:1px;color:var(--dim);border-left:2px solid transparent;transition:0.15s;}
+.nav-item:hover{color:var(--text);background:rgba(80,80,180,0.08);}
+.nav-item.active{color:var(--purple);border-left-color:var(--purple);background:rgba(176,96,255,0.07);}
+.nav-icon{margin-right:6px;}
+#sidebar-footer{margin-top:auto;padding:10px 14px;font-size:9px;color:#2a2a3a;letter-spacing:1px;border-top:1px solid #111128;}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+#content::-webkit-scrollbar{width:4px;}
+#content::-webkit-scrollbar-thumb{background:#1e1e3a;}
+.page{display:none;flex-direction:column;gap:14px;}
+.page.active{display:flex;}
+
+/* ── PANEL ── */
+.panel{background:var(--glass);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.panel-hdr{padding:8px 14px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;display:flex;align-items:center;gap:8px;}
+.panel-body{padding:14px;}
+
+/* ── HUNT PANEL ── */
+#hunt-panel{border-color:rgba(176,96,255,0.4);}
+#hunt-panel .panel-hdr{color:var(--purple);background:rgba(176,96,255,0.06);}
+#hunt-input{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(176,96,255,0.35);color:var(--text);font-family:inherit;font-size:13px;padding:10px 14px;border-radius:4px;outline:none;transition:0.2s;}
+#hunt-input:focus{border-color:var(--purple);box-shadow:0 0 12px rgba(176,96,255,0.15);}
+#hunt-input::placeholder{color:#333;}
+.hunt-opts{display:flex;gap:12px;margin-top:10px;align-items:flex-end;flex-wrap:wrap;}
+.hunt-opts .field{display:flex;flex-direction:column;gap:4px;}
+.hunt-opts label{font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;}
+.hunt-opts input[type=number]{background:rgba(0,0,0,0.4);border:1px solid #222240;color:var(--text);font-family:inherit;font-size:11px;padding:5px 8px;border-radius:3px;outline:none;width:70px;}
+#hunt-btn{margin-left:auto;cursor:pointer;padding:9px 28px;border-radius:4px;font-family:inherit;font-size:11px;letter-spacing:2px;font-weight:bold;border:1px solid var(--purple);background:rgba(176,96,255,0.15);color:var(--purple);transition:0.15s;}
+#hunt-btn:hover{background:rgba(176,96,255,0.3);box-shadow:0 0 16px rgba(176,96,255,0.2);}
+#hunt-btn:disabled{opacity:0.3;cursor:not-allowed;}
+#hunt-progress{display:none;margin-top:12px;font-size:10px;color:var(--dim);letter-spacing:1px;line-height:2;}
+#hunt-progress.visible{display:block;}
+.prog-line{padding:2px 0;}
+.prog-line.done{color:var(--green);}
+.prog-line.active{color:var(--purple);}
+.prog-line.info{color:var(--blue);}
+
+/* ── HUNT RESULTS ── */
+#hunt-results{display:none;flex-direction:column;gap:14px;}
+#hunt-results.visible{display:flex;}
+.summary-grid{display:flex;gap:12px;flex-wrap:wrap;}
+.stat-box{background:rgba(0,0,0,0.3);border:1px solid #1e1e3a;border-radius:4px;padding:10px 16px;flex:1;min-width:100px;}
+.stat-val{font-size:22px;font-weight:bold;color:var(--purple);}
+.stat-lbl{font-size:9px;letter-spacing:1px;color:var(--dim);margin-top:2px;text-transform:uppercase;}
+.queries-used{font-size:10px;color:var(--dim);margin-top:10px;}
+.queries-used span{color:var(--blue);margin-right:8px;}
+
+/* ── FINDINGS TREE PAGE ── */
+#findings-layout{display:flex;gap:12px;height:calc(100vh - 100px);min-height:400px;}
+#findings-tree-panel{width:280px;flex-shrink:0;display:flex;flex-direction:column;}
+#findings-detail-panel{flex:1;display:flex;flex-direction:column;min-width:0;}
+#tree-container{flex:1;overflow-y:auto;padding:8px;}
+#tree-container::-webkit-scrollbar{width:4px;}
+#tree-container::-webkit-scrollbar-thumb{background:#1e1e3a;}
+#detail-container{flex:1;overflow-y:auto;padding:0;}
+#detail-container::-webkit-scrollbar{width:4px;}
+#detail-container::-webkit-scrollbar-thumb{background:#1e1e3a;}
+
+/* ── TREE NODES ── */
+.tree-node{cursor:pointer;padding:4px 8px;border-radius:3px;transition:0.12s;display:flex;align-items:flex-start;gap:6px;user-select:none;}
+.tree-node:hover{background:rgba(80,80,180,0.12);}
+.tree-node.selected{background:rgba(176,96,255,0.12);color:var(--purple);}
+.tree-children{padding-left:16px;}
+.tree-toggle{font-size:9px;color:var(--dim);flex-shrink:0;margin-top:2px;width:10px;}
+.tree-icon{flex-shrink:0;}
+.tree-label{font-size:10px;letter-spacing:0.5px;line-height:1.5;}
+.tree-meta{font-size:9px;color:var(--dim);margin-left:auto;white-space:nowrap;}
+
+/* NODE TYPE COLORS */
+.node-hunt > .tree-label{color:var(--purple);font-weight:bold;letter-spacing:1px;}
+.node-category > .tree-label{color:var(--blue);font-weight:bold;text-transform:uppercase;font-size:9px;letter-spacing:2px;}
+.node-subcategory > .tree-label{color:var(--orange);font-size:9px;letter-spacing:1px;}
+.node-finding > .tree-label{color:var(--text);}
+.node-finding.selected > .tree-label{color:var(--purple);}
+
+/* ── DETAIL VIEW ── */
+#detail-empty{padding:40px;text-align:center;color:var(--dim);font-size:11px;letter-spacing:1px;}
+.detail-hero{padding:14px;border-bottom:1px solid var(--border);}
+.detail-path{font-size:13px;color:var(--blue);font-weight:bold;margin-bottom:4px;word-break:break-all;}
+.detail-repo{font-size:10px;color:var(--dim);margin-bottom:10px;}
+.detail-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.tag{display:inline-block;padding:2px 7px;border-radius:2px;font-size:9px;letter-spacing:1px;}
+.tag-cat{background:rgba(79,195,247,0.12);color:var(--blue);}
+.tag-subcat{background:rgba(255,149,0,0.1);color:var(--orange);}
+.tag-lang{background:rgba(0,255,153,0.08);color:var(--green);}
+.tag-lic{background:rgba(176,96,255,0.1);color:var(--purple);}
+.tag-score{background:rgba(255,213,79,0.1);color:var(--yellow);}
+
+/* ── EXPLANATION ── */
+.detail-explanation{
+  margin:12px 14px;padding:12px 14px;
+  background:rgba(176,96,255,0.05);
+  border:1px solid rgba(176,96,255,0.2);
+  border-radius:4px;font-size:11px;line-height:1.7;color:var(--text);letter-spacing:0.3px;
+}
+.expl-label{font-size:9px;letter-spacing:2px;color:var(--purple);margin-bottom:6px;text-transform:uppercase;}
+
+/* ── SYMBOLS ── */
+.detail-symbols{margin:0 14px 12px;display:flex;flex-wrap:wrap;gap:6px;}
+.sym-chip{background:rgba(0,0,0,0.4);border:1px solid #1e1e3a;border-radius:3px;padding:2px 8px;font-size:10px;color:var(--green);}
+
+/* ── CODE BLOCK ── */
+.detail-code{margin:0 14px 14px;}
+.code-label{font-size:9px;letter-spacing:2px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;}
+.hljs{border-radius:4px;font-size:11px;line-height:1.5;max-height:340px;overflow-y:auto;}
+
+/* ── PUSH PANEL ── */
+#push-bar{display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--border);}
+#push-repo-input{flex:1;background:rgba(0,0,0,0.4);border:1px solid #222240;color:var(--text);font-family:inherit;font-size:11px;padding:5px 10px;border-radius:3px;outline:none;}
+#push-btn{cursor:pointer;padding:5px 16px;border-radius:3px;font-family:inherit;font-size:10px;letter-spacing:1px;font-weight:bold;border:1px solid var(--green);background:rgba(0,255,153,0.1);color:var(--green);transition:0.15s;white-space:nowrap;}
+#push-btn:hover{background:rgba(0,255,153,0.22);}
+#push-btn:disabled{opacity:0.3;cursor:not-allowed;}
+#push-result{font-size:10px;color:var(--dim);}
+
+/* ── HIT CARDS (hunt results) ── */
+.hit-card{background:rgba(0,0,0,0.3);border:1px solid #1e1e3a;border-radius:4px;padding:10px 12px;margin-bottom:8px;}
+.hit-card:last-child{margin-bottom:0;}
+.hit-num{color:var(--dim);font-size:9px;margin-bottom:4px;letter-spacing:1px;}
+.hit-repo{color:var(--blue);font-size:11px;font-weight:bold;margin-bottom:3px;}
+.hit-path{color:var(--green);font-size:10px;margin-bottom:6px;}
+.hit-meta{display:flex;gap:10px;font-size:9px;color:var(--dim);margin-bottom:6px;flex-wrap:wrap;}
+.hit-preview{background:rgba(0,0,0,0.45);border-radius:3px;padding:8px 10px;font-size:10px;color:#8888aa;white-space:pre-wrap;word-break:break-word;max-height:120px;overflow-y:auto;}
+.hit-why{font-size:9px;color:var(--dim);margin-top:5px;font-style:italic;}
+.repo-ingested{display:flex;align-items:center;gap:10px;padding:7px 12px;background:rgba(0,0,0,0.25);border:1px solid #1a1a2e;border-radius:3px;margin-bottom:6px;font-size:10px;}
+.repo-ingested:last-child{margin-bottom:0;}
+.ri-name{color:var(--blue);flex:1;}
+.ri-files{color:var(--green);}
+.ri-lic{color:var(--dim);}
+
+/* ── ADVANCED PANELS ── */
+.adv-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+.adv-row:last-child{margin-bottom:0;}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;}
+.field label{font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;}
+input[type=text],select{background:rgba(0,0,0,0.4);border:1px solid #222240;color:var(--text);font-family:inherit;font-size:11px;padding:6px 10px;border-radius:3px;outline:none;transition:0.15s;}
+input[type=text]:focus,select:focus{border-color:var(--blue);}
+.btn{cursor:pointer;padding:6px 16px;border-radius:3px;font-family:inherit;font-size:10px;letter-spacing:1px;font-weight:bold;transition:0.15s;white-space:nowrap;border:1px solid;}
+.btn-blue{background:rgba(79,195,247,0.12);border-color:var(--blue);color:var(--blue);}
+.btn-blue:hover{background:rgba(79,195,247,0.25);}
+.btn-green{background:rgba(0,255,153,0.1);border-color:var(--green);color:var(--green);}
+.btn-green:hover{background:rgba(0,255,153,0.22);}
+.btn-orange{background:rgba(255,149,0,0.1);border-color:var(--orange);color:var(--orange);}
+.btn-orange:hover{background:rgba(255,149,0,0.22);}
+.btn-pink{background:rgba(255,79,160,0.1);border-color:var(--pink);color:var(--pink);}
+.btn-pink:hover{background:rgba(255,79,160,0.22);}
+.btn:disabled{opacity:0.3;cursor:not-allowed;}
+.result-hdr{padding:8px 14px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;display:flex;align-items:center;justify-content:space-between;}
+.result-body{padding:12px;max-height:440px;overflow-y:auto;}
+.result-body::-webkit-scrollbar{width:4px;}
+.result-body::-webkit-scrollbar-thumb{background:#1e1e3a;}
+.empty{color:var(--dim);font-size:11px;padding:20px;text-align:center;letter-spacing:1px;}
+.repo-card{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid #1e1e3a;border-radius:4px;margin-bottom:7px;}
+.repo-card:last-child{margin-bottom:0;}
+.rc-info{flex:1;}
+.rc-name{color:var(--blue);font-size:11px;font-weight:bold;}
+.rc-desc{color:var(--dim);font-size:10px;margin-top:3px;line-height:1.5;}
+.rc-meta{display:flex;gap:10px;font-size:9px;color:#444;margin-top:5px;}
+.rc-stars{color:var(--orange);}
+.ingest-inline{flex-shrink:0;cursor:pointer;padding:3px 10px;border-radius:3px;font-family:inherit;font-size:9px;letter-spacing:1px;border:1px solid var(--green);color:var(--green);background:rgba(0,255,153,0.07);transition:0.15s;}
+.ingest-inline:hover{background:rgba(0,255,153,0.18);}
+.spinner{display:inline-block;width:10px;height:10px;border:2px solid #2a2a4a;border-top-color:var(--purple);border-radius:50%;animation:spin 0.6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#toast{position:fixed;bottom:16px;right:16px;background:rgba(10,10,24,0.97);border:1px solid var(--border);border-radius:4px;padding:7px 14px;font-size:10px;letter-spacing:1px;color:var(--text);opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:999;}
+#toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <span id="logo">JULIAN <span>META</span>MORPH</span>
+  <div id="status-dot" class="down"></div>
+  <span id="status-txt">CHECKING…</span>
+  <span id="quarry-stat">quarry: <b id="q-repos">—</b> repos · <b id="q-files">—</b> files · <b id="q-findings">—</b> findings</span>
+  <button class="hdr-btn" onclick="checkHealth()">↺</button>
+  <button class="hdr-btn" onclick="window.open('/ripple-scope','_blank')">RIPPLE</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="sidebar">
+    <div class="nav-item active" onclick="showPage('hunt')"     id="nav-hunt"><span class="nav-icon">🎯</span>HUNT</div>
+    <div class="nav-item"        onclick="showPage('findings')" id="nav-findings"><span class="nav-icon">🌳</span>FINDINGS</div>
+    <div class="nav-item"        onclick="showPage('search')"   id="nav-search"><span class="nav-icon">🔍</span>SEARCH</div>
+    <div class="nav-item"        onclick="showPage('ingest')"   id="nav-ingest"><span class="nav-icon">⬇</span>INGEST</div>
+    <div class="nav-item"        onclick="showPage('scout')"    id="nav-scout"><span class="nav-icon">📡</span>SCOUT</div>
+    <div class="nav-item"        onclick="showPage('forge')"    id="nav-forge"><span class="nav-icon">⚒</span>FORGE</div>
+    <div id="sidebar-footer">v0.2.0 · :8765</div>
+  </div>
+
+  <div id="content">
+
+    <!-- ══ HUNT PAGE ══ -->
+    <div class="page active" id="page-hunt">
+      <div class="panel" id="hunt-panel">
+        <div class="panel-hdr">🎯 HUNT — give me a task, I'll raid GitHub and bring back the goods</div>
+        <div class="panel-body">
+          <input type="text" id="hunt-input" placeholder='e.g. "behavioral engine for AI agents" or "websocket reconnect"'>
+          <div class="hunt-opts">
+            <div class="field"><label>Repos to raid</label><input type="number" id="hunt-repos" value="5" min="1" max="15"></div>
+            <div class="field"><label>Files/repo</label><input type="number" id="hunt-files" value="40" min="5" max="200"></div>
+            <div class="field"><label>Max hits</label><input type="number" id="hunt-hits" value="10" min="1" max="30"></div>
+            <button id="hunt-btn" onclick="runHunt()">⚡ HUNT</button>
+          </div>
+          <div id="hunt-progress"></div>
+        </div>
+      </div>
+      <div id="hunt-results">
+        <div class="panel">
+          <div class="panel-hdr" style="color:var(--purple)">HUNT SUMMARY</div>
+          <div class="panel-body">
+            <div class="summary-grid">
+              <div class="stat-box"><div class="stat-val" id="hs-repos">0</div><div class="stat-lbl">Repos Raided</div></div>
+              <div class="stat-box"><div class="stat-val" id="hs-files">0</div><div class="stat-lbl">Files Ingested</div></div>
+              <div class="stat-box"><div class="stat-val" id="hs-hits">0</div><div class="stat-lbl">Code Hits</div></div>
+            </div>
+            <div class="queries-used" id="hs-queries"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr" style="color:var(--green)">REPOS INGESTED</div>
+          <div class="panel-body" id="hs-repos-list"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr" style="color:var(--blue)">CODE HITS <span id="hs-hit-count" style="color:var(--dim);font-size:9px;margin-left:8px;"></span>
+            <button class="hdr-btn" style="margin-left:auto;" onclick="showPage('findings');loadFindings()">VIEW TREE →</button>
+          </div>
+          <div class="panel-body" id="hs-hits-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ FINDINGS TREE PAGE ══ -->
+    <div class="page" id="page-findings">
+      <div class="panel" style="flex-shrink:0;">
+        <div class="panel-hdr" style="color:var(--purple)">
+          🌳 FINDINGS TREE
+          <select id="hunt-filter" style="margin-left:auto;font-size:9px;padding:2px 6px;background:rgba(0,0,0,0.5);border-color:#222240;color:var(--text);" onchange="loadFindings()">
+            <option value="">All hunts</option>
+          </select>
+          <button class="hdr-btn" onclick="loadFindings()">↺</button>
+        </div>
+      </div>
+      <div id="findings-layout">
+        <!-- Tree panel -->
+        <div class="panel" id="findings-tree-panel">
+          <div class="panel-hdr" style="color:var(--blue);">TREE <span id="tree-count" style="color:var(--dim);font-size:9px;margin-left:6px;"></span></div>
+          <div id="tree-container"></div>
+        </div>
+        <!-- Detail panel -->
+        <div class="panel" id="findings-detail-panel" style="display:flex;flex-direction:column;">
+          <div class="panel-hdr" style="color:var(--blue);">
+            DETAIL
+            <span id="detail-title" style="color:var(--dim);font-size:9px;margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;"></span>
+          </div>
+          <div id="detail-container">
+            <div id="detail-empty">← Select a finding from the tree</div>
+            <div id="detail-content" style="display:none;"></div>
+          </div>
+          <div id="push-bar">
+            <input type="text" id="push-repo-input" value="sparkbyte-engine-findings" style="max-width:240px;">
+            <button id="push-btn" onclick="pushFindings()">⬆ PUSH TO GITHUB</button>
+            <span id="push-result"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SEARCH PAGE ══ -->
+    <div class="page" id="page-search">
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--blue)">🔍 SEARCH GITHUB REPOS</div>
+        <div class="panel-body">
+          <div class="adv-row">
+            <div class="field"><label>Query</label><input type="text" id="search-q" placeholder="e.g. websocket python" onkeydown="if(event.key==='Enter')runSearch()"></div>
+            <button class="btn btn-blue" onclick="runSearch()">SEARCH</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="flex:1;">
+        <div class="result-hdr"><span style="color:var(--blue)">RESULTS</span><span id="search-count" style="color:var(--dim);font-size:9px;"></span></div>
+        <div class="result-body" id="search-body"><div class="empty">Run a search to see repos.</div></div>
+      </div>
+    </div>
+
+    <!-- ══ INGEST PAGE ══ -->
+    <div class="page" id="page-ingest">
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--green)">⬇ INGEST SPECIFIC REPO</div>
+        <div class="panel-body">
+          <div class="adv-row">
+            <div class="field"><label>Repo (owner/name)</label><input type="text" id="ingest-repo" placeholder="e.g. python-websockets/websockets"></div>
+            <div class="field" style="flex:0;"><label>Max Files</label><input type="number" id="ingest-max" value="60" min="1" max="500" style="width:70px;"></div>
+            <button class="btn btn-green" onclick="runIngest()">INGEST</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="ingest-result-panel" style="display:none;">
+        <div class="panel-hdr" style="color:var(--green)">INGEST RESULT</div>
+        <div class="panel-body" id="ingest-result-body"></div>
+      </div>
+    </div>
+
+    <!-- ══ SCOUT PAGE ══ -->
+    <div class="page" id="page-scout">
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--orange)">📡 SCOUT EXISTING QUARRY</div>
+        <div class="panel-body">
+          <div class="adv-row">
+            <div class="field"><label>Task</label><input type="text" id="scout-task" placeholder="e.g. websocket reconnect" onkeydown="if(event.key==='Enter')runScout()"></div>
+            <div class="field" style="flex:0;"><label>Limit</label><input type="number" id="scout-limit" value="8" min="1" max="30" style="width:60px;"></div>
+            <button class="btn btn-orange" onclick="runScout()">SCOUT</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="flex:1;">
+        <div class="result-hdr"><span style="color:var(--orange)">HITS</span><span id="scout-count" style="color:var(--dim);font-size:9px;"></span></div>
+        <div class="result-body" id="scout-body"><div class="empty">Scout a task to search existing quarry.</div></div>
+      </div>
+    </div>
+
+    <!-- ══ FORGE PAGE ══ -->
+    <div class="page" id="page-forge">
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--pink)">⚒ FORGE SKILL MODULE</div>
+        <div class="panel-body">
+          <div class="adv-row">
+            <div class="field" style="flex:0;min-width:140px;"><label>Skill Name</label><input type="text" id="forge-name" placeholder="e.g. ws_connect"></div>
+            <div class="field"><label>Task Description</label><input type="text" id="forge-task" placeholder="e.g. websocket client connect"></div>
+          </div>
+          <div class="adv-row">
+            <div class="field"><label>Output Dir</label><input type="text" id="forge-out" value="skills"></div>
+            <button class="btn btn-pink" onclick="runForge()">FORGE</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="forge-result-panel" style="display:none;">
+        <div class="panel-hdr" style="color:var(--pink)">FORGED SKILL</div>
+        <div class="panel-body" id="forge-result-body"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<div id="toast"></div>
+
+<script>
+const API = 'http://127.0.0.1:8765';
+let _currentHuntId = null;
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  $(id('page-'+name)).classList.add('active');
+  $(id('nav-'+name)).classList.add('active');
+}
+
+// ── HEALTH ───────────────────────────────────────────────────────────────────
+async function checkHealth(){
+  const dot=get('status-dot'), txt=get('status-txt');
+  try{
+    const r=await fetch(API+'/health'); const d=await r.json();
+    dot.className='up'; txt.textContent='ONLINE';
+    get('q-repos').textContent=d.quarry.repos;
+    get('q-files').textContent=d.quarry.files;
+    get('q-findings').textContent=d.quarry.findings||0;
+  }catch{dot.className='down'; txt.textContent='OFFLINE';}
+}
+
+// ── HUNT ─────────────────────────────────────────────────────────────────────
+async function runHunt(){
+  const task=get('hunt-input').value.trim();
+  if(!task){toast('Enter a task description','var(--red)');return;}
+  const repo_limit=parseInt(get('hunt-repos').value)||5;
+  const files_per_repo=parseInt(get('hunt-files').value)||40;
+  const hit_limit=parseInt(get('hunt-hits').value)||10;
+
+  const btn=get('hunt-btn'); btn.disabled=true; btn.textContent='HUNTING…';
+  get('hunt-results').classList.remove('visible');
+  const prog=get('hunt-progress'); prog.innerHTML=''; prog.classList.add('visible');
+  log(prog,'⚡ Deriving search queries…','active');
+
+  try{
+    const r=await fetch(API+'/hunt',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({task,repo_limit,files_per_repo,hit_limit})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    _currentHuntId = d.hunt_id;
+
+    prog.innerHTML='';
+    log(prog,'✓ Queries: '+d.queries_used.map(q=>`"${q}"`).join(' · '),'info');
+    log(prog,'✓ Raided '+d.repos_ingested.length+' repos','done');
+    const totalFiles=d.repos_ingested.reduce((s,r)=>s+(r.ingested_files||0),0);
+    log(prog,'✓ Ingested '+totalFiles+' files','done');
+    log(prog,'✓ Found '+d.hits.length+' hits — saved to findings tree','done');
+
+    get('hs-repos').textContent=d.repos_ingested.length;
+    get('hs-files').textContent=totalFiles;
+    get('hs-hits').textContent=d.hits.length;
+    get('hs-queries').innerHTML='Queries: '+d.queries_used.map(q=>`<span>"${esc(q)}"</span>`).join(' ');
+
+    get('hs-repos-list').innerHTML=d.repos_ingested.length ? d.repos_ingested.map(r=>`
+      <div class="repo-ingested">
+        <span class="ri-name">${esc(r.repo||'?')}</span>
+        <span class="ri-files">${r.ingested_files||0} files</span>
+        <span class="ri-lic">${esc(r.license||'?')}</span>
+      </div>`).join('') : '<div class="empty">No repos ingested.</div>';
+
+    get('hs-hit-count').textContent=d.hits.length+' hits';
+    get('hs-hits-list').innerHTML=d.hits.length ? d.hits.map((h,i)=>`
+      <div class="hit-card">
+        <div class="hit-num">#${i+1}</div>
+        <div class="hit-repo">${esc(h.repo_full_name)}</div>
+        <div class="hit-path">${esc(h.path)}</div>
+        <div class="hit-meta">
+          <span class="tag tag-lang">${esc(h.language||'?')}</span>
+          <span class="tag tag-lic">${esc(h.license_spdx||'?')}</span>
+          <span>score: ${h.score.toFixed(3)}</span>
+        </div>
+        ${h.preview?`<div class="hit-preview">${esc(h.preview)}</div>`:''}
+        ${h.why?`<div class="hit-why">${esc(h.why)}</div>`:''}
+      </div>`).join('') : '<div class="empty">No hits found.</div>';
+
+    get('hunt-results').classList.add('visible');
+    checkHealth();
+  }catch(e){
+    prog.innerHTML=''; log(prog,'✗ Hunt failed: '+String(e),'');
+    toast('Hunt failed: '+String(e),'var(--red)');
+  }finally{btn.disabled=false; btn.textContent='⚡ HUNT';}
+}
+
+// ── FINDINGS TREE ─────────────────────────────────────────────────────────────
+let _findingsNodes = [];
+let _expandedNodes = new Set();
+let _selectedNode = null;
+
+async function loadFindings(){
+  const filterEl=get('hunt-filter');
+  const huntId=filterEl.value||null;
+
+  // Also reload hunt list for filter dropdown
+  try{
+    const h=await fetch(API+'/findings/hunts'); const hd=await h.json();
+    const cur=filterEl.value;
+    filterEl.innerHTML='<option value="">All hunts</option>';
+    (hd.hunts||[]).forEach(hunt=>{
+      const opt=document.createElement('option');
+      opt.value=hunt.hunt_id;
+      opt.textContent=`${hunt.hunt_id} — ${hunt.task.slice(0,30)} (${hunt.finding_count})`;
+      if(hunt.hunt_id===cur) opt.selected=true;
+      filterEl.appendChild(opt);
+    });
+  }catch{}
+
+  const url=huntId ? `${API}/findings/tree?hunt_id=${encodeURIComponent(huntId)}` : `${API}/findings/tree`;
+  const container=get('tree-container');
+  container.innerHTML='<div class="empty"><span class="spinner"></span></div>';
+  try{
+    const r=await fetch(url); const d=await r.json();
+    _findingsNodes=d.nodes||[];
+    get('tree-count').textContent=_findingsNodes.filter(n=>n.node_type==='finding').length+' findings';
+    renderTree();
+  }catch(e){
+    container.innerHTML=`<div class="empty" style="color:var(--red)">${esc(String(e))}</div>`;
+  }
+}
+
+function renderTree(){
+  const container=get('tree-container');
+  const byParent = {};
+  _findingsNodes.forEach(n=>{
+    const p=n.parent_id||'root';
+    if(!byParent[p]) byParent[p]=[]; byParent[p].push(n);
+  });
+
+  function buildNode(node){
+    const children=(byParent[node.id]||[]);
+    const hasChildren=children.length>0;
+    const isExpanded=_expandedNodes.has(node.id)||node.node_type==='hunt'||node.node_type==='category';
+    const isSelected=_selectedNode===node.id;
+
+    const icons={hunt:'🎯',category:'📁',subcategory:'📂',finding:'📄'};
+    const div=document.createElement('div');
+    div.style.marginBottom='1px';
+
+    const row=document.createElement('div');
+    row.className=`tree-node node-${node.node_type}${isSelected?' selected':''}`;
+    row.dataset.id=node.id;
+    row.innerHTML=`
+      <span class="tree-toggle">${hasChildren?(isExpanded?'▾':'▸'):' '}</span>
+      <span class="tree-icon">${icons[node.node_type]||'·'}</span>
+      <span class="tree-label">${esc(node.label)}</span>
+      ${node.node_type==='finding'?`<span class="tree-meta">${esc(node.language||'')}</span>`:''}
+      ${node.node_type==='subcategory'?`<span class="tree-meta">${(byParent[node.id]||[]).length}</span>`:''}
+    `;
+    row.addEventListener('click',()=>onNodeClick(node,row));
+    div.appendChild(row);
+
+    if(hasChildren&&isExpanded){
+      const childDiv=document.createElement('div');
+      childDiv.className='tree-children';
+      children.forEach(c=>childDiv.appendChild(buildNode(c)));
+      div.appendChild(childDiv);
+    }
+    return div;
+  }
+
+  container.innerHTML='';
+  const roots=byParent['root']||[];
+  if(!roots.length){container.innerHTML='<div class="empty">No findings yet. Run a HUNT first.</div>';return;}
+  roots.forEach(r=>container.appendChild(buildNode(r)));
+}
+
+function onNodeClick(node, row){
+  if(node.node_type==='finding'){
+    _selectedNode=node.id;
+    renderTree();
+    showDetail(node);
+  } else {
+    if(_expandedNodes.has(node.id)) _expandedNodes.delete(node.id);
+    else _expandedNodes.add(node.id);
+    renderTree();
+  }
+}
+
+function showDetail(node){
+  const empty=get('detail-empty');
+  const content=get('detail-content');
+  empty.style.display='none'; content.style.display='block';
+  get('detail-title').textContent=node.label;
+
+  const lang=(node.language||'text').toLowerCase();
+  const syms=node.symbols||[];
+  const symHtml=syms.length ? syms.map(s=>`<span class="sym-chip">${esc(s)}</span>`).join('') : '<span style="color:var(--dim);font-size:10px;">—</span>';
+
+  content.innerHTML=`
+    <div class="detail-hero">
+      <div class="detail-path">${esc(node.file_path)}</div>
+      <div class="detail-repo">
+        <a href="https://github.com/${esc(node.repo_full_name)}" target="_blank" style="color:var(--blue);text-decoration:none;">${esc(node.repo_full_name)}</a>
+      </div>
+      <div class="detail-tags">
+        <span class="tag tag-cat">${esc(node.category)}</span>
+        <span class="tag tag-subcat">${esc(node.subcategory)}</span>
+        ${lang?`<span class="tag tag-lang">${esc(lang)}</span>`:''}
+        <span class="tag tag-lic">${esc(node.license_spdx||'?')}</span>
+        <span class="tag tag-score">score ${node.score.toFixed(3)}</span>
+      </div>
+    </div>
+    <div class="detail-explanation">
+      <div class="expl-label">💡 Explanation</div>
+      ${esc(node.explanation||'No explanation available.')}
+    </div>
+    ${syms.length?`<div class="detail-symbols">${symHtml}</div>`:''}
+    ${node.preview?`
+      <div class="detail-code">
+        <div class="code-label">Preview</div>
+        <pre><code class="language-${esc(lang)}">${esc(node.preview)}</code></pre>
+      </div>`:''}
+  `;
+  // Apply syntax highlighting
+  content.querySelectorAll('pre code').forEach(block=>hljs.highlightElement(block));
+}
+
+async function pushFindings(){
+  const repoName=get('push-repo-input').value.trim()||'sparkbyte-engine-findings';
+  const btn=get('push-btn'); btn.disabled=true; btn.textContent='PUSHING…';
+  const resultEl=get('push-result'); resultEl.textContent='';
+  const huntId=get('hunt-filter').value||null;
+  try{
+    const r=await fetch(API+'/findings/push',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({repo_name:repoName,hunt_id:huntId})});
+    const d=await r.json();
+    if(d.error){resultEl.style.color='var(--red)';resultEl.textContent=d.error;}
+    else{
+      resultEl.style.color='var(--green)';
+      resultEl.innerHTML=`✓ Pushed ${d.pushed} findings → <a href="${esc(d.url)}" target="_blank" style="color:var(--blue)">${esc(d.url)}</a>`;
+    }
+  }catch(e){resultEl.style.color='var(--red)';resultEl.textContent=String(e);}
+  finally{btn.disabled=false; btn.textContent='⬆ PUSH TO GITHUB';}
+}
+
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+async function runSearch(){
+  const q=get('search-q').value.trim();
+  if(!q){toast('Enter a query','var(--red)');return;}
+  const body=get('search-body');
+  body.innerHTML='<div class="empty"><span class="spinner"></span></div>';
+  get('search-count').textContent='';
+  try{
+    const r=await fetch(API+'/repos/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,limit:12})});
+    const d=await r.json(); const repos=d.results||[];
+    get('search-count').textContent=repos.length+' repos';
+    body.innerHTML=repos.length ? repos.map(r=>`
+      <div class="repo-card">
+        <div class="rc-info">
+          <div class="rc-name">${esc(r.full_name)}</div>
+          <div class="rc-desc">${esc(r.description||'No description.')}</div>
+          <div class="rc-meta"><span class="rc-stars">★ ${r.stars||0}</span><span>${esc(r.language||'?')}</span><span>${esc(r.license||'?')}</span></div>
+        </div>
+        <button class="ingest-inline" onclick="quickIngest('${esc(r.full_name)}')">⬇ INGEST</button>
+      </div>`).join('') : '<div class="empty">No results.</div>';
+  }catch(e){body.innerHTML=`<div class="empty" style="color:var(--red)">${esc(String(e))}</div>`;}
+}
+
+async function quickIngest(repo){
+  toast('Ingesting '+repo+'…','var(--green)');
+  try{
+    const r=await fetch(API+'/repos/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo,max_files:60})});
+    const d=await r.json();
+    toast('✓ Ingested '+(d.ingested_files||0)+' files from '+repo,'var(--green)');
+    checkHealth();
+  }catch{toast('Ingest failed','var(--red)');}
+}
+
+// ── INGEST ───────────────────────────────────────────────────────────────────
+async function runIngest(){
+  const repo=get('ingest-repo').value.trim();
+  if(!repo){toast('Enter repo owner/name','var(--red)');return;}
+  const max_files=parseInt(get('ingest-max').value)||60;
+  const panel=get('ingest-result-panel'), body=get('ingest-result-body');
+  panel.style.display='block'; body.innerHTML='<span class="spinner"></span>';
+  try{
+    const r=await fetch(API+'/repos/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo,max_files})});
+    const d=await r.json();
+    body.innerHTML=`<div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <div><div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:3px;">REPO</div><div style="color:var(--blue)">${esc(d.repo||repo)}</div></div>
+      <div><div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:3px;">LICENSE</div><div>${esc(d.license||'?')}</div></div>
+      <div><div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:3px;">FILES</div><div style="color:var(--green);font-size:20px;font-weight:bold;">${d.ingested_files||0}</div></div>
+    </div>`;
+    toast('✓ Ingested '+(d.ingested_files||0)+' files','var(--green)');
+    checkHealth();
+  }catch(e){body.innerHTML=`<span style="color:var(--red)">${esc(String(e))}</span>`;}
+}
+
+// ── SCOUT ────────────────────────────────────────────────────────────────────
+async function runScout(){
+  const task=get('scout-task').value.trim();
+  if(!task){toast('Enter a task','var(--red)');return;}
+  const limit=parseInt(get('scout-limit').value)||8;
+  const body=get('scout-body'); body.innerHTML='<div class="empty"><span class="spinner"></span></div>';
+  get('scout-count').textContent='';
+  try{
+    const r=await fetch(API+'/tasks/scout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task,limit})});
+    const d=await r.json(); const hits=d.hits||[];
+    get('scout-count').textContent=hits.length+' hits';
+    body.innerHTML=hits.length ? hits.map((h,i)=>`
+      <div class="hit-card">
+        <div class="hit-num">#${i+1}</div>
+        <div class="hit-repo">${esc(h.repo_full_name)}</div>
+        <div class="hit-path">${esc(h.path)}</div>
+        <div class="hit-meta">
+          <span class="tag tag-lang">${esc(h.language||'?')}</span>
+          <span class="tag tag-lic">${esc(h.license_spdx||'?')}</span>
+          <span>score: ${h.score.toFixed(3)}</span>
+        </div>
+        ${h.preview?`<div class="hit-preview">${esc(h.preview)}</div>`:''}
+      </div>`).join('') : '<div class="empty">No hits. Try ingesting repos first, or use HUNT.</div>';
+  }catch(e){body.innerHTML=`<div class="empty" style="color:var(--red)">${esc(String(e))}</div>`;}
+}
+
+// ── FORGE ────────────────────────────────────────────────────────────────────
+async function runForge(){
+  const name=get('forge-name').value.trim(), task=get('forge-task').value.trim();
+  if(!name||!task){toast('Name and task required','var(--red)');return;}
+  const out_dir=get('forge-out').value.trim()||'skills';
+  const panel=get('forge-result-panel'), body=get('forge-result-body');
+  panel.style.display='block'; body.innerHTML='<span class="spinner"></span>';
+  try{
+    const r=await fetch(API+'/skills/forge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,task,out_dir})});
+    const d=await r.json();
+    body.innerHTML=`<div style="padding:6px 0;">
+      <div style="color:var(--green);font-size:14px;font-weight:bold;letter-spacing:1px;">⚒ ${esc(d.name)}</div>
+      <div style="color:var(--dim);font-size:10px;margin-top:4px;">${esc(d.task)}</div>
+      <div style="color:var(--dim);font-size:9px;margin-top:10px;">module → <span style="color:var(--text)">${esc(d.module_path)}</span></div>
+      <div style="color:var(--dim);font-size:9px;margin-top:3px;">manifest → <span style="color:var(--text)">${esc(d.manifest_path)}</span></div>
+    </div>`;
+    toast('✓ Skill forged: '+d.name,'var(--green)');
+  }catch(e){body.innerHTML=`<span style="color:var(--red)">${esc(String(e))}</span>`;}
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function get(id){return document.getElementById(id);}
+function id(x){return x;} // alias so $(id()) looks like jQuery
+function $(el){return el;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+let _tt;
+function toast(msg,color){
+  const t=get('toast'); t.textContent=msg; t.style.color=color||'var(--text)';
+  t.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),3000);
+}
+function log(el,msg,cls){
+  const d=document.createElement('div');
+  d.className='prog-line'+(cls?' '+cls:'');
+  d.textContent=msg; el.appendChild(d);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+get('hunt-input').addEventListener('keydown',e=>{if(e.key==='Enter')runHunt();});
+checkHealth();
+setInterval(checkHealth,15000);
+</script>
+</body>
+</html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Julian MetaMorph</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07070f;
+  --glass:rgba(12,12,28,0.85);
+  --border:rgba(80,80,160,0.28);
+  --green:#00ff99;
+  --blue:#4fc3f7;
+  --pink:#ff4fa0;
+  --orange:#ff9500;
+  --purple:#b060ff;
+  --dim:#555;
+  --text:#c8c8e0;
+  --red:#f44;
+}
+body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;font-size:12px;min-height:100vh;display:flex;flex-direction:column;}
+
+/* ── HEADER ── */
+#header{
+  display:flex;align-items:center;gap:14px;padding:9px 18px;
+  background:rgba(8,8,20,0.97);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+#logo{font-size:14px;font-weight:bold;color:var(--purple);letter-spacing:3px;}
+#logo span{color:var(--pink);}
+#status-dot{width:8px;height:8px;border-radius:50%;background:#333;flex-shrink:0;transition:0.3s;}
+#status-dot.up{background:var(--green);box-shadow:0 0 6px var(--green);}
+#status-dot.down{background:var(--red);box-shadow:0 0 6px var(--red);}
+#status-txt{font-size:10px;color:var(--dim);letter-spacing:1px;}
+#quarry-stat{margin-left:auto;font-size:10px;color:var(--dim);letter-spacing:1px;}
+#quarry-stat b{color:var(--blue);}
+.hdr-btn{cursor:pointer;font-size:10px;color:var(--dim);padding:2px 8px;border:1px solid #282838;border-radius:3px;background:none;transition:0.15s;font-family:inherit;letter-spacing:1px;}
+.hdr-btn:hover{color:var(--blue);border-color:var(--blue);}
+
+/* ── LAYOUT ── */
+#main{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:160px;flex-shrink:0;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;background:rgba(6,6,18,0.7);
+}
+.nav-item{
+  padding:10px 14px;cursor:pointer;font-size:10px;letter-spacing:1px;
+  color:var(--dim);border-left:2px solid transparent;transition:0.15s;
+}
+.nav-item:hover{color:var(--text);background:rgba(80,80,180,0.08);}
+.nav-item.active{color:var(--purple);border-left-color:var(--purple);background:rgba(176,96,255,0.07);}
+.nav-icon{margin-right:6px;}
+#sidebar-footer{margin-top:auto;padding:10px 14px;font-size:9px;color:#2a2a3a;letter-spacing:1px;border-top:1px solid #111128;}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+#content::-webkit-scrollbar{width:4px;}
+#content::-webkit-scrollbar-thumb{background:#1e1e3a;}
+
+/* ── PAGES ── */
+.page{display:none;flex-direction:column;gap:14px;}
+.page.active{display:flex;}
+
+/* ── PANEL ── */
+.panel{background:var(--glass);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.panel-hdr{
+  padding:8px 14px;border-bottom:1px solid var(--border);
+  font-size:10px;letter-spacing:2px;display:flex;align-items:center;gap:8px;
+}
+.panel-body{padding:14px;}
+
+/* ── HUNT PANEL (hero) ── */
+#hunt-panel{border-color:rgba(176,96,255,0.4);}
+#hunt-panel .panel-hdr{color:var(--purple);background:rgba(176,96,255,0.06);}
+#hunt-input{
+  width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(176,96,255,0.35);
+  color:var(--text);font-family:inherit;font-size:13px;letter-spacing:0.5px;
+  padding:10px 14px;border-radius:4px;outline:none;transition:0.2s;
+}
+#hunt-input:focus{border-color:var(--purple);box-shadow:0 0 12px rgba(176,96,255,0.15);}
+#hunt-input::placeholder{color:#333;}
+.hunt-opts{display:flex;gap:12px;margin-top:10px;align-items:flex-end;flex-wrap:wrap;}
+.hunt-opts .field{display:flex;flex-direction:column;gap:4px;}
+.hunt-opts label{font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;}
+.hunt-opts input[type=number]{
+  background:rgba(0,0,0,0.4);border:1px solid #222240;color:var(--text);
+  font-family:inherit;font-size:11px;padding:5px 8px;border-radius:3px;outline:none;width:70px;
+}
+#hunt-btn{
+  margin-left:auto;cursor:pointer;padding:9px 28px;border-radius:4px;
+  font-family:inherit;font-size:11px;letter-spacing:2px;font-weight:bold;
+  border:1px solid var(--purple);background:rgba(176,96,255,0.15);color:var(--purple);
+  transition:0.15s;
+}
+#hunt-btn:hover{background:rgba(176,96,255,0.3);box-shadow:0 0 16px rgba(176,96,255,0.2);}
+#hunt-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* ── HUNT PROGRESS ── */
+#hunt-progress{display:none;margin-top:12px;font-size:10px;color:var(--dim);letter-spacing:1px;line-height:2;}
+#hunt-progress.visible{display:block;}
+.prog-line{padding:2px 0;}
+.prog-line.done{color:var(--green);}
+.prog-line.active{color:var(--purple);}
+.prog-line.info{color:var(--blue);}
+
+/* ── HUNT RESULTS ── */
+#hunt-results{display:none;flex-direction:column;gap:14px;}
+#hunt-results.visible{display:flex;}
+.summary-grid{display:flex;gap:12px;flex-wrap:wrap;}
+.stat-box{
+  background:rgba(0,0,0,0.3);border:1px solid #1e1e3a;border-radius:4px;
+  padding:10px 16px;flex:1;min-width:100px;
+}
+.stat-val{font-size:22px;font-weight:bold;color:var(--purple);}
+.stat-lbl{font-size:9px;letter-spacing:1px;color:var(--dim);margin-top:2px;text-transform:uppercase;}
+.queries-used{font-size:10px;color:var(--dim);margin-top:10px;}
+.queries-used span{color:var(--blue);margin-right:8px;}
+
+/* ── HIT CARDS ── */
+.hit-card{
+  background:rgba(0,0,0,0.3);border:1px solid #1e1e3a;
+  border-radius:4px;padding:10px 12px;margin-bottom:8px;
+}
+.hit-card:last-child{margin-bottom:0;}
+.hit-num{color:var(--dim);font-size:9px;margin-bottom:4px;letter-spacing:1px;}
+.hit-repo{color:var(--blue);font-size:11px;font-weight:bold;margin-bottom:3px;}
+.hit-path{color:var(--green);font-size:10px;margin-bottom:6px;}
+.hit-meta{display:flex;gap:10px;font-size:9px;color:var(--dim);margin-bottom:6px;flex-wrap:wrap;}
+.hit-preview{
+  background:rgba(0,0,0,0.45);border-radius:3px;padding:8px 10px;
+  font-size:10px;color:#8888aa;white-space:pre-wrap;word-break:break-word;
+  max-height:120px;overflow-y:auto;
+}
+.hit-why{font-size:9px;color:var(--dim);margin-top:5px;font-style:italic;}
+.tag{display:inline-block;padding:1px 5px;border-radius:2px;font-size:9px;letter-spacing:1px;}
+.tag-lang{background:rgba(79,195,247,0.12);color:var(--blue);}
+.tag-lic{background:rgba(0,255,153,0.08);color:var(--green);}
+
+/* ── INGESTED REPOS LIST ── */
+.repo-ingested{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 12px;background:rgba(0,0,0,0.25);
+  border:1px solid #1a1a2e;border-radius:3px;margin-bottom:6px;
+  font-size:10px;
+}
+.repo-ingested:last-child{margin-bottom:0;}
+.ri-name{color:var(--blue);flex:1;}
+.ri-files{color:var(--green);}
+.ri-lic{color:var(--dim);}
+
+/* ── ADVANCED PANEL ── */
+.adv-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+.adv-row:last-child{margin-bottom:0;}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;}
+.field label{font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;}
+input[type=text],select{
+  background:rgba(0,0,0,0.4);border:1px solid #222240;color:var(--text);
+  font-family:inherit;font-size:11px;padding:6px 10px;border-radius:3px;outline:none;transition:0.15s;
+}
+input[type=text]:focus,select:focus{border-color:var(--blue);}
+.btn{cursor:pointer;padding:6px 16px;border-radius:3px;font-family:inherit;font-size:10px;letter-spacing:1px;font-weight:bold;transition:0.15s;white-space:nowrap;border:1px solid;}
+.btn-blue{background:rgba(79,195,247,0.12);border-color:var(--blue);color:var(--blue);}
+.btn-blue:hover{background:rgba(79,195,247,0.25);}
+.btn-green{background:rgba(0,255,153,0.1);border-color:var(--green);color:var(--green);}
+.btn-green:hover{background:rgba(0,255,153,0.22);}
+.btn-orange{background:rgba(255,149,0,0.1);border-color:var(--orange);color:var(--orange);}
+.btn-orange:hover{background:rgba(255,149,0,0.22);}
+.btn-pink{background:rgba(255,79,160,0.1);border-color:var(--pink);color:var(--pink);}
+.btn-pink:hover{background:rgba(255,79,160,0.22);}
+.btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* ── RESULT GENERIC ── */
+.result-hdr{padding:8px 14px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;display:flex;align-items:center;justify-content:space-between;}
+.result-body{padding:12px;max-height:440px;overflow-y:auto;}
+.result-body::-webkit-scrollbar{width:4px;}
+.result-body::-webkit-scrollbar-thumb{background:#1e1e3a;}
+.empty{color:var(--dim);font-size:11px;padding:20px;text-align:center;letter-spacing:1px;}
+
+/* ── REPO SEARCH CARD ── */
+.repo-card{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid #1e1e3a;border-radius:4px;margin-bottom:7px;}
+.repo-card:last-child{margin-bottom:0;}
+.rc-info{flex:1;}
+.rc-name{color:var(--blue);font-size:11px;font-weight:bold;}
+.rc-desc{color:var(--dim);font-size:10px;margin-top:3px;line-height:1.5;}
+.rc-meta{display:flex;gap:10px;font-size:9px;color:#444;margin-top:5px;}
+.rc-stars{color:var(--orange);}
+.ingest-inline{flex-shrink:0;cursor:pointer;padding:3px 10px;border-radius:3px;font-family:inherit;font-size:9px;letter-spacing:1px;border:1px solid var(--green);color:var(--green);background:rgba(0,255,153,0.07);transition:0.15s;}
+.ingest-inline:hover{background:rgba(0,255,153,0.18);}
+
+/* ── SPINNER ── */
+.spinner{display:inline-block;width:10px;height:10px;border:2px solid #2a2a4a;border-top-color:var(--purple);border-radius:50%;animation:spin 0.6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:16px;right:16px;background:rgba(10,10,24,0.97);border:1px solid var(--border);border-radius:4px;padding:7px 14px;font-size:10px;letter-spacing:1px;color:var(--text);opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:999;}
+#toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <span id="logo">JULIAN <span>META</span>MORPH</span>
+  <div id="status-dot" class="down"></div>
+  <span id="status-txt">CHECKING…</span>
+  <span id="quarry-stat">quarry: <b id="q-repos">—</b> repos · <b id="q-files">—</b> files</span>
+  <button class="hdr-btn" onclick="checkHealth()">↺</button>
+  <button class="hdr-btn" onclick="window.open('/ripple-scope','_blank')">RIPPLE</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="nav-item active" onclick="showPage('hunt')"  id="nav-hunt"><span class="nav-icon">🎯</span>HUNT</div>
+    <div class="nav-item" onclick="showPage('search')" id="nav-search"><span class="nav-icon">🔍</span>SEARCH</div>
+    <div class="nav-item" onclick="showPage('ingest')" id="nav-ingest"><span class="nav-icon">⬇</span>INGEST</div>
+    <div class="nav-item" onclick="showPage('scout')"  id="nav-scout"><span class="nav-icon">📡</span>SCOUT</div>
+    <div class="nav-item" onclick="showPage('forge')"  id="nav-forge"><span class="nav-icon">⚒</span>FORGE</div>
+    <div id="sidebar-footer">v0.1.0 · :8765</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ══ HUNT PAGE (hero) ══ -->
+    <div class="page active" id="page-hunt">
+      <div class="panel" id="hunt-panel">
+        <div class="panel-hdr">🎯 HUNT — give me a task, I'll raid GitHub and bring back the goods</div>
+        <div class="panel-body">
+          <input type="text" id="hunt-input"
+            placeholder="e.g. &quot;behavioral engine for AI agents&quot; or &quot;websocket server with reconnect&quot;"
+            onkeydown="if(event.key==='Enter')runHunt()">
+          <div class="hunt-opts">
+            <div class="field">
+              <label>Repos to raid</label>
+              <input type="number" id="hunt-repos" value="5" min="1" max="15">
+            </div>
+            <div class="field">
+              <label>Files/repo</label>
+              <input type="number" id="hunt-files" value="40" min="5" max="200">
+            </div>
+            <div class="field">
+              <label>Max hits</label>
+              <input type="number" id="hunt-hits" value="10" min="1" max="30">
+            </div>
+            <button id="hunt-btn" onclick="runHunt()">⚡ HUNT</button>
+          </div>
+          <div id="hunt-progress"></div>
+        </div>
+      </div>
+
+      <!-- Hunt Results -->
+      <div id="hunt-results">
+        <!-- Summary -->
+        <div class="panel">
+          <div class="panel-hdr" style="color:var(--purple)">HUNT SUMMARY</div>
+          <div class="panel-body">
+            <div class="summary-grid">
+              <div class="stat-box"><div class="stat-val" id="hs-repos">0</div><div class="stat-lbl">Repos Raided</div></div>
+              <div class="stat-box"><div class="stat-val" id="hs-files">0</div><div class="stat-lbl">Files Ingested</div></div>
+              <div class="stat-box"><div class="stat-val" id="hs-hits">0</div><div class="stat-lbl">Code Hits</div></div>
+            </div>
+            <div class="queries-used" id="hs-queries"></div>
+          </div>
+        </div>
+
+        <!-- Repos ingested -->
+        <div class="panel">
+          <div class="panel-hdr" style="color:var(--green)">REPOS INGESTED</div>
+          <div class="panel-body" id="hs-repos-list"></div>
+        </div>
+
+        <!-- Code hits -->
+        <div class="panel">
+          <div class="panel-hdr" style="color:var(--blue)">CODE HITS <span id="hs-hit-count" style="color:var(--dim);font-size:9px;margin-left:8px;"></span></div>
+          <div class="panel-body" id="hs-hits-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SEARCH PAGE ══ -->
+    <div class="page" id="page-search">
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--blue)">🔍 SEARCH GITHUB REPOS</div>
+        <div class="panel-body">
+          <div class="adv-row">
+            <div class="field">
+              <label>Query</label>
+              <input type="text" id="search-q" placeholder="e.g. websocket python" onkeydown="if(event.key==='Enter')runSearch()">
+            </div>
+            <button class="btn btn-blue" onclick="runSearch()">SEARCH</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="flex:1;">
+        <div class="result-hdr"><span style="color:var(--blue)">RESULTS</span><span id="search-count" style="color:var(--dim);font-size:9px;"></span></div>
+        <div class="result-body" id="search-body"><div class="empty">Run a search to see repos.</div></div>
+      </div>
+    </div>
+
+    <!-- ══ INGEST PAGE ══ -->
+    <div class="page" id="page-ingest">
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--green)">⬇ INGEST SPECIFIC REPO</div>
+        <div class="panel-body">
+          <div class="adv-row">
+            <div class="field">
+              <label>Repo (owner/name)</label>
+              <input type="text" id="ingest-repo" placeholder="e.g. python-websockets/websockets">
+            </div>
+            <div class="field" style="flex:0;">
+              <label>Max Files</label>
+              <input type="number" id="ingest-max" value="60" min="1" max="500" style="width:70px;">
+            </div>
+            <button class="btn btn-green" onclick="runIngest()">INGEST</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="ingest-result-panel" style="display:none;">
+        <div class="panel-hdr" style="color:var(--green)">INGEST RESULT</div>
+        <div class="panel-body" id="ingest-result-body"></div>
+      </div>
+    </div>
+
+    <!-- ══ SCOUT PAGE ══ -->
+    <div class="page" id="page-scout">
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--orange)">📡 SCOUT EXISTING QUARRY</div>
+        <div class="panel-body">
+          <div class="adv-row">
+            <div class="field">
+              <label>Task</label>
+              <input type="text" id="scout-task" placeholder="e.g. websocket reconnect" onkeydown="if(event.key==='Enter')runScout()">
+            </div>
+            <div class="field" style="flex:0;">
+              <label>Limit</label>
+              <input type="number" id="scout-limit" value="8" min="1" max="30" style="width:60px;">
+            </div>
+            <button class="btn btn-orange" onclick="runScout()">SCOUT</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="flex:1;">
+        <div class="result-hdr"><span style="color:var(--orange)">HITS</span><span id="scout-count" style="color:var(--dim);font-size:9px;"></span></div>
+        <div class="result-body" id="scout-body"><div class="empty">Scout a task to search existing quarry.</div></div>
+      </div>
+    </div>
+
+    <!-- ══ FORGE PAGE ══ -->
+    <div class="page" id="page-forge">
+      <div class="panel">
+        <div class="panel-hdr" style="color:var(--pink)">⚒ FORGE SKILL MODULE</div>
+        <div class="panel-body">
+          <div class="adv-row">
+            <div class="field" style="flex:0;min-width:140px;">
+              <label>Skill Name</label>
+              <input type="text" id="forge-name" placeholder="e.g. ws_connect">
+            </div>
+            <div class="field">
+              <label>Task Description</label>
+              <input type="text" id="forge-task" placeholder="e.g. websocket client connect">
+            </div>
+          </div>
+          <div class="adv-row">
+            <div class="field">
+              <label>Output Dir</label>
+              <input type="text" id="forge-out" value="skills">
+            </div>
+            <button class="btn btn-pink" onclick="runForge()">FORGE</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="forge-result-panel" style="display:none;">
+        <div class="panel-hdr" style="color:var(--pink)">FORGED SKILL</div>
+        <div class="panel-body" id="forge-result-body"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<div id="toast"></div>
+
+<script>
+const API = 'http://127.0.0.1:8765';
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+}
+
+// ── HEALTH ───────────────────────────────────────────────────────────────────
+async function checkHealth(){
+  const dot=$('status-dot'), txt=$('status-txt');
+  try{
+    const r=await fetch(API+'/health'); const d=await r.json();
+    dot.className='up'; txt.textContent='ONLINE';
+    $('q-repos').textContent=d.quarry.repos;
+    $('q-files').textContent=d.quarry.files;
+  } catch{
+    dot.className='down'; txt.textContent='OFFLINE';
+  }
+}
+
+// ── HUNT (main event) ────────────────────────────────────────────────────────
+async function runHunt(){
+  const task=$('hunt-input').value.trim();
+  if(!task){toast('Enter a task description','var(--red)');return;}
+  const repo_limit=parseInt($('hunt-repos').value)||5;
+  const files_per_repo=parseInt($('hunt-files').value)||40;
+  const hit_limit=parseInt($('hunt-hits').value)||10;
+
+  const btn=$('hunt-btn'); btn.disabled=true; btn.textContent='HUNTING…';
+  $('hunt-results').classList.remove('visible');
+
+  const prog=$('hunt-progress'); prog.innerHTML=''; prog.classList.add('visible');
+  log(prog,'⚡ Deriving search queries from task…','active');
+
+  try{
+    const r=await fetch(API+'/hunt',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({task,repo_limit,files_per_repo,hit_limit})
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+
+    prog.innerHTML='';
+    log(prog,'✓ Queries: '+d.queries_used.map(q=>`"${q}"`).join(' · '),'info');
+    log(prog,'✓ Raided '+d.repos_ingested.length+' repos','done');
+    const totalFiles=d.repos_ingested.reduce((s,r)=>s+(r.ingested_files||0),0);
+    log(prog,'✓ Ingested '+totalFiles+' files','done');
+    log(prog,'✓ Found '+d.hits.length+' code hits','done');
+
+    // Stats
+    $('hs-repos').textContent=d.repos_ingested.length;
+    $('hs-files').textContent=totalFiles;
+    $('hs-hits').textContent=d.hits.length;
+    $('hs-queries').innerHTML='Queries used: '+d.queries_used.map(q=>`<span>"${esc(q)}"</span>`).join(' ');
+
+    // Repos list
+    $('hs-repos-list').innerHTML=d.repos_ingested.length ? d.repos_ingested.map(r=>`
+      <div class="repo-ingested">
+        <span class="ri-name">${esc(r.repo||'?')}</span>
+        <span class="ri-files">${r.ingested_files||0} files</span>
+        <span class="ri-lic">${esc(r.license||'?')}</span>
+      </div>`).join('') : '<div class="empty">No repos ingested.</div>';
+
+    // Hits list
+    $('hs-hit-count').textContent=d.hits.length+' hits';
+    $('hs-hits-list').innerHTML=d.hits.length ? d.hits.map((h,i)=>`
+      <div class="hit-card">
+        <div class="hit-num">#${i+1}</div>
+        <div class="hit-repo">${esc(h.repo_full_name)}</div>
+        <div class="hit-path">${esc(h.path)}</div>
+        <div class="hit-meta">
+          <span class="tag tag-lang">${esc(h.language||'?')}</span>
+          <span class="tag tag-lic">${esc(h.license_spdx||'?')}</span>
+          <span>score: ${h.score.toFixed(3)}</span>
+        </div>
+        ${h.preview?`<div class="hit-preview">${esc(h.preview)}</div>`:''}
+        ${h.why?`<div class="hit-why">${esc(h.why)}</div>`:''}
+      </div>`).join('') : '<div class="empty">No hits found — try different task wording.</div>';
+
+    $('hunt-results').classList.add('visible');
+    checkHealth();
+  } catch(e){
+    prog.innerHTML='';
+    log(prog,'✗ Hunt failed: '+String(e),'');
+    document.getElementById('hunt-progress').style.color='var(--red)';
+    toast('Hunt failed: '+String(e),'var(--red)');
+  } finally{
+    btn.disabled=false; btn.textContent='⚡ HUNT';
+  }
+}
+
+function log(el,msg,cls){
+  const d=document.createElement('div');
+  d.className='prog-line'+(cls?' '+cls:'');
+  d.textContent=msg; el.appendChild(d);
+}
+
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+async function runSearch(){
+  const q=$('search-q').value.trim();
+  if(!q){toast('Enter a query','var(--red)');return;}
+  const body=$('search-body');
+  body.innerHTML='<div class="empty"><span class="spinner"></span> Searching…</div>';
+  $('search-count').textContent='';
+  try{
+    const r=await fetch(API+'/repos/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,limit:12})});
+    const d=await r.json(); const repos=d.results||[];
+    $('search-count').textContent=repos.length+' repos';
+    body.innerHTML=repos.length ? repos.map(r=>`
+      <div class="repo-card">
+        <div class="rc-info">
+          <div class="rc-name">${esc(r.full_name)}</div>
+          <div class="rc-desc">${esc(r.description||'No description.')}</div>
+          <div class="rc-meta">
+            <span class="rc-stars">★ ${r.stars||0}</span>
+            <span>${esc(r.language||'?')}</span>
+            <span>${esc(r.license||'?')}</span>
+          </div>
+        </div>
+        <button class="ingest-inline" onclick="quickIngest('${esc(r.full_name)}')">⬇ INGEST</button>
+      </div>`).join('') : '<div class="empty">No results.</div>';
+  } catch(e){ body.innerHTML='<div class="empty" style="color:var(--red)">'+esc(String(e))+'</div>'; }
+}
+
+async function quickIngest(repo){
+  toast('Ingesting '+repo+'…','var(--green)');
+  try{
+    const r=await fetch(API+'/repos/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo,max_files:60})});
+    const d=await r.json();
+    toast('✓ Ingested '+(d.ingested_files||0)+' files from '+repo,'var(--green)');
+    checkHealth();
+  } catch(e){ toast('Ingest failed','var(--red)'); }
+}
+
+// ── INGEST ───────────────────────────────────────────────────────────────────
+async function runIngest(){
+  const repo=$('ingest-repo').value.trim();
+  if(!repo){toast('Enter repo owner/name','var(--red)');return;}
+  const max_files=parseInt($('ingest-max').value)||60;
+  const panel=$('ingest-result-panel'), body=$('ingest-result-body');
+  panel.style.display='block'; body.innerHTML='<span class="spinner"></span> Ingesting…';
+  try{
+    const r=await fetch(API+'/repos/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo,max_files})});
+    const d=await r.json();
+    body.innerHTML=`<div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <div><div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:3px;">REPO</div><div style="color:var(--blue)">${esc(d.repo||repo)}</div></div>
+      <div><div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:3px;">LICENSE</div><div>${esc(d.license||'?')}</div></div>
+      <div><div style="color:var(--dim);font-size:9px;letter-spacing:1px;margin-bottom:3px;">FILES</div><div style="color:var(--green);font-size:20px;font-weight:bold;">${d.ingested_files||0}</div></div>
+    </div>`;
+    toast('✓ Ingested '+(d.ingested_files||0)+' files','var(--green)');
+    checkHealth();
+  } catch(e){ body.innerHTML='<span style="color:var(--red)">'+esc(String(e))+'</span>'; }
+}
+
+// ── SCOUT ────────────────────────────────────────────────────────────────────
+async function runScout(){
+  const task=$('scout-task').value.trim();
+  if(!task){toast('Enter a task','var(--red)');return;}
+  const limit=parseInt($('scout-limit').value)||8;
+  const body=$('scout-body'); body.innerHTML='<div class="empty"><span class="spinner"></span> Scouting…</div>';
+  $('scout-count').textContent='';
+  try{
+    const r=await fetch(API+'/tasks/scout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task,limit})});
+    const d=await r.json(); const hits=d.hits||[];
+    $('scout-count').textContent=hits.length+' hits';
+    body.innerHTML=hits.length ? hits.map((h,i)=>`
+      <div class="hit-card">
+        <div class="hit-num">#${i+1}</div>
+        <div class="hit-repo">${esc(h.repo_full_name)}</div>
+        <div class="hit-path">${esc(h.path)}</div>
+        <div class="hit-meta">
+          <span class="tag tag-lang">${esc(h.language||'?')}</span>
+          <span class="tag tag-lic">${esc(h.license_spdx||'?')}</span>
+          <span>score: ${h.score.toFixed(3)}</span>
+        </div>
+        ${h.preview?`<div class="hit-preview">${esc(h.preview)}</div>`:''}
+      </div>`).join('') : '<div class="empty">No hits. Try ingesting repos first, or use HUNT.</div>';
+  } catch(e){ body.innerHTML='<div class="empty" style="color:var(--red)">'+esc(String(e))+'</div>'; }
+}
+
+// ── FORGE ────────────────────────────────────────────────────────────────────
+async function runForge(){
+  const name=$('forge-name').value.trim(), task=$('forge-task').value.trim();
+  if(!name||!task){toast('Name and task required','var(--red)');return;}
+  const out_dir=$('forge-out').value.trim()||'skills';
+  const panel=$('forge-result-panel'), body=$('forge-result-body');
+  panel.style.display='block'; body.innerHTML='<span class="spinner"></span> Forging…';
+  try{
+    const r=await fetch(API+'/skills/forge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,task,out_dir})});
+    const d=await r.json();
+    body.innerHTML=`<div style="padding:6px 0;">
+      <div style="color:var(--green);font-size:14px;font-weight:bold;letter-spacing:1px;">⚒ ${esc(d.name)}</div>
+      <div style="color:var(--dim);font-size:10px;margin-top:4px;">${esc(d.task)}</div>
+      <div style="color:var(--dim);font-size:9px;margin-top:10px;">module → <span style="color:var(--text)">${esc(d.module_path)}</span></div>
+      <div style="color:var(--dim);font-size:9px;margin-top:3px;">manifest → <span style="color:var(--text)">${esc(d.manifest_path)}</span></div>
+    </div>`;
+    toast('✓ Skill forged: '+d.name,'var(--green)');
+  } catch(e){ body.innerHTML='<span style="color:var(--red)">'+esc(String(e))+'</span>'; }
+}
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+let _tt;
+function toast(msg,color){
+  const t=$('toast'); t.textContent=msg; t.style.color=color||'var(--text)';
+  t.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+$('hunt-input').addEventListener('keydown',e=>{if(e.key==='Enter')runHunt();});
+checkHealth();
+setInterval(checkHealth,15000);
+</script>
+</body>
+</html>

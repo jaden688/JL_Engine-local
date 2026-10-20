@@ -1,0 +1,5 @@
+# SparkByte MCP server runtime deps. Pin minor versions for reproducibility.
+mcp>=1.2,<2
+websockets>=12,<14
+# Optional: only needed when running HTTP/SSE with auth (MCP_AUTH_TOKEN set).
+uvicorn>=0.30,<1

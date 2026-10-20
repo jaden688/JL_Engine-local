@@ -1,8 +1,0 @@
-{
-  "mode": "solution_oriented",
-  "steps": [
-    "clarify",
-    "generate_options",
-    "recommend_next_step"
-  ]
-}

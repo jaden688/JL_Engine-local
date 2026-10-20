@@ -1,0 +1,12 @@
+name: jl-engine
+metadata:
+  template: jl-engine-aca@0.0.1
+services:
+  api:
+    project: .
+    host: containerapp
+    language: docker
+    docker:
+      path: Dockerfile
+      target: runtime
+      remoteBuild: false

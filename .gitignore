@@ -1,46 +1,141 @@
-__pycache__/
-*.py[cod]
-.venv/
-.mypy_cache/
-.pytest_cache/
-.idea/
-.vscode/
-*.egg-info/
-
-logs/
-*.log
-tmp_api_*.log
-tmp_codex_run_api.py
-app.log
-app_backend.log
-*agent_loop*.log
-*agent_loop*.jsonl
-*healing_bench_trace*.jsonl
-.playwright-cli/
-
-.self_edit_lab/
-.self_edit_lab_test/
-.self_edit_lab_ui_test/
-artifacts/
-ui/models/ollama_models.json
-src/tools_runtime/
-docs/REAL_RUN_*.md
+# ─────────────────────────────────────────────────────────────
+#  Secrets — never commit
+# ─────────────────────────────────────────────────────────────
 .env
-.foundry/
-.gemini/
+.env.*
+*.known-good-backup
+*.pem
+secret.mystic
+*wallet*.json
+
+# ─────────────────────────────────────────────────────────────
+#  Runtime state — DBs, logs, telemetry, forged tools (per-user,
+#  can contain personal data; the engine regenerates them at boot)
+# ─────────────────────────────────────────────────────────────
+*.db
+*.db-wal
+*.db-shm
+*.bak
+*.bak[0-9]
+*.db.bak*
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.opencode/teamwork.sqlite3*
+*.jsonl
+*.log
+telemetry_logs/
+thought_log.txt
+telemetry_test.txt
+dynamic_tools.jl
+dynamic_tools_registry.json
+
+# ─────────────────────────────────────────────────────────────
+#  Build / release artifacts (ship via GitHub Releases, not git)
+# ─────────────────────────────────────────────────────────────
+dist/
+*.exe
+*.sysimage.dll
+*.sysimage.so
+sparkbyte-sidepanel.crx
+jlense.pdf
+tools/tunnel-client/
+Manifest.toml
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+
+# ─────────────────────────────────────────────────────────────
+#  Nested engine variants (separate old repos, not used at runtime)
+# ─────────────────────────────────────────────────────────────
+src/j-engine/
+src/jl-engine-local/
+
+# ─────────────────────────────────────────────────────────────
+#  Scratch / debug artifacts
+# ─────────────────────────────────────────────────────────────
+_*.json
+_*.txt
+_*.py
+_*.jl
+tmp_exec_*.py
+tmp_exec_*.jl
+tmp*.txt
+_mcp_inspect/
+mcp.zip
+a2a-inspector/
+a2a-tck/
+
+# ─────────────────────────────────────────────────────────────
+#  Local IDE / agent / tooling state
+# ─────────────────────────────────────────────────────────────
 .claude/
-.jl_mcp_https/
-verification.txt
-new_file
-jl_engine_core/data/agents/generated/*__main*.json
+.antigravitycli/
+.codex/
+.vs/
+.venv/
+venv/
+.CondaPkg/
+__pycache__/
+*.pyc
+*.pyo
 
-data/*.sqlite3
-human_guidance/
-docs/human_guidance/
+# ─────────────────────────────────────────────────────────────
+#  OS cruft
+# ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+pitreader_backup_copy/
+_*.ps1
 
-index.html
-!ui_web/index.html
-nul
+# ─────────────────────────────────────────────────────────────
+#  Bug-bounty / recon scratch — never for the public repo
+# ─────────────────────────────────────────────────────────────
+hunts/
+hunts.zip
+xai_openapi.json
+xai_response.txt
+data/xai_docs_screenshot.png
+data/evidence_gate_test.jl
+dotnet.zip
 
-# Added by the extension Better Context To AI
-FILE_CONTENT_MAP.md
+# ── Wave-fabric research — lives in the private jl-wave-fabric repo ───────────
+# Kept on disk for local runs, never published from this PUBLIC repo.
+operators/notes/jl-conditioned-tensor-fusion.md
+operators/notes/jl-wave-coupled-model-fabric.md
+test/manual/tensor_fusion/
+test/manual/jipple_flux_transformer/
+
+# Multi-GB run scratch (cached hidden states, logit caches)
+tmp/
+
+# ─────────────────────────────────────────────────────────────
+#  Local agent/tooling state, nested clones & editor backups
+#  (excluded at the Omni Ascension teamwork checkpoint)
+# ─────────────────────────────────────────────────────────────
+.opencode/
+.omo/
+*.jetbak
+*.jl.jetbak
+/JL_Engine-SB.Omni/
+
+# Public distribution: local secrets / telemetry / sessions
+.env
+.env.*
+sessions/
+runtime_test/
+*.db
+*.db-*
+*.sqlite*
+*.jsonl
+*.log
+*wallet*.json
+*.pem
+*.key
+*.pfx
+*.p12
+/tmp/
+logs/
+/data/dynamic_tools.jl
+/data/dynamic_tools_registry.json
+/data/webula_manual_links.json

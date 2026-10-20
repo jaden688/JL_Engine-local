@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ripple Scope Live</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07111a;
+  --glass:rgba(10,18,30,0.88);
+  --panel:rgba(14,26,41,0.9);
+  --line:rgba(107,167,255,0.18);
+  --text:#edf7ff;
+  --muted:#92afc3;
+  --aqua:#67e8f9;
+  --gold:#ffb84d;
+  --lime:#91f2b4;
+  --red:#ff7474;
+  --pink:#ff78c8;
+}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at top, rgba(90,153,255,0.18), transparent 38%),
+    linear-gradient(180deg, #061019 0%, #09131d 45%, #070d14 100%);
+  color:var(--text);
+  font-family:"Trebuchet MS","Segoe UI",sans-serif;
+}
+a{color:inherit;}
+.shell{
+  width:min(1380px, calc(100vw - 28px));
+  margin:0 auto;
+  padding:24px 0 36px;
+}
+.topbar{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  padding:18px 22px;
+  border:1px solid var(--line);
+  border-radius:24px;
+  background:var(--glass);
+  backdrop-filter:blur(18px);
+  margin-bottom:18px;
+}
+.brand h1{
+  font-size:1.4rem;
+  letter-spacing:0.08em;
+}
+.brand p{
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.45;
+}
+.status{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  color:var(--muted);
+  font-size:0.92rem;
+}
+.status-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#39485a;
+}
+.status-dot.up{background:var(--lime);box-shadow:0 0 12px rgba(145,242,180,0.7);}
+.status-dot.down{background:var(--red);box-shadow:0 0 12px rgba(255,116,116,0.55);}
+.layout{
+  display:grid;
+  grid-template-columns:minmax(320px, 420px) 1fr;
+  gap:18px;
+}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:24px;
+  overflow:hidden;
+  box-shadow:0 18px 42px rgba(0,0,0,0.24);
+}
+.panel-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px 20px;
+  border-bottom:1px solid var(--line);
+}
+.panel-head h2{
+  font-size:0.95rem;
+  letter-spacing:0.16em;
+}
+.panel-head span{
+  color:var(--muted);
+  font-size:0.84rem;
+}
+.panel-body{
+  padding:18px 20px 20px;
+}
+.stack{
+  display:grid;
+  gap:14px;
+}
+.field{
+  display:grid;
+  gap:6px;
+}
+.field label{
+  color:var(--muted);
+  font-size:0.78rem;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+}
+.field input[type=file]{
+  padding:10px 12px;
+}
+textarea,
+input{
+  width:100%;
+  background:rgba(5,10,16,0.72);
+  color:var(--text);
+  border:1px solid rgba(164,199,255,0.16);
+  border-radius:16px;
+  padding:12px 14px;
+  font:inherit;
+  outline:none;
+}
+textarea{
+  min-height:110px;
+  resize:vertical;
+  line-height:1.45;
+}
+textarea:focus,
+input:focus{
+  border-color:rgba(103,232,249,0.5);
+  box-shadow:0 0 0 3px rgba(103,232,249,0.12);
+}
+.grid-2{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+.grid-3{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+button{
+  cursor:pointer;
+  border-radius:999px;
+  padding:11px 18px;
+  border:1px solid transparent;
+  font:inherit;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+button:hover{transform:translateY(-1px);}
+.primary{
+  background:rgba(103,232,249,0.12);
+  color:var(--aqua);
+  border-color:rgba(103,232,249,0.34);
+}
+.secondary{
+  background:rgba(255,184,77,0.12);
+  color:var(--gold);
+  border-color:rgba(255,184,77,0.34);
+}
+.ghost{
+  background:transparent;
+  color:var(--muted);
+  border-color:rgba(164,199,255,0.18);
+}
+.status-box{
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid rgba(164,199,255,0.12);
+  background:rgba(4,9,15,0.55);
+  color:var(--muted);
+  line-height:1.5;
+}
+.status-box strong{color:var(--aqua);}
+.hero-grid{
+  display:grid;
+  grid-template-columns:1.3fr 1fr;
+  gap:16px;
+}
+.image-card{
+  background:rgba(4,9,15,0.68);
+  border:1px solid rgba(164,199,255,0.12);
+  border-radius:20px;
+  overflow:hidden;
+}
+.image-card img,
+.thumb-card img{
+  display:block;
+  width:100%;
+  aspect-ratio:1 / 1;
+  object-fit:cover;
+  image-rendering:pixelated;
+  background:#04070b;
+}
+.image-card figcaption,
+.thumb-card figcaption{
+  padding:11px 13px;
+  color:var(--muted);
+  font-size:0.88rem;
+}
+.thumb-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+.guide-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+.thumb-card{
+  background:rgba(4,9,15,0.68);
+  border:1px solid rgba(164,199,255,0.12);
+  border-radius:18px;
+  overflow:hidden;
+}
+.guide-card{
+  background:rgba(4,9,15,0.68);
+  border:1px solid rgba(164,199,255,0.12);
+  border-radius:18px;
+  overflow:hidden;
+}
+.guide-card img{
+  display:block;
+  width:100%;
+  aspect-ratio:1 / 1;
+  object-fit:cover;
+  background:#04070b;
+}
+.guide-card img[src=""]{
+  display:none;
+}
+.guide-card figcaption{
+  padding:11px 13px;
+  color:var(--muted);
+  font-size:0.84rem;
+  min-height:56px;
+}
+.meta-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:12px;
+}
+.stat{
+  padding:12px 14px;
+  border-radius:18px;
+  background:rgba(4,9,15,0.65);
+  border:1px solid rgba(164,199,255,0.12);
+}
+.stat label{
+  display:block;
+  color:var(--muted);
+  font-size:0.76rem;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+}
+.stat strong{
+  display:block;
+  color:var(--aqua);
+  margin-top:6px;
+  font-size:1.08rem;
+}
+.links{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.links a{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 14px;
+  border-radius:999px;
+  text-decoration:none;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(164,199,255,0.14);
+  color:var(--muted);
+}
+.links a:hover{
+  color:var(--text);
+  border-color:rgba(103,232,249,0.35);
+}
+.bench-summary{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+  margin-bottom:14px;
+}
+.bench-pill{
+  padding:12px 14px;
+  border-radius:18px;
+  background:rgba(4,9,15,0.62);
+  border:1px solid rgba(164,199,255,0.12);
+}
+.bench-pill label{
+  display:block;
+  color:var(--muted);
+  font-size:0.76rem;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+}
+.bench-pill strong{
+  display:block;
+  margin-top:6px;
+  color:var(--gold);
+}
+.case-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:14px;
+  margin-bottom:14px;
+}
+.case-card{
+  padding:14px;
+  border-radius:18px;
+  background:rgba(4,9,15,0.62);
+  border:1px solid rgba(164,199,255,0.12);
+}
+.case-card h3{
+  font-size:0.96rem;
+  margin-bottom:6px;
+}
+.case-card p{
+  color:var(--muted);
+  line-height:1.45;
+  font-size:0.88rem;
+  margin-bottom:10px;
+}
+.case-card .mini{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+}
+.report-frame{
+  width:100%;
+  min-height:560px;
+  border:1px solid rgba(164,199,255,0.14);
+  border-radius:18px;
+  background:#04070b;
+}
+.hint{
+  color:var(--muted);
+  line-height:1.5;
+}
+@media (max-width:1080px){
+  .layout{grid-template-columns:1fr;}
+}
+@media (max-width:760px){
+  .hero-grid,
+  .meta-grid,
+  .bench-summary{grid-template-columns:1fr;}
+  .guide-grid,
+  .thumb-grid,
+  .grid-2,
+  .grid-3{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar">
+      <div class="brand">
+        <h1>RIPPLE SCOPE LIVE</h1>
+        <p>Steer the Splash Garden in real time, inspect the hidden delay layer, and watch unseen vision stop pretending it is just a prompt.</p>
+      </div>
+      <div class="status">
+        <span id="health-dot" class="status-dot down"></span>
+        <span id="health-text">Checking service...</span>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>FIELD INPUT</h2>
+            <span>Live single render and bench runner</span>
+          </div>
+          <div class="panel-body stack">
+            <div class="field">
+              <label for="prompt">Prompt</label>
+              <textarea id="prompt">unseen vision radar, emotional weather, hidden causality, ripples in the glass</textarea>
+            </div>
+            <div class="field">
+              <label for="guide-file">Guide Image</label>
+              <input id="guide-file" type="file" accept="image/*">
+            </div>
+            <div class="guide-grid">
+              <figure class="guide-card">
+                <img id="guide-original" alt="Guide image preview" src="">
+                <figcaption id="guide-original-caption">No real image loaded yet. Feed it a photo and the field will steal structure from it.</figcaption>
+              </figure>
+              <figure class="guide-card">
+                <img id="guide-edge" alt="Derived edge map preview" src="">
+                <figcaption id="guide-edge-caption">Edge-pressure map will appear here after upload.</figcaption>
+              </figure>
+            </div>
+            <div class="grid-3">
+              <div class="field">
+                <label for="width">Width</label>
+                <input id="width" type="number" min="24" max="192" value="96">
+              </div>
+              <div class="field">
+                <label for="height">Height</label>
+                <input id="height" type="number" min="24" max="192" value="96">
+              </div>
+              <div class="field">
+                <label for="steps">Steps</label>
+                <input id="steps" type="number" min="8" max="200" value="72">
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="energy">Energy</label>
+                <input id="energy" type="number" min="0.35" max="2.4" step="0.01" value="1.00">
+              </div>
+              <div class="field">
+                <label for="delay-gain">Delay Gain</label>
+                <input id="delay-gain" type="number" min="0.35" max="2.6" step="0.01" value="1.00">
+              </div>
+              <div class="field">
+                <label for="structure-gain">Structure Gain</label>
+                <input id="structure-gain" type="number" min="0.45" max="2.6" step="0.01" value="1.00">
+              </div>
+              <div class="field">
+                <label for="spectral-tilt">Spectral Tilt</label>
+                <input id="spectral-tilt" type="number" min="-1" max="1" step="0.01" value="0.00">
+              </div>
+              <div class="field">
+                <label for="ring-scale">Ring Scale</label>
+                <input id="ring-scale" type="number" min="0.6" max="1.45" step="0.01" value="1.00">
+              </div>
+            </div>
+            <div class="actions">
+              <button class="primary" id="pulse-btn" type="button">Pulse Render</button>
+              <button class="secondary" id="bench-btn" type="button">Run Bench</button>
+              <button class="ghost" id="sample-btn" type="button">Load Weird Sample</button>
+            </div>
+            <div class="status-box" id="status-box"><strong>Idle.</strong> Kick the field and it will spill fresh artifacts into the live scope.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>BENCH HIGHLIGHTS</h2>
+            <span>Delay, structure, spectral drift</span>
+          </div>
+          <div class="panel-body">
+            <div class="bench-summary">
+              <div class="bench-pill">
+                <label>Most Delay-Driven</label>
+                <strong id="bench-delay">Not run yet</strong>
+              </div>
+              <div class="bench-pill">
+                <label>Most Structural</label>
+                <strong id="bench-structure">Not run yet</strong>
+              </div>
+              <div class="bench-pill">
+                <label>Most Spectral</label>
+                <strong id="bench-spectral">Not run yet</strong>
+              </div>
+            </div>
+            <div class="case-grid" id="case-grid">
+              <div class="hint">Bench cases will land here after you run them.</div>
+            </div>
+            <div class="links" id="bench-links"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>LIVE FIELD</h2>
+            <span id="single-headline">No render yet</span>
+          </div>
+          <div class="panel-body stack">
+            <div class="hero-grid">
+              <figure class="image-card">
+                <img id="rgb-image" alt="RGB field output">
+                <figcaption>RGB field</figcaption>
+              </figure>
+              <figure class="image-card">
+                <img id="delay-image" alt="Delay field output">
+                <figcaption>Delay field</figcaption>
+              </figure>
+            </div>
+            <div class="thumb-grid">
+              <figure class="thumb-card">
+                <img id="source-image" alt="Source map">
+                <figcaption>Source map</figcaption>
+              </figure>
+              <figure class="thumb-card">
+                <img id="red-image" alt="Red channel">
+                <figcaption>Red channel</figcaption>
+              </figure>
+              <figure class="thumb-card">
+                <img id="green-image" alt="Green channel">
+                <figcaption>Green channel</figcaption>
+              </figure>
+              <figure class="thumb-card">
+                <img id="blue-image" alt="Blue channel">
+                <figcaption>Blue channel</figcaption>
+              </figure>
+            </div>
+            <div class="meta-grid">
+              <div class="stat"><label>Seed</label><strong id="stat-seed">-</strong></div>
+              <div class="stat"><label>Delay Mean</label><strong id="stat-delay">-</strong></div>
+              <div class="stat"><label>Spectral Split</label><strong id="stat-spectral">-</strong></div>
+              <div class="stat"><label>Sources</label><strong id="stat-sources">-</strong></div>
+              <div class="stat"><label>Guide</label><strong id="stat-guide">none</strong></div>
+            </div>
+            <div class="links" id="single-links"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>BENCH REPORT</h2>
+            <span>Embedded live gallery</span>
+          </div>
+          <div class="panel-body stack">
+            <iframe id="report-frame" class="report-frame" title="Splash Garden bench report"></iframe>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+<script>
+const byId = (id) => document.getElementById(id);
+const cacheBust = (url) => url ? `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}` : '';
+const guideState = {
+  file: null,
+  label: null,
+  luma: null,
+  edges: null,
+  previewUrl: '',
+  edgePreviewUrl: '',
+};
+
+function setStatus(message, tone = 'info') {
+  const box = byId('status-box');
+  const colorMap = {
+    info: 'var(--aqua)',
+    warm: 'var(--gold)',
+    bad: 'var(--red)',
+    good: 'var(--lime)',
+  };
+  box.innerHTML = `<strong style="color:${colorMap[tone] || colorMap.info}">${tone === 'bad' ? 'Problem.' : tone === 'good' ? 'Ready.' : 'Working.'}</strong> ${escapeHtml(message)}`;
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function currentPayload() {
+  return {
+    prompt: byId('prompt').value.trim(),
+    width: Number(byId('width').value || 96),
+    height: Number(byId('height').value || 96),
+    steps: Number(byId('steps').value || 72),
+    energy: Number(byId('energy').value || 1),
+    delay_gain: Number(byId('delay-gain').value || 1),
+    structure_gain: Number(byId('structure-gain').value || 1),
+    spectral_tilt: Number(byId('spectral-tilt').value || 0),
+    ring_scale: Number(byId('ring-scale').value || 1),
+  };
+}
+
+function clearGuideArtifacts() {
+  if (guideState.previewUrl) {
+    URL.revokeObjectURL(guideState.previewUrl);
+  }
+  guideState.previewUrl = '';
+  guideState.edgePreviewUrl = '';
+}
+
+async function syncGuideMaps() {
+  if (!guideState.file) {
+    return {};
+  }
+  const payload = currentPayload();
+  const width = payload.width;
+  const height = payload.height;
+  const bitmap = await createImageBitmap(guideState.file);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const gray = Array.from({ length: height }, () => Array(width).fill(0));
+  const luma = Array.from({ length: height }, () => Array(width).fill(0));
+  const edges = Array.from({ length: height }, () => Array(width).fill(0));
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const idx = (y * width + x) * 4;
+      const red = imageData.data[idx];
+      const green = imageData.data[idx + 1];
+      const blue = imageData.data[idx + 2];
+      const value = ((0.299 * red) + (0.587 * green) + (0.114 * blue)) / 255;
+      gray[y][x] = value;
+      luma[y][x] = value;
+    }
+  }
+
+  let edgePeak = 0;
+  const edgeCanvas = document.createElement('canvas');
+  edgeCanvas.width = width;
+  edgeCanvas.height = height;
+  const edgeCtx = edgeCanvas.getContext('2d');
+  const edgeImage = edgeCtx.createImageData(width, height);
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const left = gray[y][Math.max(0, x - 1)];
+      const right = gray[y][Math.min(width - 1, x + 1)];
+      const up = gray[Math.max(0, y - 1)][x];
+      const down = gray[Math.min(height - 1, y + 1)][x];
+      const edge = Math.min(1, Math.sqrt(((right - left) ** 2) + ((down - up) ** 2)) * 1.85);
+      edges[y][x] = edge;
+      if (edge > edgePeak) {
+        edgePeak = edge;
+      }
+    }
+  }
+
+  const normalizer = edgePeak || 1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      edges[y][x] = Math.min(1, edges[y][x] / normalizer);
+      const idx = (y * width + x) * 4;
+      const edgeValue = Math.round(edges[y][x] * 255);
+      edgeImage.data[idx] = edgeValue;
+      edgeImage.data[idx + 1] = Math.round(edgeValue * 0.92);
+      edgeImage.data[idx + 2] = 255;
+      edgeImage.data[idx + 3] = 255;
+    }
+  }
+  edgeCtx.putImageData(edgeImage, 0, 0);
+
+  clearGuideArtifacts();
+  guideState.previewUrl = URL.createObjectURL(guideState.file);
+  guideState.edgePreviewUrl = edgeCanvas.toDataURL('image/png');
+  guideState.luma = luma;
+  guideState.edges = edges;
+  guideState.label = guideState.file.name;
+
+  byId('guide-original').src = guideState.previewUrl;
+  byId('guide-edge').src = guideState.edgePreviewUrl;
+  byId('guide-original-caption').textContent = `Guide image: ${guideState.file.name}`;
+  byId('guide-edge-caption').textContent = `Derived edge pressure map at ${width}x${height}.`;
+
+  return {
+    guide_label: guideState.label,
+    guide_luma: guideState.luma,
+    guide_edges: guideState.edges,
+  };
+}
+
+async function buildGuidePayload() {
+  if (!guideState.file) {
+    return {};
+  }
+  return syncGuideMaps();
+}
+
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+function fillImage(id, url) {
+  byId(id).src = cacheBust(url);
+}
+
+function fillSingle(data) {
+  const urls = data.artifact_urls;
+  const result = data.result;
+  const stats = result.pixel_stats;
+  byId('single-headline').textContent = `${result.prompt} | ${result.width}x${result.height} | ${result.steps} steps`;
+  fillImage('rgb-image', urls.rgb);
+  fillImage('delay-image', urls.delay);
+  fillImage('source-image', urls.source_map);
+  fillImage('red-image', urls.red);
+  fillImage('green-image', urls.green);
+  fillImage('blue-image', urls.blue);
+  byId('stat-seed').textContent = String(result.seed);
+  byId('stat-delay').textContent = stats.delay_mean.toFixed(3);
+  byId('stat-spectral').textContent = stats.spectral_split.toFixed(3);
+  byId('stat-sources').textContent = String(result.source_count);
+  byId('stat-guide').textContent = result.guide && result.guide.enabled ? (result.guide.label || 'image') : 'none';
+  byId('single-links').innerHTML = [
+    ['RGB PNG', urls.rgb],
+    ['Delay PNG', urls.delay],
+    ['Meta JSON', urls.meta],
+  ].map(([label, href]) => `<a href="${href}" target="_blank" rel="noreferrer">${label}</a>`).join('');
+}
+
+function fillBench(data) {
+  const manifest = data.manifest;
+  byId('bench-delay').textContent = manifest.highlights.most_delay_driven;
+  byId('bench-structure').textContent = manifest.highlights.most_structural;
+  byId('bench-spectral').textContent = manifest.highlights.most_spectral;
+  byId('bench-links').innerHTML = [
+    ['Bench Report', manifest.report_url],
+    ['Bench Manifest', manifest.manifest_url],
+  ].map(([label, href]) => `<a href="${href}" target="_blank" rel="noreferrer">${label}</a>`).join('');
+  const reportFrame = byId('report-frame');
+  reportFrame.removeAttribute('srcdoc');
+  reportFrame.src = cacheBust(manifest.report_url);
+  byId('case-grid').innerHTML = manifest.cases.map((item) => `
+    <article class="case-card">
+      <h3>${escapeHtml(item.title)}</h3>
+      <p>${escapeHtml(item.description)}</p>
+      <div class="mini">
+        <figure class="thumb-card">
+          <img src="${cacheBust(item.artifact_urls.rgb)}" alt="${escapeHtml(item.title)} rgb">
+          <figcaption>RGB</figcaption>
+        </figure>
+        <figure class="thumb-card">
+          <img src="${cacheBust(item.artifact_urls.delay)}" alt="${escapeHtml(item.title)} delay">
+          <figcaption>Delay</figcaption>
+        </figure>
+        <figure class="thumb-card">
+          <img src="${cacheBust(item.artifact_urls.source_map)}" alt="${escapeHtml(item.title)} source map">
+          <figcaption>Sources</figcaption>
+        </figure>
+      </div>
+    </article>
+  `).join('');
+}
+
+async function pulseRender() {
+  const payload = currentPayload();
+  const guidePayload = await buildGuidePayload();
+  setStatus(guidePayload.guide_label ? `Pulsing the field through ${guidePayload.guide_label}.` : 'Pulsing the field and baking fresh RGB plus delay artifacts.', 'warm');
+  try {
+    const data = await postJson('/splash/live', { ...payload, ...guidePayload });
+    fillSingle(data);
+    const guideNote = data.result.guide && data.result.guide.enabled
+      ? ` Guide active from ${data.result.guide.label || 'image'} with edge mean ${data.result.guide.edge_mean.toFixed(3)}.`
+      : '';
+    setStatus(`Render ${data.run_id} landed. Delay mean ${data.result.pixel_stats.delay_mean.toFixed(3)} and spectral split ${data.result.pixel_stats.spectral_split.toFixed(3)}.${guideNote}`, 'good');
+  } catch (error) {
+    setStatus(`Live render failed: ${error}`, 'bad');
+  }
+}
+
+async function runBench() {
+  const payload = currentPayload();
+  const guidePayload = await buildGuidePayload();
+  setStatus('Running the multi-case bench. This is the part where the field gets audited instead of merely admired.', 'warm');
+  try {
+    const data = await postJson('/splash/live/bench', {
+      prompt: payload.prompt,
+      width: payload.width,
+      height: payload.height,
+      steps: payload.steps,
+      ...guidePayload,
+    });
+    fillBench(data);
+    setStatus(`Bench ${data.run_id} is ready. Delay king: ${data.manifest.highlights.most_delay_driven}; structure brute: ${data.manifest.highlights.most_structural}.`, 'good');
+  } catch (error) {
+    setStatus(`Bench run failed: ${error}`, 'bad');
+  }
+}
+
+function loadSample() {
+  byId('prompt').value = 'unseen vision radar, pressure ghosts, emotional weather, hidden architecture under the face';
+  byId('width').value = '120';
+  byId('height').value = '120';
+  byId('steps').value = '84';
+  byId('energy').value = '1.08';
+  byId('delay-gain').value = '1.34';
+  byId('structure-gain').value = '1.22';
+  byId('spectral-tilt').value = '0.24';
+  byId('ring-scale').value = '0.94';
+  setStatus('Loaded a weird sample so the controls stop sitting there like decorative salad.', 'info');
+}
+
+async function checkHealth() {
+  try {
+    const response = await fetch('/health');
+    const data = await response.json();
+    byId('health-dot').className = 'status-dot up';
+    byId('health-text').textContent = `Service online | ${data.quarry.repos} repos | ${data.quarry.files} files`;
+  } catch {
+    byId('health-dot').className = 'status-dot down';
+    byId('health-text').textContent = 'Service offline';
+  }
+}
+
+byId('guide-file').addEventListener('change', async (event) => {
+  const [file] = event.target.files || [];
+  if (!file) {
+    guideState.file = null;
+    guideState.label = null;
+    guideState.luma = null;
+    guideState.edges = null;
+    clearGuideArtifacts();
+    byId('guide-original').src = '';
+    byId('guide-edge').src = '';
+    byId('guide-original-caption').textContent = 'No real image loaded yet. Feed it a photo and the field will steal structure from it.';
+    byId('guide-edge-caption').textContent = 'Edge-pressure map will appear here after upload.';
+    byId('stat-guide').textContent = 'none';
+    return;
+  }
+  guideState.file = file;
+  await syncGuideMaps();
+  setStatus(`Guide image ${file.name} loaded. Now the field has something real to chew on.`, 'good');
+  await pulseRender();
+  await runBench();
+});
+
+async function bootScope() {
+  await checkHealth();
+  await pulseRender();
+  await runBench();
+}
+
+byId('pulse-btn').addEventListener('click', pulseRender);
+byId('bench-btn').addEventListener('click', runBench);
+byId('sample-btn').addEventListener('click', loadSample);
+
+byId('report-frame').srcdoc = `
+  <style>
+    body{
+      margin:0;
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      background:#04070b;
+      color:#92afc3;
+      font-family:"Trebuchet MS","Segoe UI",sans-serif;
+    }
+    div{
+      padding:24px;
+      border:1px solid rgba(164,199,255,0.14);
+      border-radius:18px;
+      background:rgba(14,26,41,0.88);
+      max-width:420px;
+      text-align:center;
+      line-height:1.5;
+    }
+    strong{display:block;color:#67e8f9;margin-bottom:8px;letter-spacing:0.08em;}
+  </style>
+  <div><strong>Booting Ripple Scope</strong>The bench report will load automatically after the first field pulse.</div>
+`;
+
+bootScope();
+</script>
+</body>
+</html>

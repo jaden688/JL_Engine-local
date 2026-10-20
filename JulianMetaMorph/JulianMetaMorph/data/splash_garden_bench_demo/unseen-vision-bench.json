@@ -1,0 +1,132 @@
+{
+  "prompt": "unseen vision",
+  "width": 72,
+  "height": 72,
+  "base_steps": 48,
+  "out_dir": "data\\splash_garden_bench_demo",
+  "cases": [
+    {
+      "case": "balanced-field",
+      "title": "Balanced Field",
+      "description": "Baseline unseen-vision render with the hub and ring held in balance.",
+      "files": {
+        "rgb": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field.png",
+        "delay": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-delay.png",
+        "red": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-red.png",
+        "green": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-green.png",
+        "blue": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-blue.png",
+        "source_map": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-sources.png"
+      },
+      "meta_path": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field.json",
+      "pixel_stats": {
+        "brightness_mean": 0.5379952392479638,
+        "delay_mean": 0.5546969559428709,
+        "red_mean": 0.5472237351730815,
+        "green_mean": 0.5469045025417575,
+        "blue_mean": 0.5198574800290486,
+        "spectral_split": 0.04820715323166304
+      },
+      "tuning": {
+        "energy": 1.0,
+        "delay_gain": 1.0,
+        "structure_gain": 1.0,
+        "spectral_tilt": 0.0,
+        "ring_scale": 1.0
+      }
+    },
+    {
+      "case": "delay-oracle",
+      "title": "Delay Oracle",
+      "description": "Pushes the hidden delay layer harder so arrival-order starts steering the scene.",
+      "files": {
+        "rgb": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle.png",
+        "delay": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-delay.png",
+        "red": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-red.png",
+        "green": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-green.png",
+        "blue": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-blue.png",
+        "source_map": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-sources.png"
+      },
+      "meta_path": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle.json",
+      "pixel_stats": {
+        "brightness_mean": 0.49557108851769666,
+        "delay_mean": 0.575714112805616,
+        "red_mean": 0.5150568869523118,
+        "green_mean": 0.5012254901960784,
+        "blue_mean": 0.4704308884047446,
+        "spectral_split": 0.054900447833454366
+      },
+      "tuning": {
+        "energy": 0.94,
+        "delay_gain": 1.8,
+        "structure_gain": 0.92,
+        "spectral_tilt": 0.18,
+        "ring_scale": 0.96
+      }
+    },
+    {
+      "case": "structure-lock",
+      "title": "Structure Lock",
+      "description": "Leans into lensing and composition to see whether the form stabilizes first.",
+      "files": {
+        "rgb": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock.png",
+        "delay": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-delay.png",
+        "red": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-red.png",
+        "green": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-green.png",
+        "blue": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-blue.png",
+        "source_map": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-sources.png"
+      },
+      "meta_path": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock.json",
+      "pixel_stats": {
+        "brightness_mean": 0.4872874304042449,
+        "delay_mean": 0.5547552045509562,
+        "red_mean": 0.4858561788913096,
+        "green_mean": 0.4832070019365771,
+        "blue_mean": 0.4927991103848947,
+        "spectral_split": 0.03277656741709029
+      },
+      "tuning": {
+        "energy": 1.05,
+        "delay_gain": 0.82,
+        "structure_gain": 1.65,
+        "spectral_tilt": -0.12,
+        "ring_scale": 0.84
+      }
+    },
+    {
+      "case": "spectral-echo",
+      "title": "Spectral Echo",
+      "description": "Separates channel agentlities so the field reveals color-phase drift.",
+      "files": {
+        "rgb": "data\\splash_garden_bench_demo\\unseen-vision-spectral-echo.png",
+        "delay": "data\\splash_garden_bench_demo\\unseen-vision-spectral-echo-delay.png",
+        "red": "data\\splash_garden_bench_demo\\unseen-vision-spectral-echo-red.png",
+        "green": "data\\splash_garden_bench_demo\\unseen-vision-spectral-echo-green.png",
+        "blue": "data\\splash_garden_bench_demo\\unseen-vision-spectral-echo-blue.png",
+        "source_map": "data\\splash_garden_bench_demo\\unseen-vision-spectral-echo-sources.png"
+      },
+      "meta_path": "data\\splash_garden_bench_demo\\unseen-vision-spectral-echo.json",
+      "pixel_stats": {
+        "brightness_mean": 0.4429168683934509,
+        "delay_mean": 0.5463802650689905,
+        "red_mean": 0.5224287400145243,
+        "green_mean": 0.45768427741466955,
+        "blue_mean": 0.34863758775114984,
+        "spectral_split": 0.1738395666908739
+      },
+      "tuning": {
+        "energy": 1.12,
+        "delay_gain": 1.08,
+        "structure_gain": 1.0,
+        "spectral_tilt": 0.78,
+        "ring_scale": 1.14
+      }
+    }
+  ],
+  "highlights": {
+    "most_delay_driven": "delay-oracle",
+    "most_structural": "structure-lock",
+    "most_spectral": "spectral-echo"
+  },
+  "manifest_path": "data\\splash_garden_bench_demo\\unseen-vision-bench.json",
+  "report_path": "data\\splash_garden_bench_demo\\index.html"
+}

@@ -1,0 +1,16 @@
+﻿{
+  "SparkByte": {
+    "agent_file": "SparkByte_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "openrouter",
+    "drive_type": "spur",
+    "tags": ["quirky", "creative"]
+  },
+  "GremlinLite": {
+    "agent_file": "GremlinLite_Full.json",
+    "default_memory_mode": "HYBRID",
+    "default_backend_id": "noop-stub",
+    "drive_type": "cvt",
+    "tags": ["creative", "chaos"]
+  }
+}

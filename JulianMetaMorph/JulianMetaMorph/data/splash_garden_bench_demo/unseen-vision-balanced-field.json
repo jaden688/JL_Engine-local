@@ -1,0 +1,95 @@
+{
+  "prompt": "unseen vision",
+  "seed": 3259225858081419276,
+  "width": 72,
+  "height": 72,
+  "steps": 48,
+  "tuning": {
+    "energy": 1.0,
+    "delay_gain": 1.0,
+    "structure_gain": 1.0,
+    "spectral_tilt": 0.0,
+    "ring_scale": 1.0
+  },
+  "layers": [
+    "R",
+    "G",
+    "B",
+    "D"
+  ],
+  "delay_role": "arrival-order, damping, and phase modulation",
+  "layout": "hub-and-ring splash garden",
+  "modules": [
+    "core",
+    "style",
+    "detail",
+    "lighting"
+  ],
+  "sources": [
+    {
+      "token": "unseen vision",
+      "module": "core",
+      "x": 36,
+      "y": 36,
+      "radius": 8,
+      "period": 9,
+      "phase": 0,
+      "strength": 1.4,
+      "r_bias": 0.92,
+      "g_bias": 0.88,
+      "b_bias": 1.0,
+      "delay_bias": 1.1
+    },
+    {
+      "token": "unseen",
+      "module": "style",
+      "x": 52,
+      "y": 36,
+      "radius": 9,
+      "period": 7,
+      "phase": 4,
+      "strength": 1.3654901960784314,
+      "r_bias": 0.3694117647058824,
+      "g_bias": 0.2564705882352941,
+      "b_bias": 0.2062745098039216,
+      "delay_bias": 0.5911764705882353
+    },
+    {
+      "token": "vision",
+      "module": "detail",
+      "x": 16,
+      "y": 36,
+      "radius": 5,
+      "period": 13,
+      "phase": 1,
+      "strength": 0.8649019607843137,
+      "r_bias": 0.4698039215686275,
+      "g_bias": 0.38823529411764707,
+      "b_bias": 0.7992156862745099,
+      "delay_bias": 1.0747058823529412
+    }
+  ],
+  "output_files": {
+    "rgb": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field.png",
+    "delay": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-delay.png",
+    "red": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-red.png",
+    "green": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-green.png",
+    "blue": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-blue.png",
+    "source_map": "data\\splash_garden_bench_demo\\unseen-vision-balanced-field-sources.png"
+  },
+  "amplitude_stats": {
+    "r_max_abs": 1.911535023847094,
+    "g_max_abs": 1.5294302103388178,
+    "b_max_abs": 4.489221931106086,
+    "d_max_abs": 13.793908188189757
+  },
+  "pixel_stats": {
+    "brightness_mean": 0.5379952392479638,
+    "delay_mean": 0.5546969559428709,
+    "red_mean": 0.5472237351730815,
+    "green_mean": 0.5469045025417575,
+    "blue_mean": 0.5198574800290486,
+    "spectral_split": 0.04820715323166304
+  },
+  "source_count": 3
+}

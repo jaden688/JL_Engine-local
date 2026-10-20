@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="OmniAscension_E2E" tests="30" failures="0" time="8.619">
+  <testsuite name="F01: Git Baseline &amp; Branch Setup" tests="5" failures="0" time="0.504">
+    <testcase classname="F01: Git Baseline &amp; Branch Setup" name="T1-F01-01: Git repository tracking root points to primary remote" time="0.135">
+    </testcase>
+    <testcase classname="F01: Git Baseline &amp; Branch Setup" name="T1-F01-02: Active development branch is feature/omni-ascension" time="0.123">
+    </testcase>
+    <testcase classname="F01: Git Baseline &amp; Branch Setup" name="T1-F01-03: Baseline commit history reflects upstream HEAD ancestry" time="0.123">
+    </testcase>
+    <testcase classname="F01: Git Baseline &amp; Branch Setup" name="T1-F01-04: .gitignore excludes sensitive files (.env, *.db)" time="0.001">
+    </testcase>
+    <testcase classname="F01: Git Baseline &amp; Branch Setup" name="T1-F01-05: Reference remotes are queryable without overwriting origin" time="0.122">
+    </testcase>
+  </testsuite>
+  <testsuite name="F02: Port 8081 Alignment" tests="5" failures="0" time="0.001">
+    <testcase classname="F02: Port 8081 Alignment" name="T1-F02-01: Engine default port is standardized to 8081 in src/App.jl" time="0.0">
+    </testcase>
+    <testcase classname="F02: Port 8081 Alignment" name="T1-F02-02: Launch_SparkByte.bat specifies SPARKBYTE_PORT=8081" time="0.0">
+    </testcase>
+    <testcase classname="F02: Port 8081 Alignment" name="T1-F02-03: start.bat exists and executes sparkbyte.jl on project environment" time="0.0">
+    </testcase>
+    <testcase classname="F02: Port 8081 Alignment" name="T1-F02-04: BYTE web server default port is 8081" time="0.001">
+    </testcase>
+    <testcase classname="F02: Port 8081 Alignment" name="T1-F02-05: SPARKBYTE_PORT environment override is parsed and respected" time="0.0">
+    </testcase>
+  </testsuite>
+  <testsuite name="F03: Destructive Recovery Rejection" tests="5" failures="0" time="1.495">
+    <testcase classname="F03: Destructive Recovery Rejection" name="T1-F03-01: Startup scripts reject blind taskkill anti-pattern" time="0.001">
+    </testcase>
+    <testcase classname="F03: Destructive Recovery Rejection" name="T1-F03-02: Scripts reject manual SQLite WAL/SHM file deletion" time="0.001">
+    </testcase>
+    <testcase classname="F03: Destructive Recovery Rejection" name="T1-F03-03: Port probing operates gracefully without process termination" time="0.316">
+    </testcase>
+    <testcase classname="F03: Destructive Recovery Rejection" name="T1-F03-04: SQLite recovery uses native PRAGMA wal_checkpoint without file deletion" time="1.177">
+    </testcase>
+    <testcase classname="F03: Destructive Recovery Rejection" name="T1-F03-05: Clean resource de-allocation hooks exist via atexit" time="0.0">
+    </testcase>
+  </testsuite>
+  <testsuite name="F04: Port Matrix &amp; Architecture Baseline" tests="5" failures="0" time="0.001">
+    <testcase classname="F04: Port Matrix &amp; Architecture Baseline" name="T1-F04-01: docs/ascension/ARCHITECTURE_BASELINE.md exists and is documented" time="0.0">
+    </testcase>
+    <testcase classname="F04: Port Matrix &amp; Architecture Baseline" name="T1-F04-02: docs/ascension/PORT_MATRIX.md catalogs 29 reference candidates" time="0.001">
+    </testcase>
+    <testcase classname="F04: Port Matrix &amp; Architecture Baseline" name="T1-F04-03: Port matrix decisions contain explicit categories" time="0.0">
+    </testcase>
+    <testcase classname="F04: Port Matrix &amp; Architecture Baseline" name="T1-F04-04: Verified commit hashes are documented for all reference remotes" time="0.0">
+    </testcase>
+    <testcase classname="F04: Port Matrix &amp; Architecture Baseline" name="T1-F04-05: Reference remote URLs match authoritative repository endpoints" time="0.0">
+    </testcase>
+  </testsuite>
+  <testsuite name="F05: Reference Candidate Ports (Wave 0)" tests="5" failures="0" time="0.633">
+    <testcase classname="F05: Reference Candidate Ports (Wave 0)" name="T1-F05-01: .env.example exists and documents OpenRouter and runtime parameters" time="0.0">
+    </testcase>
+    <testcase classname="F05: Reference Candidate Ports (Wave 0)" name="T1-F05-02: sparkbyte.jl contains early .env loader prior to package imports" time="0.0">
+    </testcase>
+    <testcase classname="F05: Reference Candidate Ports (Wave 0)" name="T1-F05-03: health_check.jl executes successfully via CLI" time="0.633">
+    </testcase>
+    <testcase classname="F05: Reference Candidate Ports (Wave 0)" name="T1-F05-04: health_check.log confirms zero errors and zero warnings" time="0.0">
+    </testcase>
+    <testcase classname="F05: Reference Candidate Ports (Wave 0)" name="T1-F05-05: Windows launchers invoke Julia with --project=." time="0.0">
+    </testcase>
+  </testsuite>
+  <testsuite name="F30: E2E Test Infrastructure &amp; Suite Design" tests="5" failures="0" time="0.001">
+    <testcase classname="F30: E2E Test Infrastructure &amp; Suite Design" name="T1-F30-01: TEST_INFRA.md exists and defines 4-tier testing architecture" time="0.0">
+    </testcase>
+    <testcase classname="F30: E2E Test Infrastructure &amp; Suite Design" name="T1-F30-02: TEST_INFRA.md documents all 30 features (F01 through F30)" time="0.001">
+    </testcase>
+    <testcase classname="F30: E2E Test Infrastructure &amp; Suite Design" name="T1-F30-03: Test runner and framework modules exist and are importable" time="0.0">
+    </testcase>
+    <testcase classname="F30: E2E Test Infrastructure &amp; Suite Design" name="T1-F30-04: TAP reporter produces valid TAP v13 stream structure" time="0.0">
+    </testcase>
+    <testcase classname="F30: E2E Test Infrastructure &amp; Suite Design" name="T1-F30-05: Test report exit code semantics map passed/failed counts" time="0.0">
+    </testcase>
+  </testsuite>
+</testsuites>

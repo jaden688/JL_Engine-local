@@ -1,0 +1,34 @@
+services:
+  sparkbyte:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${SPARKBYTE_PUBLIC_PORT:-8081}:8081"
+      - "${A2A_PUBLIC_PORT:-8082}:8082"
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      SPARKBYTE_HOST: 0.0.0.0
+      SPARKBYTE_PORT: 8081
+      SPARKBYTE_LAUNCH_BROWSER: "0"
+      SPARKBYTE_SKIP_PKG_INSTANTIATE: "1"
+      SPARKBYTE_STATE_DIR: /app/runtime
+      A2A_HOST: 0.0.0.0
+      A2A_PORT: 8082
+      A2A_PUBLIC_URL: ${A2A_PUBLIC_URL:-http://localhost:8082}
+      # Optional: require Bearer token on A2A (set in .env)
+      A2A_API_KEY: ${A2A_API_KEY:?Set A2A_API_KEY in .env before exposing A2A}
+      # Julian curiosity loop: 0 = off (default). e.g. 3600 = hourly
+      JULIAN_AUTONOMOUS_SECONDS: ${JULIAN_AUTONOMOUS_SECONDS:-0}
+    volumes:
+      - sparkbyte-state:/app/runtime
+    init: true
+    restart: unless-stopped
+
+volumes:
+  sparkbyte-state:

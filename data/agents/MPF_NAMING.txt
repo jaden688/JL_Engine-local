@@ -1,0 +1,20 @@
+MPF = MODULAR PERSONALITY FRAME
+=================================
+
+CORRECT terminology — use these, always:
+  - MPF               → the format/system (Modular Personality Frame)
+  - MPF operator file → a single agent JSON in this folder
+  - MPF character frame → what an agent's identity/voice is
+  - operator identity → the loaded active agent
+  - MPFProfile        → the registry struct (Modular Personality Frame Profile)
+  - character frame   → acceptable shorthand in copy
+  - operator          → acceptable shorthand in code comments
+
+This applies to:
+  - All JSON files in this folder
+  - All .jl source files in src/ and BYTE/src/
+  - All web copy in web/components/
+  - All markdown docs
+  - All comments, variable names, and string literals
+
+If you're writing a new agent file, refer to its identity block or operator frame.

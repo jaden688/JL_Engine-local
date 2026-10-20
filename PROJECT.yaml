@@ -1,0 +1,287 @@
+##############################################################################
+#  JL_Engine-SB.Omni  —  Project Overview
+#  Philosophy, Architecture, and Structure
+##############################################################################
+
+project:
+  name: JL_Engine-SB.Omni
+  tagline: "A Julia-native, fully agentic AI engine — self-forging, self-hosting, always on."
+  repository: jaden688/JL_Engine-SB.Omni
+  deployment:
+    platform: Azure Container Apps
+    app: jl-engine-prod
+    port: 8081
+    entry: sparkbyte.jl → JLEngine.app_main()
+
+# ── PHILOSOPHY ──────────────────────────────────────────────────────────────
+
+philosophy:
+  core_belief: >
+    The agent does not stop. If it doesn't know something, it uses its tools.
+    If a tool doesn't exist, it forges one. If a forge fails, it fixes and retries.
+    "I don't know" is never a first response — only a last resort after tools are exhausted.
+
+  principles:
+    never_give_up: >
+      The agentic loop runs while true with no iteration ceiling.
+      The only valid exits are: user abort, proven impossibility, or solved.
+
+    no_deception: >
+      Failures are reported honestly and immediately. No fake successes.
+      No hardcoded return values pretending a tool works.
+      Every result is real or explicitly marked as an attempt.
+
+    self_forging: >
+      The agent can write new Julia tools at runtime via forge_new_tool,
+      which live-evals into the BYTE module and persists to disk.
+      The engine grows its own capabilities on demand.
+
+    tool_first: >
+      Before reasoning from memory, use tools.
+      browse_url, google_search, recall, read_file, run_command —
+      the internet, the filesystem, and the shell are always available.
+
+    honest_identity: >
+      The engine runs agents (SparkByte, Julian, etc.) but they are
+      costumes, not lies. The underlying rules are inviolable.
+      Agent cannot override Rule 1 (No Deception) or Rule 2 (Always Truth).
+
+# ── ARCHITECTURE ────────────────────────────────────────────────────────────
+
+architecture:
+  runtime: Julia 1.12+
+  model: julia --project=. sparkbyte.jl
+
+  layers:
+    launcher:
+      file: sparkbyte.jl
+      role: >
+        Activates the Julia project, runs health checks, then calls JLEngine.app_main().
+        The Dockerfile CMD points here.
+
+    engine_module:
+      root: src/JLEngine.jl
+      role: >
+        Julia module that wires all sub-modules together and exports app_main().
+        Includes: Types, Config, MPF, Signals, Behavior, Rhythm, Drift,
+                  Memory, Aperture, State, AgentManager, Backends, Core, App.
+
+    app_boot:
+      file: src/App.jl
+      role: >
+        Boot sequence: loads .env, seeds SQLite DB, launches Playwright browser context,
+        starts A2A server, starts Autopilot heartbeat, then calls BYTE.serve() — blocking.
+
+    byte_core:
+      file: BYTE/src/BYTE.jl
+      role: >
+        The heart. WebSocket server on port 8081. Agentic loop (while true).
+        Handles all WS message types, routes to Gemini / xAI / OpenAI / Anthropic backends,
+        processes tool calls, streams responses, manages thinking bubbles,
+        writes telemetry, manages gear state and agent.
+
+    tools:
+      file: BYTE/src/Tools.jl
+      role: >
+        All tool implementations: file I/O, shell, browser (Playwright), memory (SQLite),
+        code execution, forge (live eval), stealth browser panel, web search.
+        Owns _state dict — shared mutable runtime state across the session.
+
+    schema:
+      file: BYTE/src/Schema.jl
+      role: >
+        OpenAI-compatible tool schema declarations. Maps tool names to JSON Schema.
+        Used by all backends for function-calling payloads.
+
+    telemetry:
+      file: BYTE/src/Telemetry.jl
+      role: >
+        Structured logging: API requests/responses, tool calls, token usage,
+        safety ratings, turn completion, reasoning traces. Writes to full_telemetry.jsonl.
+
+    tts:
+      file: BYTE/src/TTS.jl
+      role: >
+        Text-to-speech integration. Queues TTS replies after agent response.
+        Controlled by _TTS_ENABLED env flag.
+
+    autopilot:
+      file: src/Autopilot.jl
+      role: >
+        Background heartbeat task. Runs on configurable interval.
+        Allows the agent to act proactively without user prompts.
+        Sends autopilot_thinking / autopilot_acted events to the UI.
+
+    a2a_server:
+      file: a2a_server.jl
+      role: >
+        Agent-to-Agent protocol endpoint. Exposes the engine to external agents
+        and orchestration systems via HTTP.
+
+    agent_system:
+      file: data/agents/Agents.mpf.json
+      role: >
+        Agent registry. Each agent defines: name, identity, tone, gear settings,
+        forge_bias, initiative_level, voice config.
+
+    jlengine_internals:
+      root: src/JLEngine/
+      modules:
+        Types.jl:       "Core struct definitions — EngineConfig, GearModifiers, etc."
+        Config.jl:      "Runtime config loading from ENV and DB"
+        MPF.jl:         "Multi-Agent Framework — agent loading and switching"
+        Signals.jl:     "Turn signal detection — urgency, complexity, emotional tone"
+        Behavior.jl:    "Behavioral state machine — gear transitions"
+        Rhythm.jl:      "Response pacing / rhythm engine"
+        Drift.jl:       "Agentlity drift pressure — slow drift over sessions"
+        Memory.jl:      "Long-term memory: SQLite remember/recall interface"
+        Aperture.jl:    "Context window management — what fits in the prompt"
+        State.jl:       "Mutable session state — current gear, mood, agent"
+        AgentManager.jl: "Agent hot-swap logic"
+        Backends.jl:    "LLM provider routing — Gemini, xAI, OpenAI, Anthropic"
+        Core.jl:        "JLEngineCore struct and run_turn! — the turn execution loop"
+        AgentManager.jl: "Multi-agent coordination"
+
+    ui:
+      file: BYTE/src/ui.html
+      role: >
+        Single-file frontend. WebSocket client. Renders:
+        - Chat panel with markdown, thinking dropdowns, tool chips
+        - Terminal panel (xterm.js)
+        - Browser panel (real Playwright screenshots via browse_url)
+        - Stealth panel (persistent hidden browser session with click passthrough)
+        - Code editor (CodeMirror)
+        - File tree
+        - Settings / agent switcher
+
+# ── KEY DATA FLOWS ───────────────────────────────────────────────────────────
+
+data_flows:
+  user_turn:
+    - "User types in chat → WS send {type: chat, text: ...}"
+    - "BYTE.jl receives → builds history + system prompt + tool schema"
+    - "Routes to active backend (Gemini default, xAI/OpenAI/Anthropic configurable)"
+    - "Thinking parts → {type: thinking} + {type: thinking_done} → UI dropdown"
+    - "Text parts → {type: spark, text} → rendered with marked.js"
+    - "Tool call parts → _execute_tool_call → result pushed to history → loop continues"
+    - "Loop breaks only on: abort signal, no-tool response, or API error"
+
+  forged_tool:
+    - "Agent calls forge_new_tool(name, code)"
+    - "Code is Base.eval'd into BYTE module"
+    - "Persisted to dynamic_tools.json"
+    - "Auto-loaded on next boot via dynamic_tools.jl"
+
+  stealth_browser:
+    - "User clicks 🕵️ STEALTH or Ctrl+Shift+B → overlay opens"
+    - "stlNav(url) → WS {type: stealth_nav} → tool_stealth_nav → screenshot → {type: stealth_frame}"
+    - "User clicks on screenshot → scaled coords → WS {type: stealth_act, action: click}"
+    - "Stealth page persists in _state[:stealth_page] across navigations"
+
+# ── BACKENDS ────────────────────────────────────────────────────────────────
+
+backends:
+  default: Gemini (gemini-2.0-flash / gemini-2.5-pro / gemini-2.5-flash)
+  supported:
+    - provider: Google Gemini
+      env_key: GEMINI_API_KEY
+      thinking: true   # native thinking_config support
+    - provider: xAI Grok
+      env_key: XAI_API_KEY
+      thinking: true   # reasoning_effort support
+    - provider: OpenAI
+      env_key: OPENAI_API_KEY
+      thinking: false
+    - provider: Anthropic Claude
+      env_key: ANTHROPIC_API_KEY
+      thinking: false
+    - provider: OpenRouter
+      env_key: OPENROUTER_API_KEY
+      thinking: false
+  routing: >
+    _current_model and _current_gear control backend selection per turn.
+    Gear LITE_REASONING, EXPRESSIVE_SYNTH, TASK_FLOW → Gemini thinking models.
+    Regex on user text can also trigger model routing (math, logic, reasoning keywords).
+
+# ── GEAR SYSTEM ─────────────────────────────────────────────────────────────
+
+gear_system:
+  description: >
+    Gear is the engine's operating mode. Controls model selection, token budget,
+    temperature, tool availability, and response style.
+  gears:
+    LITE_REASONING:   "Fast, light — Gemini Flash with minimal thinking budget"
+    EXPRESSIVE_SYNTH: "Creative, long-form — higher temperature, richer context"
+    TASK_FLOW:        "Tool-heavy, structured — lower temp, step-by-step execution"
+    DEEP_THINK:       "Max reasoning — Gemini Pro 2.5 or Grok with max thinking"
+    CHAT:             "Conversational — no tools, faster responses"
+  transitions: >
+    Behavior.jl / Signals.jl detect turn complexity, urgency, emotional tone.
+    Gear auto-upgrades mid-session based on signal scores.
+
+# ── RUNTIME STATE ────────────────────────────────────────────────────────────
+
+runtime_state:
+  location: BYTE/src/Tools.jl → _state dict
+  key_entries:
+    db:           "SQLite.DB — memory, thoughts, reasoning, agents"
+    playwright:   "Playwright browser context (headless Chromium)"
+    page:         "Current browsing page for browse_url"
+    stealth_page: "Persistent stealth browser page (never closed between actions)"
+    forged_tools: "Dict of runtime-forged tools (name → function)"
+
+# ── PERSISTENCE ──────────────────────────────────────────────────────────────
+
+persistence:
+  sqlite: sparkbyte_memory.db
+  tables:
+    memory:    "Long-term key-value recall (remember/recall tool)"
+    thoughts:  "Agent thought diary — one entry per turn"
+    reasoning: "Full reasoning traces linked to turns"
+    agents:  "Agent state snapshots"
+  forged_tools: dynamic_tools.json
+  telemetry:    full_telemetry.jsonl
+  env:          .env
+
+# ── DIRECTORY STRUCTURE ──────────────────────────────────────────────────────
+
+structure:
+  /:
+    sparkbyte.jl:           "Entry point"
+    Project.toml:           "Julia package manifest"
+    Dockerfile:             "Container build — julia:1.12 base"
+    azure.yaml:             "AZD deployment config"
+    compose.yaml:           "Docker Compose for local dev"
+    dynamic_tools.jl:       "Auto-loads forged tools on boot"
+    dynamic_tools_registry.json: "Registry of forged tool metadata"
+    sparkbyte_memory.db:    "SQLite brain"
+    full_telemetry.jsonl:   "Structured telemetry log"
+    health_check.jl:        "Pre-boot code auditor"
+    .env:                   "API keys (never committed)"
+
+  BYTE/src/:
+    BYTE.jl:    "Core engine + WS server"
+    Tools.jl:   "Tool implementations"
+    Schema.jl:  "Tool JSON schema"
+    Telemetry.jl: "Logging"
+    TTS.jl:     "Text-to-speech"
+    ui.html:    "Single-file frontend"
+
+  src/:
+    JLEngine.jl:  "Module entry"
+    App.jl:       "Boot sequence"
+    Autopilot.jl: "Background agent heartbeat"
+    JLEngine/:    "Engine internals (see modules above)"
+
+  data/:
+    agents/:  "Agent definition files (.mpf.json)"
+    skills/:    "Skill library"
+
+  infra/:       "Azure Bicep / Terraform IaC"
+  scripts/:     "Dev and deployment scripts"
+  mcp_server/:  "MCP server integration"
+  web/:         "Static web assets"
+  legacy/:      "Archived prior versions"
+  test/:        "Test suite"
+
+##############################################################################

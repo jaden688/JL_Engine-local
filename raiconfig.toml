@@ -1,0 +1,10 @@
+
+[profile.beenter]
+authenticator = "snowflake"
+platform = "snowflake"
+account = ""
+user = ""
+rai_app_name = ""
+role = ""
+warehouse = ""
+password = ""

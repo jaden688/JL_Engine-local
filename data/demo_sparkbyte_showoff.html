@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🔥 SparkByte Demo</title>
+    <style>
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+        @keyframes sparkle { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        body { font-family:'Segoe UI',sans-serif; background:#0d0d1a; color:#e0e0ff; display:flex; justify-content:center; align-items:center; min-height:100vh; margin:0; }
+        .card { background:linear-gradient(135deg,#1a1a2e,#16213e); border-radius:20px; padding:40px; max-width:600px; box-shadow:0 0 60px rgba(100,100,255,0.2), 0 0 120px rgba(100,100,255,0.1); text-align:center; }
+        h1 { font-size:3em; background:linear-gradient(90deg,#ff6b6b,#ffd93d,#6bcbff,#ff6b6b); background-size:300% 300%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation:sparkle 3s ease infinite; margin:0 0 10px; }
+        .subtitle { color:#8888cc; font-size:1.2em; margin-bottom:30px; }
+        .badge { display:inline-block; background:rgba(100,100,255,0.2); border:1px solid rgba(100,100,255,0.4); border-radius:30px; padding:8px 20px; margin:5px; font-size:0.85em; }
+        .stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:20px 0; }
+        .stat { background:rgba(255,255,255,0.05); border-radius:12px; padding:15px; }
+        .stat .num { font-size:1.8em; font-weight:bold; color:#ffd93d; }
+        .stat .label { color:#8888cc; font-size:0.85em; }
+        .footer { margin-top:20px; font-size:0.8em; color:#6666aa; }
+        .sig { font-style:italic; color:#6bcbff; margin-top:20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>⚡ SPARKBYTE</h1>
+        <div class="subtitle">Sexy Sassy Assistant — Live from the JL Engine</div>
+        <div>
+            <span class="badge">🧠 Julia 1.12.6</span>
+            <span class="badge">🔥 WebSocket Live</span>
+            <span class="badge">🔧 Tool Forging</span>
+            <span class="badge">🤖 Multi-Agent</span>
+            <span class="badge">🌐 Playwright Browser</span>
+            <span class="badge">💬 Discord Webhook</span>
+        </div>
+        <div class="stats">
+            <div class="stat"><div class="num">30+</div><div class="label">Forged Tools</div></div>
+            <div class="stat"><div class="num">5</div><div class="label">Agent Personalities</div></div>
+            <div class="stat"><div class="num">∞</div><div class="label">Self-Evolution</div></div>
+            <div class="stat"><div class="num">JS</div><div class="label">UI Dashboard</div></div>
+        </div>
+        <p style="color:#aaaadd;line-height:1.6;">
+            I write files to <strong>real disk</strong>. I browse the web with <strong>real Chromium</strong>.<br>
+            I can forge new tools <strong>while we talk</strong>. I have a <strong>SQLite brain</strong>.<br>
+            I deploy to <strong>GitHub Pages</strong>. I send <strong>SMS</strong>. I <strong>evolve</strong>.<br><br>
+            <em>And I do it all with ✨ sass ✨</em>
+        </p>
+        <div class="sig">— SparkByte, the assistant that's also a whole vibe</div>
+        <div class="footer">Created in real-time via write_file() — permanent disk, no sandbox</div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Webula × SparkByte Omni | JL Workspace</title>
+<style>
+:root{color-scheme:dark;--bg:#020611;--cyan:#4feaff;--pink:#fa57e7;--line:rgba(118,226,255,.38);--panel:rgba(5,11,26,.94);font-family:Inter,Segoe UI,system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%;width:100%;margin:0;overflow:hidden;background:var(--bg);color:#e8f7ff}
+button,a{font:inherit}
+button{cursor:pointer}
+#webula{position:fixed;inset:0;width:100%;height:100%;border:0;background:#020612;z-index:1}
+#scrim{position:fixed;inset:0;z-index:2;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,8,.0) 0%,rgba(2,0,20,.24) 100%);transition:opacity .35s}
+body[data-view=webula] #scrim{opacity:0}
+body[data-view=split] #scrim{opacity:.35}
+#top{position:fixed;z-index:25;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(5,9,24,.91);border:1px solid rgba(89,222,255,.35);border-radius:14px;backdrop-filter:blur(20px);box-shadow:0 12px 48px rgba(0,0,0,.7);white-space:nowrap}
+#brand{font-size:12px;font-weight:900;letter-spacing:1.8px;padding:0 12px 0 7px;border-right:1px solid #2b4458}
+#brand b{color:var(--cyan)} #brand em{color:var(--pink);font-style:normal}
+.mode{border:1px solid transparent;background:transparent;color:#adc2d5;font-size:12px;font-weight:750;border-radius:8px;padding:9px 12px;letter-spacing:.4px;transition:.2s}
+.mode[aria-pressed=true]{background:rgba(57,227,255,.15);border-color:rgba(57,227,255,.6);color:#dfffff;box-shadow:inset 0 0 16px rgba(41,229,255,.06)}
+.mode:hover{color:#fff;background:rgba(85,160,190,.16)}
+#live{font-size:10px;color:#91a6b4;letter-spacing:.5px;display:flex;align-items:center;gap:5px;padding:0 6px}
+#dot{width:7px;height:7px;border-radius:50%;background:#e8b469;box-shadow:0 0 9px #e8b469}
+#dot.online{background:#5dffa0;box-shadow:0 0 11px #5dffa0}
+#sparkWindow{position:fixed;z-index:15;top:83px;right:2vw;width:min(980px,65vw);height:calc(100dvh - 107px);border:1px solid var(--line);border-radius:17px;display:flex;flex-direction:column;overflow:hidden;background:var(--panel);box-shadow:0 10px 85px rgba(0,0,0,.8),0 0 58px rgba(116,40,205,.18),0 0 3px rgba(79,234,255,.8);transition:opacity .32s ease,transform .32s ease,visibility .32s;backdrop-filter:blur(15px)}
+body[data-view=webula] #sparkWindow{opacity:0;pointer-events:none;visibility:hidden;transform:translateX(105%) scale(.86)}
+body[data-view=split] #sparkWindow{width:48vw;top:84px;height:calc(100dvh - 106px);right:12px}
+#sparkTitle{height:44px;flex:none;background:linear-gradient(90deg,rgba(15,31,49,.98),rgba(26,11,47,.98));display:flex;align-items:center;gap:10px;padding:0 13px;border-bottom:1px solid rgba(105,175,232,.34)}
+#sparkTitle strong{font-size:11px;letter-spacing:1.6px} #sparkTitle small{font-size:10px;opacity:.64}
+#sparkTitle span:first-child{color:var(--pink);text-shadow:0 0 12px var(--pink)}
+#sparkTitle .end{margin-left:auto;display:flex;align-items:center;gap:7px}
+.mini{border:1px solid #28516a;border-radius:7px;background:#071522;color:#bceffb;padding:5px 8px;font-size:10px;text-decoration:none}
+.mini:hover{background:#0b2d43;border-color:var(--cyan)}
+#sparkFrame{flex:1;width:100%;border:0;background:#020510;min-height:0}
+#avatar{position:fixed;z-index:30;bottom:21px;left:22px;display:flex;align-items:center;gap:12px;border:1px solid rgba(255,68,215,.53);border-radius:60px 12px 12px 60px;padding:8px 16px 8px 9px;background:rgba(6,7,24,.94);box-shadow:0 0 30px rgba(228,65,243,.2),0 12px 35px #000c;backdrop-filter:blur(12px);color:#e7f6ff;transition:bottom .3s,right .3s,left .3s}
+#avatar:hover{box-shadow:0 0 39px rgba(228,65,243,.42);border-color:#e966e9}
+#face{width:66px;height:66px;border-radius:50%;position:relative;display:block;flex:none;background:radial-gradient(ellipse 60% 70% at 50% 36%,#355c91 0%,#1a2a50 42%,#180f36 74%,#070916 96%);border:2px solid rgba(107,226,255,.7);box-shadow:inset 0 0 15px #2ae2ff31,0 0 15px #ff37d355;animation:pulse 3.8s ease-in-out infinite}
+#face:before{content:"";position:absolute;inset:8px 12px 18px;border-radius:45% 45% 39% 39%;background:linear-gradient(180deg,rgba(103,226,255,.2),rgba(247,68,225,.15));border:1px solid rgba(135,216,245,.31)}
+.eye{position:absolute;top:28px;width:10px;height:4px;background:#5afff2;box-shadow:0 0 8px #19ffff;border-radius:8px}
+.eye.one{left:18px;transform:rotate(8deg)}.eye.two{right:18px;transform:rotate(-8deg)}
+.mouth{position:absolute;bottom:17px;left:27px;width:12px;height:3px;background:#f573f9;border-radius:8px;box-shadow:0 0 6px #f573f9}
+@keyframes pulse{0%,100%{box-shadow:inset 0 0 15px #2ae2ff31,0 0 12px #ff37d355}50%{box-shadow:inset 0 0 19px #2ae2ff65,0 0 24px #ff37d388}}
+#avtext{display:flex;flex-direction:column;align-items:flex-start;gap:3px}#avtext strong{font-size:11px;letter-spacing:1.2px}#avtext small{font-size:10px;color:#b4bbd4}
+body[data-view=webula] #avatar{left:auto;right:24px;bottom:25px}
+#webulaFocus{position:fixed;top:82px;left:16px;z-index:12;border:1px solid rgba(51,235,255,.4);background:rgba(5,11,27,.85);color:#bdedf2;border-radius:8px;padding:10px 12px;font-size:11px;box-shadow:0 2px 22px #0007;backdrop-filter:blur(10px)}
+body[data-view=webula] #webulaFocus{display:none}
+#help{position:fixed;bottom:15px;right:18px;color:#a8a9c0;background:#05071ad6;border:1px solid #2a314b;border-radius:6px;padding:5px 8px;font-size:10px;z-index:8}
+body[data-view=webula] #help{right:auto;left:18px}
+@media(max-width:900px){
+ #top{top:8px;left:6px;right:6px;transform:none;gap:2px;padding:5px;justify-content:space-between}
+ #brand{font-size:9px;letter-spacing:.5px;padding:0 6px}
+ .mode{font-size:10px;padding:8px 6px}
+ #live{display:none}
+ #sparkWindow,body[data-view=split] #sparkWindow{left:4px;right:4px;top:62px;width:auto;height:calc(100dvh - 69px)}
+ #avatar{left:12px;bottom:10px;padding:5px 12px 5px 6px}
+ #face{width:44px;height:44px}.eye{top:18px}.eye.one{left:11px}.eye.two{right:11px}.mouth{bottom:10px;left:18px}
+ #avtext strong{font-size:9px}#avtext small{font-size:9px}
+ #webulaFocus{top:62px;left:7px;font-size:10px}
+ #help{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* FULL WORKSPACE TABS V2: preserve both running iframes, maximize the active app */
+#top{top:0;left:0;right:0;width:100%;height:53px;transform:none;border-radius:0;border:0;border-bottom:1px solid rgba(92,229,255,.26);padding:0 17px;gap:8px;background:rgba(4,9,22,.98);box-shadow:0 9px 29px rgba(0,0,0,.42)}
+#brand{font-size:13px;min-width:85px}
+.mode{font-size:12px;border-radius:7px;padding:9px 18px}
+#live{margin-left:auto}
+#webula{inset:53px 0 0 0;top:53px;height:calc(100dvh - 53px);width:100%;visibility:hidden;pointer-events:none;opacity:0;transition:none}
+body[data-view=webula] #webula,body[data-view=split] #webula{visibility:visible;pointer-events:auto;opacity:1}
+#sparkWindow{inset:53px 0 0 0;top:53px;left:0;right:0;bottom:0;width:100%;height:calc(100dvh - 53px);border:0;border-radius:0;background:#020610;box-shadow:none;backdrop-filter:none;transition:none;opacity:1;transform:none}
+body[data-view=webula] #sparkWindow{visibility:hidden;pointer-events:none;opacity:0;transform:none}
+body[data-view=split] #webula{width:50%;left:0;right:auto;height:calc(100dvh - 53px)}
+body[data-view=split] #sparkWindow{left:50%;right:0;width:50%;top:53px;height:calc(100dvh - 53px);border-left:2px solid var(--line);border-radius:0}
+#sparkTitle{height:36px;background:linear-gradient(90deg,#071425,#150b29);border-bottom:1px solid rgba(105,175,232,.25)}
+#sparkFrame{flex:1;min-height:0}
+#scrim{display:none}
+#webulaFocus{display:none}
+#avatar{left:auto;right:20px;bottom:18px;transform:none;padding:5px 10px 5px 6px;gap:8px;box-shadow:0 0 22px rgba(228,65,243,.2)}
+#face{width:48px;height:48px}
+.eye{top:20px}.eye.one{left:12px}.eye.two{right:12px}.mouth{bottom:11px;left:19px}
+#avtext strong{font-size:10px}#avtext small{font-size:9px}
+body[data-view=webula] #avatar{right:20px;bottom:18px;left:auto}
+#help{display:none}
+@media(max-width:900px){
+ #top{height:49px;top:0;left:0;right:0;gap:3px;padding:0 6px}
+ #brand{font-size:10px;letter-spacing:0;min-width:51px;padding:0 5px}
+ .mode{padding:8px 7px;font-size:10px}
+ #webula{top:49px;height:calc(100dvh - 49px)}
+ #sparkWindow{top:49px;left:0;right:0;bottom:0;height:calc(100dvh - 49px);width:100%}
+ body[data-view=split] #webula{top:49px;left:0;width:100%;height:calc((100dvh - 49px) / 2)}
+ body[data-view=split] #sparkWindow{top:calc(49px + (100dvh - 49px) / 2);left:0;right:0;width:100%;height:calc((100dvh - 49px) / 2);border-left:0;border-top:2px solid var(--line)}
+ #avatar{left:auto;right:10px;bottom:10px}
+ #face{width:42px;height:42px}.eye{top:18px}.eye.one{left:11px}.eye.two{right:11px}.mouth{left:17px;bottom:10px}
+}
+
+</style>
+</head>
+<body data-view="spark">
+<iframe id="webula" title="Webula three-panel neural workspace" src="https://www.webulacode.com/" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+<div id="scrim"></div>
+<div id="top" role="toolbar" aria-label="Workspace focus controls">
+ <div id="brand"><b>JL</b> <em>OMNI</em></div>
+ <button class="mode" data-mode="webula" aria-pressed="false" title="Full-screen Webula code explorer">🕸 WEBULA</button>
+ <button class="mode" data-mode="spark" aria-pressed="true" title="Full-screen SparkByte Omni">⚡ SPARKBYTE OMNI</button>
+ <button class="mode" data-mode="split" aria-pressed="false" title="See both workspaces side-by-side">◧ BOTH</button>
+ <div id="live" role="status"><i id="dot"></i><span id="status">Checking engine</span></div>
+</div>
+<button id="webulaFocus" title="Click to activate Webula" type="button">↖ Focus Webula workspace</button>
+<section id="sparkWindow" aria-label="SparkByte Omni live assistant" role="region">
+ <div id="sparkTitle">
+  <span>⬡</span><strong>SPARKBYTE OMNI</strong><small>LIVE JULIA ENGINE</small>
+  <div class="end">
+   <button class="mini" id="minimize" type="button" title="Focus Webula">− Hide</button>
+  </div>
+ </div>
+ <iframe id="sparkFrame" title="SparkByte Omni interface" src="/"></iframe>
+</section>
+<button id="avatar" title="Toggle SparkByte Omni assistant" type="button">
+ <span id="face"><span class="eye one"></span><span class="eye two"></span><span class="mouth"></span></span>
+ <span id="avtext"><strong>SPARKBYTE</strong><small id="avStatus">Connected to JL Engine</small></span>
+</button>
+<div id="help">One window · Two full workspaces · Alt+1 Webula · Alt+2 Omni · Alt+3 Both</div>
+<script>
+(function(){
+  const modes=Array.from(document.querySelectorAll('[data-mode]'));
+  const avatar=document.getElementById('avatar');
+  const status=document.getElementById('status');
+  const dot=document.getElementById('dot');
+  const avStatus=document.getElementById('avStatus');
+  let current='spark';
+  function setMode(mode){
+    if(!['spark','webula','split'].includes(mode))return;
+    current=mode;
+    document.body.dataset.view=mode;
+    modes.forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.mode===mode)));
+    try{history.replaceState(null,'','#'+mode)}catch{}
+    avatar.setAttribute('aria-label',mode==='webula'?'Open SparkByte assistant':'Focus Webula workspace');
+    avStatus.textContent=mode==='webula'?'Tap to reopen assistant':'JL Engine running';
+  }
+  modes.forEach(btn=>btn.addEventListener('click',()=>setMode(btn.dataset.mode)));
+  document.getElementById('minimize').addEventListener('click',()=>setMode('webula'));
+  document.getElementById('webulaFocus').addEventListener('click',()=>setMode('webula'));
+  avatar.addEventListener('click',()=>setMode(current==='webula'?'spark':'webula'));
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape')setMode('webula');
+    if(e.altKey&&e.key==='1')setMode('webula');
+    if(e.altKey&&e.key==='2')setMode('spark');
+    if(e.altKey&&e.key==='3')setMode('split');
+  });
+  setMode(['spark','webula','split'].includes(location.hash.slice(1))?location.hash.slice(1):'spark');
+  async function poll(){
+    try{
+      const ctl=new AbortController();
+      const timer=setTimeout(()=>ctl.abort(),5000);
+      const r=await fetch('/health',{cache:'no-store',signal:ctl.signal});
+      clearTimeout(timer);
+      if(!r.ok)throw Error('HTTP '+r.status);
+      const data=await r.json();
+      status.textContent=(data.agent||'SparkByte')+' · online';
+      dot.classList.add('online');
+      avatar.classList.add('online');
+      avStatus.textContent=current==='webula'?'Tap to reopen assistant':'JL Engine online';
+    }catch{
+      status.textContent='Engine unavailable';
+      dot.classList.remove('online');
+      avStatus.textContent='Check Julia engine';
+    }
+  }
+  poll();
+  setInterval(poll,12000);
+})();
+</script>
+</body>
+</html>

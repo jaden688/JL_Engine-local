@@ -1,6 +1,0 @@
-{
-  "name": "my-computer",
-  "description": "Local machine host adapter using JL Platform core.",
-  "privacy_mode": "local",
-  "tools": ["local_action"]
-}

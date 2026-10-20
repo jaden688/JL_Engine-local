@@ -1,0 +1,95 @@
+{
+  "prompt": "unseen vision",
+  "seed": 2705056736553384174,
+  "width": 72,
+  "height": 72,
+  "steps": 54,
+  "tuning": {
+    "energy": 1.05,
+    "delay_gain": 0.82,
+    "structure_gain": 1.65,
+    "spectral_tilt": -0.12,
+    "ring_scale": 0.84
+  },
+  "layers": [
+    "R",
+    "G",
+    "B",
+    "D"
+  ],
+  "delay_role": "arrival-order, damping, and phase modulation",
+  "layout": "hub-and-ring splash garden",
+  "modules": [
+    "core",
+    "style",
+    "detail",
+    "lighting"
+  ],
+  "sources": [
+    {
+      "token": "unseen vision",
+      "module": "core",
+      "x": 36,
+      "y": 36,
+      "radius": 8,
+      "period": 9,
+      "phase": 0,
+      "strength": 1.47,
+      "r_bias": 0.9068,
+      "g_bias": 0.8752,
+      "b_bias": 1.0132,
+      "delay_bias": 1.1
+    },
+    {
+      "token": "unseen",
+      "module": "style",
+      "x": 49,
+      "y": 36,
+      "radius": 9,
+      "period": 7,
+      "phase": 4,
+      "strength": 1.433764705882353,
+      "r_bias": 0.3430117647058824,
+      "g_bias": 0.24687058823529412,
+      "b_bias": 0.2326745098039216,
+      "delay_bias": 0.5911764705882353
+    },
+    {
+      "token": "vision",
+      "module": "detail",
+      "x": 18,
+      "y": 36,
+      "radius": 5,
+      "period": 13,
+      "phase": 1,
+      "strength": 0.9081470588235294,
+      "r_bias": 0.4434039215686275,
+      "g_bias": 0.37863529411764707,
+      "b_bias": 0.8256156862745099,
+      "delay_bias": 1.0747058823529412
+    }
+  ],
+  "output_files": {
+    "rgb": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock.png",
+    "delay": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-delay.png",
+    "red": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-red.png",
+    "green": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-green.png",
+    "blue": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-blue.png",
+    "source_map": "data\\splash_garden_bench_demo\\unseen-vision-structure-lock-sources.png"
+  },
+  "amplitude_stats": {
+    "r_max_abs": 4.935877738187879,
+    "g_max_abs": 4.810723190637333,
+    "b_max_abs": 6.303359929165038,
+    "d_max_abs": 9.458128808870248
+  },
+  "pixel_stats": {
+    "brightness_mean": 0.4872874304042449,
+    "delay_mean": 0.5547552045509562,
+    "red_mean": 0.4858561788913096,
+    "green_mean": 0.4832070019365771,
+    "blue_mean": 0.4927991103848947,
+    "spectral_split": 0.03277656741709029
+  },
+  "source_count": 3
+}

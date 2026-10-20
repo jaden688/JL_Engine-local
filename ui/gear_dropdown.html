@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SparkByte Gear Selector</title>
+  <style>
+    body {font-family:Arial,Helvetica,sans-serif; padding:1rem;}
+    select {font-size:1rem; padding:.3rem;}
+  </style>
+</head>
+<body>
+  <label for="gearSelect">Choose a SparkByte gear:</label>
+  <select id="gearSelect">
+    <option value="LITE_REASONING">Fast (LITE_REASONING)</option>
+    <option value="EXPRESSIVE_SYNTH">Story (EXPRESSIVE_SYNTH)</option>
+    <option value="TASK_FLOW">Pipeline (TASK_FLOW)</option>
+    <option value="HUMANIZED_EXPLANATION">Plain English (HUMANIZED_EXPLANATION)</option>
+  </select>
+
+  <script>
+    // This assumes a global function `sparkbyteSend` that forwards a chat message to the engine.
+    document.getElementById('gearSelect').addEventListener('change', function(e) {
+      const cmd = `/gear ${e.target.value}`;
+      // Send the command to the engine – replace with your actual messaging hook.
+      if (typeof sparkbyteSend === 'function') {
+        sparkbyteSend({type:'chat', text: cmd});
+      } else {
+        console.warn('sparkbyteSend not defined – you need to wire this to your UI layer.');
+      }
+    });
+  </script>
+</body>
+</html>

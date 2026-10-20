@@ -1,0 +1,131 @@
+{
+  "prompt": "THE SPLASH GARDEN feel the ripple",
+  "seed": 16653801346760390136,
+  "width": 96,
+  "height": 96,
+  "steps": 72,
+  "layers": [
+    "R",
+    "G",
+    "B",
+    "D"
+  ],
+  "delay_role": "arrival-order, damping, and phase modulation",
+  "layout": "hub-and-ring splash garden",
+  "modules": [
+    "core",
+    "style",
+    "detail",
+    "lighting"
+  ],
+  "sources": [
+    {
+      "token": "THE SPLASH GARDEN feel the ripple",
+      "module": "core",
+      "x": 48,
+      "y": 48,
+      "radius": 10,
+      "period": 9,
+      "phase": 0,
+      "strength": 1.4,
+      "r_bias": 0.92,
+      "g_bias": 0.88,
+      "b_bias": 1.0,
+      "delay_bias": 1.1
+    },
+    {
+      "token": "the",
+      "module": "style",
+      "x": 69,
+      "y": 48,
+      "radius": 6,
+      "period": 14,
+      "phase": 0,
+      "strength": 0.607843137254902,
+      "r_bias": 0.7239215686274509,
+      "g_bias": 0.5952941176470589,
+      "b_bias": 0.7803921568627452,
+      "delay_bias": 1.2511764705882353
+    },
+    {
+      "token": "splash",
+      "module": "detail",
+      "x": 61,
+      "y": 71,
+      "radius": 10,
+      "period": 12,
+      "phase": 0,
+      "strength": 1.3474509803921568,
+      "r_bias": 0.6643137254901961,
+      "g_bias": 0.5545098039215686,
+      "b_bias": 0.30980392156862746,
+      "delay_bias": 0.7464705882352941
+    },
+    {
+      "token": "garden",
+      "module": "lighting",
+      "x": 32,
+      "y": 76,
+      "radius": 9,
+      "period": 14,
+      "phase": 1,
+      "strength": 0.6619607843137255,
+      "r_bias": 0.5576470588235294,
+      "g_bias": 0.5858823529411765,
+      "b_bias": 0.44470588235294123,
+      "delay_bias": 1.0535294117647058
+    },
+    {
+      "token": "feel",
+      "module": "core",
+      "x": 27,
+      "y": 48,
+      "radius": 9,
+      "period": 13,
+      "phase": 3,
+      "strength": 1.2888235294117647,
+      "r_bias": 0.44470588235294123,
+      "g_bias": 0.6799999999999999,
+      "b_bias": 0.4415686274509804,
+      "delay_bias": 1.0005882352941178
+    },
+    {
+      "token": "the",
+      "module": "style",
+      "x": 35,
+      "y": 25,
+      "radius": 8,
+      "period": 7,
+      "phase": 0,
+      "strength": 0.7025490196078431,
+      "r_bias": 0.6768627450980392,
+      "g_bias": 0.4886274509803922,
+      "b_bias": 0.5733333333333334,
+      "delay_bias": 0.9088235294117647
+    },
+    {
+      "token": "ripple",
+      "module": "detail",
+      "x": 64,
+      "y": 20,
+      "radius": 10,
+      "period": 11,
+      "phase": 4,
+      "strength": 0.6574509803921569,
+      "r_bias": 0.5733333333333334,
+      "g_bias": 0.48235294117647065,
+      "b_bias": 0.2847058823529412,
+      "delay_bias": 1.3041176470588236
+    }
+  ],
+  "output_files": {
+    "rgb": "data\\splash_garden_demo.ppm",
+    "delay": "data\\splash_garden_demo_delay.pgm"
+  },
+  "amplitude_stats": {
+    "r_max_abs": 3.0341666673292678,
+    "g_max_abs": 2.8401982535146333,
+    "b_max_abs": 4.169259996080556,
+    "d_max_abs": 13.858413834672856
+  }
+}

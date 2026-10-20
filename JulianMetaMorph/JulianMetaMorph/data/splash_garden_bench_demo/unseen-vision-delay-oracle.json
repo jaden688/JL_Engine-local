@@ -1,0 +1,95 @@
+{
+  "prompt": "unseen vision",
+  "seed": 14475762191110275825,
+  "width": 72,
+  "height": 72,
+  "steps": 58,
+  "tuning": {
+    "energy": 0.94,
+    "delay_gain": 1.8,
+    "structure_gain": 0.92,
+    "spectral_tilt": 0.18,
+    "ring_scale": 0.96
+  },
+  "layers": [
+    "R",
+    "G",
+    "B",
+    "D"
+  ],
+  "delay_role": "arrival-order, damping, and phase modulation",
+  "layout": "hub-and-ring splash garden",
+  "modules": [
+    "core",
+    "style",
+    "detail",
+    "lighting"
+  ],
+  "sources": [
+    {
+      "token": "unseen vision",
+      "module": "core",
+      "x": 36,
+      "y": 36,
+      "radius": 8,
+      "period": 9,
+      "phase": 0,
+      "strength": 1.3159999999999998,
+      "r_bias": 0.9398000000000001,
+      "g_bias": 0.8728,
+      "b_bias": 0.9802,
+      "delay_bias": 1.1
+    },
+    {
+      "token": "unseen",
+      "module": "style",
+      "x": 51,
+      "y": 36,
+      "radius": 9,
+      "period": 7,
+      "phase": 4,
+      "strength": 1.2835607843137253,
+      "r_bias": 0.4090117647058824,
+      "g_bias": 0.24207058823529412,
+      "b_bias": 0.1666745098039216,
+      "delay_bias": 0.5911764705882353
+    },
+    {
+      "token": "vision",
+      "module": "detail",
+      "x": 16,
+      "y": 36,
+      "radius": 5,
+      "period": 13,
+      "phase": 1,
+      "strength": 0.8130078431372548,
+      "r_bias": 0.5094039215686275,
+      "g_bias": 0.37383529411764704,
+      "b_bias": 0.7596156862745099,
+      "delay_bias": 1.0747058823529412
+    }
+  ],
+  "output_files": {
+    "rgb": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle.png",
+    "delay": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-delay.png",
+    "red": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-red.png",
+    "green": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-green.png",
+    "blue": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-blue.png",
+    "source_map": "data\\splash_garden_bench_demo\\unseen-vision-delay-oracle-sources.png"
+  },
+  "amplitude_stats": {
+    "r_max_abs": 2.809326184494167,
+    "g_max_abs": 2.5499917642991403,
+    "b_max_abs": 5.462499482419785,
+    "d_max_abs": 17.62330743020729
+  },
+  "pixel_stats": {
+    "brightness_mean": 0.49557108851769666,
+    "delay_mean": 0.575714112805616,
+    "red_mean": 0.5150568869523118,
+    "green_mean": 0.5012254901960784,
+    "blue_mean": 0.4704308884047446,
+    "spectral_split": 0.054900447833454366
+  },
+  "source_count": 3
+}

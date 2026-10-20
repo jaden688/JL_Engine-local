@@ -1,0 +1,110 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "RIPPLE SCOPE LIVE" [level=1] [ref=e5]
+      - paragraph [ref=e6]: Steer the Splash Garden in real time, inspect the hidden delay layer, and watch unseen vision stop pretending it is just a prompt.
+    - generic [ref=e9]: Checking service...
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - heading "FIELD INPUT" [level=2] [ref=e14]
+          - generic [ref=e15]: Live single render and bench runner
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - generic [ref=e18]: Prompt
+            - textbox "Prompt" [ref=e19]: unseen vision radar, emotional weather, hidden causality, ripples in the glass
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - generic [ref=e22]: Width
+              - spinbutton "Width" [ref=e23]: "96"
+            - generic [ref=e24]:
+              - generic [ref=e25]: Height
+              - spinbutton "Height" [ref=e26]: "96"
+            - generic [ref=e27]:
+              - generic [ref=e28]: Steps
+              - spinbutton "Steps" [ref=e29]: "72"
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: Energy
+              - spinbutton "Energy" [ref=e33]: "1.00"
+            - generic [ref=e34]:
+              - generic [ref=e35]: Delay Gain
+              - spinbutton "Delay Gain" [ref=e36]: "1.00"
+            - generic [ref=e37]:
+              - generic [ref=e38]: Structure Gain
+              - spinbutton "Structure Gain" [ref=e39]: "1.00"
+            - generic [ref=e40]:
+              - generic [ref=e41]: Spectral Tilt
+              - spinbutton "Spectral Tilt" [ref=e42]: "0.00"
+            - generic [ref=e43]:
+              - generic [ref=e44]: Ring Scale
+              - spinbutton "Ring Scale" [ref=e45]: "1.00"
+          - generic [ref=e46]:
+            - button "Pulse Render" [ref=e47] [cursor=pointer]
+            - button "Run Bench" [ref=e48] [cursor=pointer]
+            - button "Load Weird Sample" [ref=e49] [cursor=pointer]
+          - generic [ref=e50]:
+            - strong [ref=e51]: Working.
+            - text: Pulsing the field and baking fresh RGB plus delay artifacts.
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - heading "BENCH HIGHLIGHTS" [level=2] [ref=e54]
+          - generic [ref=e55]: Delay, structure, spectral drift
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - generic [ref=e59]: Most Delay-Driven
+              - strong [ref=e60]: Not run yet
+            - generic [ref=e61]:
+              - generic [ref=e62]: Most Structural
+              - strong [ref=e63]: Not run yet
+            - generic [ref=e64]:
+              - generic [ref=e65]: Most Spectral
+              - strong [ref=e66]: Not run yet
+          - generic [ref=e68]: Bench cases will land here after you run them.
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - heading "LIVE FIELD" [level=2] [ref=e72]
+          - generic [ref=e73]: No render yet
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - figure "RGB field" [ref=e76]:
+              - img "RGB field output" [ref=e77]
+              - generic [ref=e78]: RGB field
+            - figure "Delay field" [ref=e79]:
+              - img "Delay field output" [ref=e80]
+              - generic [ref=e81]: Delay field
+          - generic [ref=e82]:
+            - figure "Source map" [ref=e83]:
+              - img "Source map" [ref=e84]
+              - generic [ref=e85]: Source map
+            - figure "Red channel" [ref=e86]:
+              - img "Red channel" [ref=e87]
+              - generic [ref=e88]: Red channel
+            - figure "Green channel" [ref=e89]:
+              - img "Green channel" [ref=e90]
+              - generic [ref=e91]: Green channel
+            - figure "Blue channel" [ref=e92]:
+              - img "Blue channel" [ref=e93]
+              - generic [ref=e94]: Blue channel
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - generic [ref=e97]: Seed
+              - strong [ref=e98]: "-"
+            - generic [ref=e99]:
+              - generic [ref=e100]: Delay Mean
+              - strong [ref=e101]: "-"
+            - generic [ref=e102]:
+              - generic [ref=e103]: Spectral Split
+              - strong [ref=e104]: "-"
+            - generic [ref=e105]:
+              - generic [ref=e106]: Sources
+              - strong [ref=e107]: "-"
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - heading "BENCH REPORT" [level=2] [ref=e110]
+          - generic [ref=e111]: Embedded live gallery
+        - iframe [ref=e113]:
+          

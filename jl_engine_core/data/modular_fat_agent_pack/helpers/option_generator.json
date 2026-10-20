@@ -1,6 +1,0 @@
-{
-  "helper_id": "option_generator",
-  "type": "quick_helper",
-  "purpose": "generate lists of options quickly",
-  "max_steps": 2
-}
