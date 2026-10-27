@@ -9,7 +9,7 @@ SQLite. Not a chatbot wrapper.
 
 | Action | Command |
 |---|---|
-| Boot (dev) | `julia sparkbyte.jl` — self-activates `@__DIR__`; same as `julia --project=. sparkbyte.jl` |
+| Boot (dev) | `julia --project=. start.jl` |
 | UI | http://127.0.0.1:8081 |
 | A2A | http://127.0.0.1:8082 |
 | Unit tests | `julia --project=. -e 'using Pkg; Pkg.test()'` (runs `test/runtests.jl`) |
@@ -92,7 +92,7 @@ is an optional experimental integration; start it only through its current check
 
 1. `run_turn!` (in `a2a_server.jl`) is the real A2A entrypoint; `process_turn` was never a
    symbol — don't `import` it.
-2. `sparkbyte.jl`, `src/JLEngine.jl`, and `BYTE/src/Tools.jl` force
+2. `start.jl`, `src/JLEngine.jl`, and `BYTE/src/Tools.jl` force
    `JULIA_CONDAPKG_BACKEND=Null` + `JULIA_PYTHONCALL_EXE=python`. CondaPkg will not provision
    Python; Playwright and other deps must already exist in the system `python`.
 3. SQLite schema is created at boot in `src/App.jl:_open_memory_db` via
@@ -102,7 +102,7 @@ is an optional experimental integration; start it only through its current check
    `self_tree`/`self_src` and runs `DELETE FROM agents`, then re-seeds. Don't treat those
    as durable.
 5. Env vars are read lazily through functions (e.g. `_a2a_port()` in `a2a_server.jl`), so the
-   `.env` loaded in `sparkbyte.jl` takes effect; constants compiled in `Backends.jl` are read
+   `.env` loaded in `start.jl` takes effect; constants compiled in `Backends.jl` are read
    at compile time.
 6. `src/Autopilot.jl` exists and documents `SPARKBYTE_AUTOPILOT_SECONDS`, but it is **not
    `include`d anywhere** — autopilot is not wired into `app_main`. The only background loop
@@ -115,8 +115,7 @@ is an optional experimental integration; start it only through its current check
    (`MCP_ALLOW_EXTERNAL_PATHS=1` disables); non-loopback bind requires
    `MCP_BIND_ACK=I_understand_no_builtin_auth` + `MCP_AUTH_TOKEN`; `SPARKBYTE_WS` must be
    loopback unless `MCP_ALLOW_REMOTE_WS=1`.
-9. `health_check.jl` runs on every boot and writes `health_check.log`; a non-empty report is
-   informational, not a boot failure.
+9. `startup diagnostics are handled by the engine runtime.
 10. Gitignored runtime state, regenerated at boot: `*.db`, `*.jsonl`, `*.log`,
     `dynamic_tools.jl`, `dynamic_tools_registry.json`, `Manifest.toml`, `_mcp_inspect/`,
     `hunts/`, `.env` (see `.gitignore`).
