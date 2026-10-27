@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+RESOURCES="$(cd "$(dirname "$0")/../Resources" && pwd)"
+BUNDLED_ENGINE="$RESOURCES/engine"
+USER_ENGINE="$HOME/Library/Application Support/JL Engine"
+mkdir -p "$HOME/Library/Application Support"
+if [[ ! -f "$USER_ENGINE/sparkbyte.jl" ]]; then
+  mkdir -p "$USER_ENGINE"
+  /usr/bin/ditto "$BUNDLED_ENGINE" "$USER_ENGINE"
+fi
+# Keep mutable config/dependencies out of /Applications. Show setup and engine logs in Terminal.
+/usr/bin/osascript - "$USER_ENGINE" <<'APPLESCRIPT'
+on run argv
+  set enginePath to item 1 of argv
+  tell application "Terminal"
+    activate
+    do script "cd " & quoted form of enginePath & " && chmod +x packaging/macos/Launch-JLEngine.command packaging/macos/install-macos.sh sparkbyte.sh && ./packaging/macos/Launch-JLEngine.command"
+  end tell
+end run
+APPLESCRIPT
