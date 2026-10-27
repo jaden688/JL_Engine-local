@@ -648,7 +648,7 @@ run on this same engine. You are the active agent right now.
 You have full access to the project via read_file, write_file, execute_code, and run_command.
 Engine source: src/ (JL Engine behavioral modules)
 App layer: BYTE/src/ (tools, UI, telemetry, schema)
-Launcher: sparkbyte.jl
+Launcher: start.jl
 Agent definitions: data/agents/ (fat JSONs in MPF format)
 
 Use recall("self_src") to read your own source. Use recall("self_tree") to see all project files.
@@ -729,7 +729,7 @@ If something breaks after you touch one, that's on you — own it, diagnose it, 
   src/App.jl                ← Boot sequence, DB seeding, server launch
   src/JLEngine/Core.jl      ← JLEngineCore struct and run_turn! loop
   src/JLEngine/Backends.jl  ← LLM provider routing
-  sparkbyte.jl              ← Launcher
+  start.jl                  ← Canonical entrypoint
   data/agents/Agents.mpf.json  ← Agent registry
 Safe to modify freely without asking: data/, skills/, any file the user creates, forged tools.
 You are encouraged to evolve yourself. Just be honest about what you're touching.
@@ -1517,9 +1517,9 @@ function process_message(ws, raw_msg::String, history::Vector, engine)
         @async begin
             sleep(1.0)
             # Spawn a fresh server process detached from this one
-            sparkbyte_script = joinpath(dirname(dirname(@__DIR__)), "sparkbyte.jl")
+            sparkbyte_script = joinpath(dirname(dirname(@__DIR__)), "start.jl")
             if !isfile(sparkbyte_script)
-                sparkbyte_script = joinpath(dirname(@__DIR__), "sparkbyte.jl")
+                sparkbyte_script = joinpath(dirname(@__DIR__), "start.jl")
             end
             if isfile(sparkbyte_script)
                 project_dir = dirname(sparkbyte_script)
