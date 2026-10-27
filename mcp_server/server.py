@@ -67,7 +67,7 @@ def skill_context() -> str:
 # SparkByte / JLEngine
 Julia-native AI agent engine with behavioral control layer (gait/rhythm/aperture/drift).
 Root: {ROOT}
-Entry: julia sparkbyte.jl | UI: http://127.0.0.1:8081
+Entry: julia --project=. start.jl | UI: http://127.0.0.1:8081
 
 # JulianMetaMorph (joined in monorepo)
 quarry: {JUL_DB}
@@ -259,7 +259,7 @@ def run_turn(message: str) -> str:
                 return "\n".join(texts)
             return "Turn executed, but no reply was found in history."
     except urllib.error.URLError as e:
-        return f"Error connecting to JLEngine A2A server on port 8082: {e.reason}\nIs SparkByte/JLEngine running? Start it via 'julia sparkbyte.jl' to enable execution."
+        return f"Error connecting to JLEngine A2A server on port 8082: {e.reason}\nIs SparkByte/JLEngine running? Start it via 'julia --project=. start.jl' to enable execution."
     except Exception as e:
         return f"Error: {e}"
 
