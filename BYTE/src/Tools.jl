@@ -1624,38 +1624,6 @@ Parameters:
   dry_run      — if true, print result without writing (default: false)
   engine_root  — engine root override (default: project root)
 """
-function tool_card_cruncher(args)
-    card_path = string(get(args, "card_path", ""))
-    isempty(card_path) && return Dict("error" => "card_path is required")
-
-    out_path    = let v = get(args, "out_path", nothing); isnothing(v) ? nothing : string(v) end
-    dry_run     = Bool(get(args, "dry_run", false))
-    engine_root = string(get(args, "engine_root", isempty(_project_root[]) ? pwd() : _project_root[]))
-
-    cc_path = joinpath(engine_root, "card_cruncher.jl")
-    isfile(cc_path) || return Dict("error" => "card_cruncher.jl not found at: $cc_path. Make sure it lives in the engine root.")
-
-    try
-        m = Module(:CardCruncherSandbox)
-        Base.include(m, cc_path)
-        result_path = Base.invokelatest(m.crunch_card, card_path;
-                                        out_path=out_path,
-                                        engine_root=engine_root,
-                                        dry_run=dry_run)
-        agent_name = replace(basename(result_path), r"_Full\.json$" => "")
-        return Dict(
-            "status"       => "ok",
-            "output_path"  => result_path,
-            "agent_name" => agent_name,
-            "message"      => dry_run ?
-                "Dry run complete. No file written." :
-                "Character card crunched into agent! Activate with: /gear $agent_name"
-        )
-    catch e
-        return Dict("error" => string(e), "trace" => sprint(showerror, e, catch_backtrace()))
-    end
-end
-
 # ── Playwright Full Interaction ───────────────────────────────────────────────
 # Extends browse_url to support click, fill, type, submit, screenshot, wait.
 # actions: array of {type, selector, value, timeout_ms}
@@ -1867,7 +1835,6 @@ const TOOL_MAP = Dict{String, Function}(
     "remember"       => tool_remember,
     "recall"         => tool_recall,
     "metamorph"      => tool_metamorph,
-    "card_cruncher"  => tool_card_cruncher,
 )
 
 function dispatch(name::String, args; agent::String="SparkByte")
