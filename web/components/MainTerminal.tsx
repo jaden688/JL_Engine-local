@@ -8,7 +8,7 @@ interface MainTerminalProps {
 
 export default function MainTerminal({ phase }: MainTerminalProps) {
   const [typedCmd, setTypedCmd] = useState("");
-  const fullCmd = "./sparkbyte.jl";
+  const fullCmd = "julia --project=. start.jl";
 
   useEffect(() => {
     if (phase === "run") {
