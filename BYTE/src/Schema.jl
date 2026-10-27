@@ -213,18 +213,5 @@ const TOOLS_SCHEMA = [Dict("function_declarations" => [
             "required" => ["html"]
         )
     ),
-    Dict(
-        "name" => "card_cruncher",
-        "description" => "Convert a SillyTavern or CharacterTavern character card (.png or .json) into a JLEngine _Full.json agent file. Extracts name, description, personality, scenario, tags, and boot prompt from the card and maps them to the full JLEngine agent schema. The agent is written to data/agents/<Name>_Full.json and can be activated immediately with /gear <Name>. Drag-and-drop cards into the chat UI to trigger this automatically.",
-        "parameters" => Dict(
-            "type" => "OBJECT",
-            "properties" => Dict(
-                "card_path"   => Dict("type" => "STRING", "description" => "Path to the .png or .json SillyTavern character card file"),
-                "out_path"    => Dict("type" => "STRING", "description" => "Optional output path override. Default: data/agents/<Name>_Full.json"),
-                "dry_run"     => Dict("type" => "BOOLEAN", "description" => "If true, print the result without writing to disk. Default: false"),
-                "engine_root" => Dict("type" => "STRING", "description" => "Engine root directory override. Default: current project root")
-            ),
-            "required" => ["card_path"]
-        )
-    ),
+
 ])]
