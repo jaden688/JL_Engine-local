@@ -23,37 +23,55 @@ jobs:
         with:
           version: "1.11"
 
-      - name: Stage Julia runtime
+      - name: Set up bundled Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: "x64"
+
+      - name: Stage application-local Julia and Python runtimes
         shell: pwsh
         run: |
           $julia = (Get-Command julia).Source
-          $runtime = Split-Path (Split-Path $julia -Parent) -Parent
-          if (!(Test-Path $runtime)) { throw "Could not locate Julia runtime from $julia" }
+          $juliaRoot = Split-Path (Split-Path $julia -Parent) -Parent
+          if (!(Test-Path $juliaRoot)) { throw "Could not locate Julia runtime from $julia" }
           New-Item -ItemType Directory -Force packaging/windows/runtime | Out-Null
-          Copy-Item "$runtime\*" packaging/windows/runtime -Recurse -Force
+          Copy-Item "$juliaRoot\*" packaging/windows/runtime -Recurse -Force
           if (!(Test-Path "packaging/windows/runtime/bin/julia.exe")) {
             throw "Julia runtime staging failed: bin/julia.exe is missing"
           }
 
-      - name: Instantiate and smoke-test engine without a virtual environment
+          $pythonRoot = $env:pythonLocation
+          if (!$pythonRoot -or !(Test-Path "$pythonRoot\python.exe")) {
+            throw "Could not locate Python runtime from setup-python"
+          }
+          New-Item -ItemType Directory -Force packaging/windows/python | Out-Null
+          Copy-Item "$pythonRoot\*" packaging/windows/python -Recurse -Force
+          if (!(Test-Path "packaging/windows/python/python.exe")) {
+            throw "Python runtime staging failed: python.exe is missing"
+          }
+
+      - name: Instantiate and smoke-test engine in the app-local depot
         shell: pwsh
         run: |
           $env:JULIA_DEPOT_PATH = Join-Path $PWD "packaging/windows/depot"
           $env:JULIA_CONDAPKG_BACKEND = "Null"
-          $env:JULIA_PYTHONCALL_EXE = "python"
+          $env:JULIA_PYTHONCALL_EXE = Join-Path $PWD "packaging/windows/python/python.exe"
           New-Item -ItemType Directory -Force $env:JULIA_DEPOT_PATH | Out-Null
           julia --project=. -e 'using Pkg; Pkg.instantiate(); using JLEngine; println("JLEngine import smoke test passed")'
           if ($LASTEXITCODE -ne 0) { throw "Julia dependency instantiation or engine import failed" }
 
-      - name: Verify installer staging has no Python virtual environment
+      - name: Verify staging is application-local, not a virtual environment
         shell: pwsh
         run: |
-          $forbidden = @(".venv", "venv", ".conda")
-          foreach ($path in $forbidden) {
-            if (Test-Path $path) { throw "Unexpected virtual-environment directory found in repository root: $path" }
+          foreach ($path in @(".venv", "venv", ".conda")) {
+            if (Test-Path $path) { throw "Unexpected virtual-environment directory in repository root: $path" }
           }
           if (!(Test-Path "packaging/windows/depot/packages")) {
             throw "Julia package dependencies were not staged in the installer depot"
+          }
+          if (!(Test-Path "packaging/windows/python/python.exe")) {
+            throw "Bundled Python executable is missing"
           }
 
       - name: Install Inno Setup
