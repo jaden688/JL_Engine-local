@@ -1,6 +1,7 @@
 @echo off
 setlocal
-set "APP_DIR=%~dp0"
+rem This script lives under packaging\windows in the installed tree; resolve the app root.
+set "APP_DIR=%~dp0..\..\"
 set "JULIA_EXE=%APP_DIR%runtime\bin\julia.exe"
 if not exist "%JULIA_EXE%" (
   echo JL Engine runtime is missing: "%JULIA_EXE%"
