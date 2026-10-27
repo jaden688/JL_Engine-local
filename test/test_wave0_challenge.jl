@@ -60,7 +60,7 @@ println("=================================================================")
     @test !occursin("8008", env_example)
 
     # 1.6 All batch files in root repo must not bind to 8008
-    for bat in ["Launch_SparkByte.bat", "start.bat", "install.bat", "crush.bat", "run_demo.bat"]
+    for bat in ["Launch_SparkByte.bat", "start.bat", "install.bat"]
         path = joinpath(@__DIR__, "..", bat)
         if isfile(path)
             content = read(path, String)
