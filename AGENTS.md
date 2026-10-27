@@ -27,11 +27,7 @@ in-process with mock streams. `runtests.jl` also shells out to `tool_execute_cod
 
 ## Repo layout & filing rules
 
-Root is core engine code/config only. Full map + filing rules: `operators/README.md`.
-Quick: engine code → `src/JLEngine/` or `BYTE/src/`; one-off scripts → `test/manual/`;
-helpers → `scripts/`; docs/notes → `operators/notes/`; agent docs → `operators/agents/`;
-images/SVG/HTML → `assets/`; dead files → `archive/`; scratch → `tmp/`. Never hand-place
-files in `data/` or `logs/` (engine-owned runtime).
+Root is core engine code/config only. Engine code lives in `src/JLEngine/` or `BYTE/src/`; helpers live in `scripts/`; tests and manual test artifacts live under `test/`. Images/SVG/HTML belong in `assets/`; dead files belong in `archive/`; scratch belongs in `tmp/`. Never hand-place files in `data/` or `logs/` (engine-owned runtime).
 
 - `src/JLEngine.jl` is the module loader: it `include`s every `src/JLEngine/*.jl` in a
   fixed order, then `src/App.jl`. Add new engine modules to that list, not ad hoc.
@@ -69,8 +65,7 @@ behavioral vocabulary (5×4 grid, gaits, rhythm modes, aperture) is diagrammed i
 
 ## Teamwork
 
-Two independent layers. Runbook, credentials, and limits for both:
-`operators/notes/OPENCODE_TEAMWORK.md`.
+Teamwork settings live in `opencode.json` and `.omo/`; local credentials and runtime state are not committed.
 
 **1. OpenCode MCP teamwork** (what an OpenCode session gets by default). `opencode.json`
 launches two local MCP servers: `sparkbyte` (read-only tool allowlist — only the 6 names
