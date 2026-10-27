@@ -222,13 +222,6 @@ The MCP bridge includes live turn execution and Ruida laser-controller tools in 
 to database reads. `ruida_send_job` uploads without starting by default; set `auto_start`
 to `true` only when immediate physical operation is intended.
 
-### OpenCode Teamwork
-
-Optional OpenCode teamwork is configured in `opencode.json` and the agent settings. Start
-SparkByte with `julia --project=. sparkbyte.jl`, then run `opencode` from the repository
-root. Invoke the team orchestrator explicitly with `opencode --agent team-lead` when you
-want teamwork. Local credentials and runtime state should remain untracked.
-
 ---
 
 ## Agents
