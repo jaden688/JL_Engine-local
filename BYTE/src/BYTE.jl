@@ -1567,37 +1567,6 @@ function process_message(ws, raw_msg::String, history::Vector, engine)
     end
 
     # --- Card Cruncher: drag-and-drop character card from browser ---
-    if get(p, "type", "") == "card_crunch"
-        filename = string(get(p, "filename", "card.png"))
-        b64_data = string(get(p, "data", ""))
-        if isempty(b64_data)
-            _ws_send(ws, JSON.json(Dict("type"=>"tool_error", "text"=>"Card Cruncher: no file data received.")))
-            return
-        end
-        _ws_send(ws, JSON.json(Dict("type"=>"tool", "text"=>"🃏 Card received: $filename — crunching...")))
-        tmp_path = joinpath(tempdir(), filename)
-        try
-            write(tmp_path, base64decode(b64_data))
-            root = isempty(_project_root[]) ? pwd() : _project_root[]
-            result = dispatch("card_cruncher", Dict("card_path"=>tmp_path, "engine_root"=>root))
-            if haskey(result, "error")
-                _ws_send(ws, JSON.json(Dict("type"=>"tool_error",
-                    "text"=>"🃏 Card Cruncher error: $(result["error"])")))
-            else
-                pname = get(result, "agent_name", "Unknown")
-                _ws_send(ws, JSON.json(Dict("type"=>"spark",
-                    "text"=>"🃏 **$(pname)** is ready! Use **/gear $(pname)** to activate her.")))
-                # Refresh agent list so new card shows up in the dropdown
-                _handle_builder_cmd(ws, Dict("cmd"=>"list_agents"))
-            end
-        catch e
-            bt = sprint(showerror, e, catch_backtrace())
-            _ws_send(ws, JSON.json(Dict("type"=>"tool_error", "text"=>"🃏 Card Cruncher crashed: $bt")))
-        finally
-            isfile(tmp_path) && rm(tmp_path, force=true)
-        end
-        return
-    end
 
     txt       = get(p, "text",  "")
     img       = get(p, "image", nothing)
