@@ -22,9 +22,10 @@ CloseApplications=yes
 Name: "{localappdata}\JL-Engine"; Flags: uninsneveruninstall
 
 [Files]
-Source: "..\..\*"; DestDir: "{app}"; Excludes: ".git\*,.github\*,dist\*,node_modules\*,.venv\*,venv\*,__pycache__\*,packaging\windows\runtime\*,packaging\windows\depot\*,*.db,*.sqlite,*.sqlite3"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\*"; DestDir: "{app}"; Excludes: ".git\*,.github\*,dist\*,node_modules\*,.venv\*,venv\*,__pycache__\*,packaging\windows\runtime\*,packaging\windows\depot\*,packaging\windows\python\*,*.db,*.sqlite,*.sqlite3"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "runtime\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "depot\*"; DestDir: "{app}\depot"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "python\*"; DestDir: "{app}\python"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\JL Engine"; Filename: "{app}\packaging\windows\Launch-JL-Engine.cmd"; WorkingDir: "{app}"
@@ -39,3 +40,4 @@ Filename: "{app}\packaging\windows\Launch-JL-Engine.cmd"; Description: "Launch J
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\runtime"
 Type: filesandordirs; Name: "{app}\depot"
+Type: filesandordirs; Name: "{app}\python"
