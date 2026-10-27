@@ -8,10 +8,10 @@ export run_suite!
 function run_suite!(report::TestRunReport, repo_root::String; bail::Bool=false)
     suite_name = "F30: E2E Test Infrastructure & Suite Design"
 
-    # T1-F30-01: TEST_INFRA.md exists in repository root and defines 4-tier architecture
+    # T1-F30-01: TEST_INFRA.md exists in docs/testing and defines 4-tier architecture
     run_test_case!(report, suite_name, "T1-F30-01", "TEST_INFRA.md exists and defines 4-tier testing architecture", () -> begin
-        infra_file = joinpath(repo_root, "TEST_INFRA.md")
-        assert_file_exists(infra_file, "TEST_INFRA.md must exist at repository root")
+        infra_file = joinpath(repo_root, "docs", "testing", "TEST_INFRA.md")
+        assert_file_exists(infra_file, "docs/testing/TEST_INFRA.md must exist at docs/testing/")
         content = read(infra_file, String)
         assert_match("TIER 1: FEATURE COVERAGE", content, "TEST_INFRA.md must define Tier 1")
         assert_match("TIER 2: BOUNDARY & CORNER CASES", content, "TEST_INFRA.md must define Tier 2")
@@ -21,8 +21,8 @@ function run_suite!(report::TestRunReport, repo_root::String; bail::Bool=false)
 
     # T1-F30-02: TEST_INFRA.md specifies all 30 features (F01 through F30)
     run_test_case!(report, suite_name, "T1-F30-02", "TEST_INFRA.md documents all 30 features (F01 through F30)", () -> begin
-        infra_file = joinpath(repo_root, "TEST_INFRA.md")
-        assert_file_exists(infra_file, "TEST_INFRA.md must exist")
+        infra_file = joinpath(repo_root, "docs", "testing", "TEST_INFRA.md")
+        assert_file_exists(infra_file, "docs/testing/TEST_INFRA.md must exist")
         content = read(infra_file, String)
         for i in 1:30
             fid = string("F", lpad(i, 2, "0"))
