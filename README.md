@@ -280,7 +280,7 @@ $env:XAI_API_KEY      = "..."
 
 ```
 JL_Engine-local/
-├── sparkbyte.jl              # Entry point
+├── start.jl                  # Canonical Julia entrypoint
 ├── compose.yaml              # Docker compose
 ├── Dockerfile                # Multi-stage build
 ├── requirements.docker.txt   # Python deps (Playwright, Pillow, requests)
