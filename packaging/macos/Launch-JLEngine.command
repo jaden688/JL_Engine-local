@@ -6,4 +6,4 @@ if [[ ! -f .install-complete ]]; then
   ./packaging/macos/install-macos.sh
   touch .install-complete
 fi
-exec ./sparkbyte.sh
+exec julia --project=. start.jl
