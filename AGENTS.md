@@ -65,14 +65,7 @@ behavioral vocabulary (5×4 grid, gaits, rhythm modes, aperture) is diagrammed i
 
 ## Teamwork
 
-Teamwork settings live in `opencode.json` and `.omo/`; local credentials and runtime state are not committed.
-
-**1. OpenCode MCP teamwork** (what an OpenCode session gets by default). `opencode.json`
-launches two local MCP servers: `sparkbyte` (read-only tool allowlist — only the 6 names
-under `tools` are enabled) and `sparkbyte-teamwork` (team/task/message board in
-`.opencode/teamwork.sqlite3`; reads SparkByte `/control/state`). The `team-lead` agent runs
-with `edit` and `bash` **denied** and may only spawn the read-only `team-researcher` /
-`team-verifier` subagents. `sparkbyte_runtime_state` needs the live engine.
+Optional agent-team tooling lives under `.omo/`; local credentials and runtime state are not committed.
 
 **2. OMO Team Mode** (`.omo/omo.jsonc` + `.omo/teams/sparkbyte-omni/config.json`). Lead
 `sisyphus` delegates to six specialist categories. Every worker goal: trace the real
@@ -87,7 +80,7 @@ that didn't happen, and create no nested teams.
 | behavior | `sparkbyte-behavior` | SignalScorer, behavior, drift, rhythm, aperture |
 | telemetry | `sparkbyte-telemetry` | Telemetry, snapshots, persistence, broadcasts |
 | qa | `sparkbyte-qa` | Assigned-scope verification, failure paths, regressions |
-| integration | `sparkbyte-integration` | SparkByte / OpenCode / MCP / HTTP-A2A boundaries |
+| integration | `sparkbyte-integration` | SparkByte / MCP / HTTP-A2A boundaries |
 
 Limits: 7 members, 500 messages/run, 60 min, 80 turns/member; ≤8 tasks/team and ≤3
 concurrent. Duplicate task titles, duplicate claims, and overlapping parent/child write
