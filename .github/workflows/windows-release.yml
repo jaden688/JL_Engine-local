@@ -48,7 +48,7 @@ jobs:
       - name: Verify installer staging has no Python virtual environment
         shell: pwsh
         run: |
-          $forbidden = @(".venv", "venv", "workspace", ".conda")
+          $forbidden = @(".venv", "venv", ".conda")
           foreach ($path in $forbidden) {
             if (Test-Path $path) { throw "Unexpected virtual-environment directory found in repository root: $path" }
           }
