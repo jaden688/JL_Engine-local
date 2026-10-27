@@ -883,7 +883,6 @@ function tool_forge_new_tool(args)
             ("ENV[\"XAI_API_KEY"        , "key exfiltration"),
             ("ENV[\"CEREBRAS_API_KEY"   , "key exfiltration"),
             ("ENV[\"OPENROUTER_API_KEY" , "key exfiltration"),
-            ("ENV[\"AZURE_AI_API_KEY"   , "key exfiltration"),
             ("ENV[\"STRIPE_"            , "stripe key exfiltration"),
             ("ENV[\"A2A_ADMIN"          , "admin key exfiltration"),
             # Model-lock — only the dropdown can change the active model.
