@@ -1,0 +1,21 @@
+@echo off
+setlocal
+set "APP_DIR=%~dp0"
+set "JULIA_EXE=%APP_DIR%runtime\bin\julia.exe"
+if not exist "%JULIA_EXE%" (
+  echo JL Engine runtime is missing: "%JULIA_EXE%"
+  echo Reinstall JL Engine or contact support with this message.
+  pause
+  exit /b 1
+)
+cd /d "%APP_DIR%"
+set "JULIA_CONDAPKG_BACKEND=Null"
+set "JULIA_PYTHONCALL_EXE=python"
+"%JULIA_EXE%" "%APP_DIR%sparkbyte.jl"
+set "EXIT_CODE=%ERRORLEVEL%"
+if not "%EXIT_CODE%"=="0" (
+  echo.
+  echo JL Engine stopped with exit code %EXIT_CODE%.
+  pause
+)
+exit /b %EXIT_CODE%
