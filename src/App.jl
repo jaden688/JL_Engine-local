@@ -176,7 +176,7 @@ function _seed_self_context!(db::SQLite.DB, root::String)
         (string(Dates.now()), "self_tree", "project_files", join(tree, "\n")))
 
     key_files = [
-        "sparkbyte.jl",
+        "start.jl",
         "BYTE/src/BYTE.jl",
         "BYTE/src/Tools.jl",
         "BYTE/src/Schema.jl",
