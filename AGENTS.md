@@ -93,7 +93,7 @@ Limits: 7 members, 500 messages/run, 60 min, 80 turns/member; ≤8 tasks/team an
 concurrent. Duplicate task titles, duplicate claims, and overlapping parent/child write
 paths are rejected; `team_fail` releases a worker's claims. Routing is DeepSeek V3.2 for
 the lead + architect/runtime/integration, Qwen3.5 Flash for behavior/telemetry/qa. OMO
-needs its V1 launcher (`operators/scripts/start-opencode-omo.ps1`) — see the runbook.
+is an optional experimental integration; start it only through its current checked-in configuration.
 
 ## Gotchas
 
