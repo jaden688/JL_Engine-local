@@ -11,6 +11,8 @@ if not exist "%JULIA_EXE%" (
 cd /d "%APP_DIR%"
 set "JULIA_CONDAPKG_BACKEND=Null"
 set "JULIA_PYTHONCALL_EXE=python"
+set "JULIA_DEPOT_PATH=%APP_DIR%depot"
+set "SPARKBYTE_SKIP_PKG_INSTANTIATE=1"
 "%JULIA_EXE%" "%APP_DIR%sparkbyte.jl"
 set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" (
