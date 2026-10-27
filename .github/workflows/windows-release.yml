@@ -42,7 +42,7 @@ jobs:
           $env:JULIA_CONDAPKG_BACKEND = "Null"
           $env:JULIA_PYTHONCALL_EXE = "python"
           New-Item -ItemType Directory -Force $env:JULIA_DEPOT_PATH | Out-Null
-          julia --project=. -e "using Pkg; Pkg.instantiate(); using JLEngine; println(\"JLEngine import smoke test passed\")"
+          julia --project=. -e 'using Pkg; Pkg.instantiate(); using JLEngine; println("JLEngine import smoke test passed")'
           if ($LASTEXITCODE -ne 0) { throw "Julia dependency instantiation or engine import failed" }
 
       - name: Verify installer staging has no Python virtual environment
