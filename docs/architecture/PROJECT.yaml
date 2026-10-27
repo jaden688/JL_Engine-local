@@ -7,11 +7,6 @@ project:
   name: JL_Engine-local
   tagline: "A Julia-native, fully agentic AI engine — self-forging, self-hosting, always on."
   repository: jaden688/JL_Engine-local
-  deployment:
-    platform: Azure Container Apps
-    app: jl-engine-prod
-    port: 8081
-    entry: sparkbyte.jl → JLEngine.app_main()
 
 # ── PHILOSOPHY ──────────────────────────────────────────────────────────────
 
@@ -50,14 +45,13 @@ philosophy:
 
 architecture:
   runtime: Julia 1.12+
-  model: julia --project=. sparkbyte.jl
+  model: julia start.jl
 
   layers:
     launcher:
-      file: sparkbyte.jl
+      file: start.jl
       role: >
-        Activates the Julia project, runs health checks, then calls JLEngine.app_main().
-        The Dockerfile CMD points here.
+        Starts the local Julia engine through JLEngine.julia_main().
 
     engine_module:
       root: src/JLEngine.jl
@@ -250,7 +244,6 @@ structure:
     sparkbyte.jl:           "Entry point"
     Project.toml:           "Julia package manifest"
     Dockerfile:             "Container build — julia:1.12 base"
-    azure.yaml:             "AZD deployment config"
     compose.yaml:           "Docker Compose for local dev"
     dynamic_tools.jl:       "Auto-loads forged tools on boot"
     dynamic_tools_registry.json: "Registry of forged tool metadata"
@@ -277,7 +270,6 @@ structure:
     agents/:  "Agent definition files (.mpf.json)"
     skills/:    "Skill library"
 
-  infra/:       "Azure Bicep / Terraform IaC"
   scripts/:     "Dev and deployment scripts"
   mcp_server/:  "MCP server integration"
   web/:         "Static web assets"
