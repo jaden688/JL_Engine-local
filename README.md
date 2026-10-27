@@ -2,7 +2,7 @@
 
 > A Julia-native AI agent engine with a real-time behavioral control layer. Not a chatbot wrapper — a middleware system that models conversation state as a dynamic behavioral machine before any LLM ever sees your message.
 
-**Live UI:** `http://127.0.0.1:8081` &nbsp;|&nbsp; **Entry:** `julia sparkbyte.jl` &nbsp;|&nbsp; **Repo:** `github.com/jaden688/JL_Engine-SB.Omni`
+**Live UI:** `http://127.0.0.1:8081` &nbsp;|&nbsp; **Entry:** `julia sparkbyte.jl` &nbsp;|&nbsp; **Repo:** `github.com/jaden688/JL_Engine-local`
 
 ---
 
@@ -286,7 +286,7 @@ $env:XAI_API_KEY      = "..."
 ## Project Structure
 
 ```
-JL_Engine-SB.Omni/
+JL_Engine-local/
 ├── sparkbyte.jl              # Entry point
 ├── compose.yaml              # Docker compose
 ├── Dockerfile                # Multi-stage build
