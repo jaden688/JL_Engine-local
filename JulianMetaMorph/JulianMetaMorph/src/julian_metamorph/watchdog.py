@@ -3,7 +3,7 @@ SparkByte watchdog — runs inside MetaMorph.
 
 Polls SparkByte's /health endpoint every POLL_INTERVAL_S seconds.
 After FAIL_THRESHOLD consecutive failures it fires a restart by launching
-`julia --project=. sparkbyte.jl` in SPARKBYTE_DIR.
+`julia --project=. start.jl` in SPARKBYTE_DIR.
 
 Control:
     watchdog.pause()   — stop polling (e.g. during intentional restart)
@@ -35,7 +35,7 @@ POLL_INTERVAL_S: float = float(os.environ.get("WATCHDOG_POLL_S", "15"))
 FAIL_THRESHOLD: int = int(os.environ.get("WATCHDOG_FAIL_THRESHOLD", "3"))
 RESTART_COOLDOWN_S: float = float(os.environ.get("WATCHDOG_COOLDOWN_S", "60"))
 
-# Directory where `julia --project=. sparkbyte.jl` should be run.
+# Directory where `julia --project=. start.jl` should be run.
 _DEFAULT_SB_DIR = Path(__file__).resolve().parents[4]  # …/JL_Engine-SB.Omni
 SPARKBYTE_DIR: Path = Path(
     os.environ.get("SPARKBYTE_DIR", str(_DEFAULT_SB_DIR))
