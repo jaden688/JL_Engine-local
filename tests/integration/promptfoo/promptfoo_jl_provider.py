@@ -9,7 +9,7 @@ def call_api(prompt, options, context):
     agent_name = vars_data.get('agent_name', 'SparkByte')
     safety_on = vars_data.get('safety_on', True)
 
-    jl_engine_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    jl_engine_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     engine_dir_clean = jl_engine_dir.replace('\\', '/')
     msg_clean = user_message.replace('"', '\\"')
 
