@@ -35,6 +35,27 @@ jobs:
             throw "Julia runtime staging failed: bin/julia.exe is missing"
           }
 
+      - name: Instantiate and smoke-test engine without a virtual environment
+        shell: pwsh
+        run: |
+          $env:JULIA_DEPOT_PATH = Join-Path $PWD "packaging/windows/depot"
+          $env:JULIA_CONDAPKG_BACKEND = "Null"
+          $env:JULIA_PYTHONCALL_EXE = "python"
+          New-Item -ItemType Directory -Force $env:JULIA_DEPOT_PATH | Out-Null
+          julia --project=. -e "using Pkg; Pkg.instantiate(); using JLEngine; println(\"JLEngine import smoke test passed\")"
+          if ($LASTEXITCODE -ne 0) { throw "Julia dependency instantiation or engine import failed" }
+
+      - name: Verify installer staging has no Python virtual environment
+        shell: pwsh
+        run: |
+          $forbidden = @(".venv", "venv", "workspace", ".conda")
+          foreach ($path in $forbidden) {
+            if (Test-Path $path) { throw "Unexpected virtual-environment directory found in repository root: $path" }
+          }
+          if (!(Test-Path "packaging/windows/depot/packages")) {
+            throw "Julia package dependencies were not staged in the installer depot"
+          }
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --yes --no-progress
