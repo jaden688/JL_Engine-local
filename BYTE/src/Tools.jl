@@ -389,7 +389,7 @@ function _agent_write_guard(path::String)::Tuple{Bool,String}
     # Lock 1 — secrets / build config (the .env nuke protection you asked for)
     if base in (".env", ".env.example", ".env.local",
                 "Project.toml", "Manifest.toml",
-                "start.jl", "a2a_server.jl, "a2a_billing.jl")
+                "start.jl", "a2a_server.jl", "a2a_billing.jl")
         return (true,
             "$base is a protected engine config/secret file (it holds things like " *
             "the API key) and is write-locked. Edit it by hand, or set " *
