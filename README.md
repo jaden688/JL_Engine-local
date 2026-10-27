@@ -2,7 +2,7 @@
 
 > A Julia-native AI agent engine with a real-time behavioral control layer. Not a chatbot wrapper — a middleware system that models conversation state as a dynamic behavioral machine before any LLM ever sees your message.
 
-**Live UI:** `http://127.0.0.1:8081` &nbsp;|&nbsp; **Entry:** `julia sparkbyte.jl` &nbsp;|&nbsp; **Repo:** `github.com/jaden688/JL_Engine-local`
+**Live UI:** `http://127.0.0.1:8081` &nbsp;|&nbsp; **Entry:** `julia --project=. start.jl` &nbsp;|&nbsp; **Repo:** `github.com/jaden688/JL_Engine-local`
 
 ---
 
@@ -256,7 +256,7 @@ Switch in chat: `/gear SparkByte` &nbsp;|&nbsp; Switch in code: `set_agent!(engi
 ```powershell
 # Local (full host access — recommended for dev)
 cd "C:\Users\J_lin\Desktop\JL_Engine (3)\jl-vs\vscode-main\copilot-separate-leopard"
-julia sparkbyte.jl
+julia --project=. start.jl
 # Open http://127.0.0.1:8081
 
 # Docker (containerized deploy)
