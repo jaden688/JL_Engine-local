@@ -224,12 +224,10 @@ to `true` only when immediate physical operation is intended.
 
 ### OpenCode Teamwork
 
-This checkout includes a bounded OpenCode lead and two read-only subagents. Start
-SparkByte with `julia --project=. sparkbyte.jl`, then run `opencode` from the
-repository root. OpenCode starts the configured local MCP teamwork server from
-`opencode.json`; see [the teamwork runbook](operators/notes/OPENCODE_TEAMWORK.md)
-for credentials, limits, and the verified parallel-agent run. Invoke the team
-orchestrator explicitly with `opencode --agent team-lead` when you want teamwork.
+Optional OpenCode teamwork is configured in `opencode.json` and the agent settings. Start
+SparkByte with `julia --project=. sparkbyte.jl`, then run `opencode` from the repository
+root. Invoke the team orchestrator explicitly with `opencode --agent team-lead` when you
+want teamwork. Local credentials and runtime state should remain untracked.
 
 ---
 
