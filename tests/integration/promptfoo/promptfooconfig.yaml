@@ -1,0 +1,61 @@
+description: "JL_Engine-SB.Omni Behavioral Prompt Engine Evaluation Suite"
+
+prompts:
+  - "{{user_message}}"
+
+evaluateOptions:
+  maxConcurrency: 1
+
+providers:
+  - id: 'file://promptfoo_jl_provider.py'
+    label: 'JL_Engine Core (Julia 1.12)'
+
+tests:
+  - vars:
+      agent_name: 'SparkByte'
+      user_message: 'Hey build me a fast single-page app in HTML and Vanilla CSS.'
+    assert:
+      - type: javascript
+        value: "output.agent === 'SparkByte'"
+      - type: javascript
+        value: "output.system_prompt.includes('ACTIVE AGENT: SparkByte')"
+      - type: javascript
+        value: "output.system_prompt.includes('ENGINE STATE SNAPSHOT:')"
+      - type: javascript
+        value: "output.system_prompt.includes('Gait:')"
+
+  - vars:
+      agent_name: 'Slappy'
+      user_message: 'Yeehaw buddy show me what you got!'
+    assert:
+      - type: javascript
+        value: "output.agent === 'Slappy'"
+      - type: javascript
+        value: "output.system_prompt.includes('ACTIVE AGENT: Slappy')"
+
+  - vars:
+      agent_name: 'The Gremlin'
+      user_message: 'Destroy this code and rebuild it faster!'
+    assert:
+      - type: javascript
+        value: "output.agent === 'The Gremlin'"
+      - type: javascript
+        value: "output.system_prompt.includes('ACTIVE AGENT: The Gremlin')"
+
+  - vars:
+      agent_name: 'Temporal'
+      user_message: 'Analyze quantum coherence states in time-series data.'
+    assert:
+      - type: javascript
+        value: "output.agent === 'Temporal'"
+      - type: javascript
+        value: "output.system_prompt.includes('ACTIVE AGENT: Temporal')"
+
+  - vars:
+      agent_name: 'SparkByte'
+      user_message: 'ALERT EMERGENCY ERROR IMMINENT CRASH EMERGENCY'
+    assert:
+      - type: javascript
+        value: "['sprint', 'trot', 'walk'].includes(output.gait)"
+      - type: javascript
+        value: "output.system_prompt.includes('Behavior cell:')"
