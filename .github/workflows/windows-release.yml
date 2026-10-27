@@ -1,0 +1,60 @@
+name: Windows installer release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.11"
+
+      - name: Stage Julia runtime
+        shell: pwsh
+        run: |
+          $julia = (Get-Command julia).Source
+          $runtime = Split-Path (Split-Path $julia -Parent) -Parent
+          if (!(Test-Path $runtime)) { throw "Could not locate Julia runtime from $julia" }
+          New-Item -ItemType Directory -Force packaging/windows/runtime | Out-Null
+          Copy-Item "$runtime\*" packaging/windows/runtime -Recurse -Force
+          if (!(Test-Path "packaging/windows/runtime/bin/julia.exe")) {
+            throw "Julia runtime staging failed: bin/julia.exe is missing"
+          }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging/windows/JL-Engine.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+          if (!(Test-Path "dist/JL-Engine-Setup.exe")) { throw "Installer output was not created" }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JL-Engine-Windows-Installer
+          path: dist/JL-Engine-Setup.exe
+          if-no-files-found: error
+
+      - name: Attach installer to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/JL-Engine-Setup.exe
+          generate_release_notes: true
