@@ -18,7 +18,7 @@ Operation Omni Ascension establishes a parallel **E2E Testing Track** executing 
    - E2E tests interact with SparkByte Omni strictly through external, public interfaces:
      * HTTP REST Endpoints (`http://127.0.0.1:8081/api/...`, `http://127.0.0.1:8081/control/...`, `http://127.0.0.1:8081/runtime/...`)
      * WebSocket Message Bus (`ws://127.0.0.1:8081/ws`)
-     * Process-level CLI and Batch entrypoints (`sparkbyte.jl`, `Launch_SparkByte.bat`, `start.bat`)
+     * Canonical Julia entrypoint (`start.jl`) and Windows launcher (`start.bat`)
      * Environment variables (`.env`, `SPARKBYTE_*`, `OPENROUTER_API_KEY`)
      * File-system artifacts, Git worktrees, and persistent SQLite databases (`data/sparkbyte_memory.db`) queried via standard SQL.
    - Tests do NOT import private module internals or manipulate private struct fields directly.
@@ -70,7 +70,7 @@ The E2E test harness is structured into 4 distinct tiers:
 
 ### F02: Port 8081 Alignment
 - **T1-F02-01:** Default host is `127.0.0.1` and default port is `8081` in engine configuration.
-- **T1-F02-02:** Windows launch script `Launch_SparkByte.bat` specifies port `8081` in its command line.
+- **T1-F02-02:** Windows launch script `start.bat` specifies port `8081` in its command line.
 - **T1-F02-03:** Windows startup script `start.bat` defaults browser launch to `http://127.0.0.1:8081`.
 - **T1-F02-04:** Web server in `BYTE.jl` binds to port `8081` by default when started without environment overrides.
 - **T1-F02-05:** Port environment override (`SPARKBYTE_PORT=18081`) is respected without hardcoding.
@@ -91,8 +91,8 @@ The E2E test harness is structured into 4 distinct tiers:
 
 ### F05: Reference Candidate Ports (Wave 0)
 - **T1-F05-01:** Standardized `.env.example` exists at repository root documenting all supported environment variables.
-- **T1-F05-02:** Early `.env` loader in `sparkbyte.jl` successfully populates `ENV` prior to package imports.
-- **T1-F05-03:** `health_check.jl` executes cleanly from CLI (`julia health_check.jl`) and generates `health_check.log`.
+- **T1-F05-02:** Early `.env` loader in `start.jl` successfully populates `ENV` prior to package imports.
+- **T1-F05-03:** `startup diagnostics` executes cleanly from CLI (`julia startup diagnostics`) and generates `runtime diagnostics`.
 - **T1-F05-04:** Static health scanner detects silent exception swallowers (`catch; end`) and logs warning/error codes.
 - **T1-F05-05:** Windows batch scripts invoke Julia with `--project=.` without hardcoding machine-specific user paths.
 
@@ -259,7 +259,7 @@ The E2E test harness is structured into 4 distinct tiers:
 
 ### F29: Release Verification & Test Report
 - **T1-F29-01:** Clean checkout of branch `feature/omni-ascension` installs all dependencies via `Pkg.instantiate()`.
-- **T1-F29-02:** Engine boots cleanly via `julia --project=. sparkbyte.jl` without manual code edits.
+- **T1-F29-02:** Engine boots cleanly via `julia --project=. start.jl` without manual code edits.
 - **T1-F29-03:** Production release checklist is fully satisfied and documented in `docs/RELEASE_NOTES.md`.
 - **T1-F29-04:** Windows launch batch scripts start application cleanly on fresh Windows machine.
 - **T1-F29-05:** Test reproducibility report documents operating system, Julia version, and commit SHA.
@@ -307,8 +307,8 @@ The E2E test harness is structured into 4 distinct tiers:
 ### F05-B: Reference Candidate Ports Boundaries
 - **T2-F05-01:** `.env` containing empty lines, comments, and unquoted values parses without error.
 - **T2-F05-02:** `.env` containing multiline values or escaped characters (`\n`, `\"`) preserves formatting.
-- **T2-F05-03:** `health_check.jl` executed on empty directory returns zero false-positive errors.
-- **T2-F05-04:** `health_check.jl` scanning file with 10,000 lines executes in under 2 seconds.
+- **T2-F05-03:** `startup diagnostics` executed on empty directory returns zero false-positive errors.
+- **T2-F05-04:** `startup diagnostics` scanning file with 10,000 lines executes in under 2 seconds.
 - **T2-F05-05:** Windows batch script executed from arbitrary working directory locates project root correctly.
 
 ### F06-B: OpenRouter Streaming Boundaries
