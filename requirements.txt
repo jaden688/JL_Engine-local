@@ -11,12 +11,6 @@ anyio==4.12.1
 astor==0.8.1
 asttokens==3.0.1
 attrs==25.4.0
-azure-ai-agents==1.1.0
-azure-ai-projects==1.0.0
-azure-core==1.39.0
-azure-cosmos==4.5.1
-azure-identity==1.15.0
-azure-storage-blob==12.28.0
 blessed==1.33.0
 boolean.py==5.0
 CacheControl==0.14.4
