@@ -141,9 +141,6 @@ function detect_feature_extractor(row::Dict)
         subtype = "latent_feature_encoder"
     end
 
-    # Azure candidate
-    azure_candidate = "deploy:azure" in tags
-
     # Input modalities
     input_modalities = if subtype == "image_embedding"
         ["image"]
@@ -164,7 +161,6 @@ function detect_feature_extractor(row::Dict)
         "input_modalities"       => input_modalities,
         "output_type"            => get(SUBTYPE_OUTPUT, subtype, "vector"),
         "vector_role"            => get(SUBTYPE_VECTOR_ROLE, subtype, "semantic_memory"),
-        "azure_candidate"        => azure_candidate,
         "julian_metamorph_role"  => jm_role,
         "confidence"             => confidence,
         "source_signal"          => source_signal,
