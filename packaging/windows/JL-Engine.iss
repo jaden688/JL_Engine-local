@@ -22,7 +22,7 @@ CloseApplications=yes
 Name: "{localappdata}\JL-Engine"; Flags: uninsneveruninstall
 
 [Files]
-Source: "..\..\*"; DestDir: "{app}"; Excludes: ".git\*,.github\*,dist\*,node_modules\*,.venv\*,venv\*,__pycache__\*,*.db,*.sqlite,*.sqlite3"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\*"; DestDir: "{app}"; Excludes: ".git\*,.github\*,dist\*,node_modules\*,.venv\*,venv\*,__pycache__\*,packaging\windows\runtime\*,*.db,*.sqlite,*.sqlite3"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "runtime\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
